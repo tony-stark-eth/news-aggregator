@@ -27,7 +27,7 @@
 
 | Type | Pattern | Example |
 |------|---------|---------|
-| Controller | `{Feature}Controller` | `ArticleController` |
+| Controller | `{Action}{Feature}Controller` | `ListSourcesController`, `CreateAlertRuleController` |
 | Service | `{Action}Service` | `ScoringService` |
 | Interface | `{Action}ServiceInterface` | `ScoringServiceInterface` |
 | Repository | `{Entity}Repository` | `ArticleRepository` |
@@ -62,6 +62,30 @@
   - Keywords, slugs, model IDs → value objects or typed collections
 - Internal/private methods may use plain arrays if scope is small
 - **FQCN**: always import via `use`, never `\App\...` inline — enforced by ECS `FullyQualifiedStrictTypesFixer`
+
+## Controllers
+
+- **Invokable** (single action per class) — one `__invoke()` method, one responsibility
+  ```php
+  #[Route('/sources', name: 'app_sources', methods: ['GET'])]
+  final class ListSourcesController extends AbstractController
+  {
+      public function __invoke(): Response { ... }
+  }
+  ```
+- **Never inject or access `Request` directly** — use typed parameter mapping:
+  - `#[MapQueryParameter]` for individual query params (`?page=2`)
+  - `#[MapQueryString]` for mapping full query string to a DTO
+  - `#[MapRequestPayload]` for mapping POST/PUT body to a DTO
+  - Path params via route attributes (`{id}`, `{slug}`)
+  - `#[MapEntity]` for Doctrine entity resolution from path params
+  ```php
+  public function __invoke(
+      #[MapQueryParameter] int $page = 1,
+      #[MapQueryParameter] ?string $category = null,
+  ): Response { ... }
+  ```
+- **No multi-action controllers** — split `SourceController` with `index()`/`create()`/`edit()` into `ListSourcesController`, `CreateSourceController`, `EditSourceController`
 
 ## Domain Structure
 

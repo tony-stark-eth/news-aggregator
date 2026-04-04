@@ -18,7 +18,7 @@ final class NotificationLogController extends AbstractController
     }
 
     #[Route('/notifications', name: 'app_notifications')]
-    public function index(): Response
+    public function __invoke(): Response
     {
         /** @var list<NotificationLog> $logs */
         $logs = $this->entityManager

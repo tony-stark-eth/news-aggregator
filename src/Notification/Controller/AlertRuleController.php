@@ -18,7 +18,7 @@ final class AlertRuleController extends AbstractController
     }
 
     #[Route('/alerts', name: 'app_alerts')]
-    public function index(): Response
+    public function __invoke(): Response
     {
         /** @var list<AlertRule> $rules */
         $rules = $this->entityManager->getRepository(AlertRule::class)->findAll();

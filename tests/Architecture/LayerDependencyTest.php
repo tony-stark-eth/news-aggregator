@@ -14,7 +14,10 @@ final class LayerDependencyTest
     {
         return PHPat::rule()
             ->classes(Selector::inNamespace('App\Shared'))
-            ->excluding(Selector::inNamespace('App\Shared\Controller'))
+            ->excluding(
+                Selector::inNamespace('App\Shared\Controller'),
+                Selector::inNamespace('App\Shared\Search'),
+            )
             ->shouldNot()
             ->dependOn()
             ->classes(

@@ -9,6 +9,8 @@
         "php": ">=8.4.19",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "cmsig/seal-loupe-adapter": "^0.12.9",
+        "cmsig/seal-symfony-bundle": "^0.12.9",
         "doctrine/doctrine-bundle": "^3.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",

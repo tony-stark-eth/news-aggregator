@@ -19,7 +19,7 @@ final class AiStatsController extends AbstractController
     }
 
     #[Route('/stats/ai', name: 'app_ai_stats')]
-    public function index(): Response
+    public function __invoke(): Response
     {
         return $this->render('stats/ai.html.twig', [
             'stats' => $this->qualityTracker->getAllStats(),

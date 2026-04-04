@@ -6,11 +6,13 @@ namespace App\Shared\Controller;
 
 use App\Article\Entity\Article;
 use App\Source\Entity\Source;
+use App\User\Entity\User;
+use App\User\Entity\UserArticleRead;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class DashboardController extends AbstractController
@@ -22,10 +24,15 @@ final class DashboardController extends AbstractController
     }
 
     #[Route('/', name: 'app_dashboard')]
-    public function index(Request $request): Response
-    {
-        $category = $request->query->get('category');
-        $page = max(1, $request->query->getInt('page', 1));
+    public function __invoke(
+        #[MapQueryParameter]
+        ?string $category = null,
+        #[MapQueryParameter]
+        int $page = 1,
+        #[MapQueryParameter(name: '_fragment')]
+        ?string $fragment = null,
+    ): Response {
+        $page = max(1, $page);
         $limit = 20;
 
         $qb = $this->entityManager
@@ -61,10 +68,14 @@ final class DashboardController extends AbstractController
                 'enabled' => true,
             ]);
 
+        // Build read-state set for the current user
+        $readArticleIds = $this->getReadArticleIds($articles);
+
         // AJAX fragment for infinite scroll
-        if ($request->isXmlHttpRequest()) {
+        if ($fragment !== null) {
             return $this->render('dashboard/_article_list.html.twig', [
                 'articles' => $articles,
+                'readArticleIds' => $readArticleIds,
             ]);
         }
 
@@ -74,6 +85,43 @@ final class DashboardController extends AbstractController
             'articlesToday' => $articlesToday,
             'activeSources' => $activeSources,
             'page' => $page,
+            'readArticleIds' => $readArticleIds,
         ]);
+    }
+
+    /**
+     * @param list<Article> $articles
+     *
+     * @return array<int, true>
+     */
+    private function getReadArticleIds(array $articles): array
+    {
+        $user = $this->getUser();
+        if (! $user instanceof User || $articles === []) {
+            return [];
+        }
+
+        $articleIds = array_map(
+            static fn (Article $a): int => (int) $a->getId(),
+            $articles,
+        );
+
+        /** @var list<UserArticleRead> $readRecords */
+        $readRecords = $this->entityManager
+            ->getRepository(UserArticleRead::class)
+            ->createQueryBuilder('r')
+            ->where('r.user = :user')
+            ->andWhere('r.article IN (:ids)')
+            ->setParameter('user', $user)
+            ->setParameter('ids', $articleIds)
+            ->getQuery()
+            ->getResult();
+
+        $readIds = [];
+        foreach ($readRecords as $record) {
+            $readIds[(int) $record->getArticle()->getId()] = true;
+        }
+
+        return $readIds;
     }
 }

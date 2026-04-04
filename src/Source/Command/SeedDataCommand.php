@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Source\Command;
 
+use App\Digest\Entity\DigestConfig;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
+use App\User\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -13,6 +15,7 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
 #[AsCommand(
     name: 'app:seed-data',
@@ -23,6 +26,7 @@ final class SeedDataCommand extends Command
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
+        private readonly UserPasswordHasherInterface $passwordHasher,
     ) {
         parent::__construct();
     }
@@ -33,6 +37,8 @@ final class SeedDataCommand extends Command
 
         $categories = $this->seedCategories($io);
         $this->seedSources($io, $categories);
+        $user = $this->seedDemoUser($io);
+        $this->seedDigestConfigs($io, $user);
 
         $this->entityManager->flush();
 
@@ -219,6 +225,68 @@ final class SeedDataCommand extends Command
             $source = new Source($def['name'], $def['url'], $category, $now);
             $this->entityManager->persist($source);
             $io->info(sprintf('Created source: %s', $def['name']));
+        }
+    }
+
+    private function seedDemoUser(SymfonyStyle $io): User
+    {
+        $repository = $this->entityManager->getRepository(User::class);
+
+        /** @var User|null $existing */
+        $existing = $repository->findOneBy([]);
+        if ($existing instanceof User) {
+            $io->note('Demo user already exists, skipping.');
+
+            return $existing;
+        }
+
+        $user = new User('demo@example.com', '');
+        $hashedPassword = $this->passwordHasher->hashPassword($user, 'demo');
+        $user->setPassword($hashedPassword);
+        $this->entityManager->persist($user);
+        $io->info('Created demo user: demo@example.com (password: demo)');
+
+        return $user;
+    }
+
+    private function seedDigestConfigs(SymfonyStyle $io, User $user): void
+    {
+        $repository = $this->entityManager->getRepository(DigestConfig::class);
+        $now = $this->clock->now();
+
+        $definitions = [
+            [
+                'name' => 'Daily Tech Digest',
+                'schedule' => '0 8 * * *',
+                'categories' => ['tech'],
+                'limit' => 10,
+            ],
+            [
+                'name' => 'Weekly Summary',
+                'schedule' => '0 9 * * 1',
+                'categories' => [],
+                'limit' => 20,
+            ],
+        ];
+
+        foreach ($definitions as $def) {
+            /** @var DigestConfig|null $existing */
+            $existing = $repository->findOneBy([
+                'name' => $def['name'],
+                'user' => $user,
+            ]);
+
+            if ($existing instanceof DigestConfig) {
+                $io->note(sprintf('Digest config "%s" already exists, skipping.', $def['name']));
+
+                continue;
+            }
+
+            $config = new DigestConfig($def['name'], $def['schedule'], $user, $now);
+            $config->setCategories($def['categories']);
+            $config->setArticleLimit($def['limit']);
+            $this->entityManager->persist($config);
+            $io->info(sprintf('Created digest config: %s (%s)', $def['name'], $def['schedule']));
         }
     }
 }

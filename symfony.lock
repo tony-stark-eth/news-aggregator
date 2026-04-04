@@ -1,4 +1,13 @@
 {
+    "cmsig/seal-symfony-bundle": {
+        "version": "0.12",
+        "recipe": {
+            "repo": "github.com/symfony/recipes-contrib",
+            "branch": "main",
+            "version": "0.8",
+            "ref": "458145ff09fdee9eb7ac74dfaf02aab3cf12621a"
+        }
+    },
     "doctrine/deprecations": {
         "version": "1.1",
         "recipe": {

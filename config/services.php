@@ -16,6 +16,8 @@ use App\Shared\AI\Platform\ModelFailoverPlatform;
 use App\Shared\AI\Service\ModelDiscoveryService;
 use App\Shared\Command\CleanupCommand;
 use App\Shared\Controller\SettingsController;
+use App\Shared\Search\Service\ArticleSearchServiceInterface;
+use App\Shared\Search\Service\SealArticleSearchService;
 use App\Source\Scheduler\FetchScheduleProvider;
 use Symfony\AI\Platform\Bridge\Generic\CompletionsModel;
 use Symfony\AI\Platform\Bridge\OpenRouter\ModelCatalog;
@@ -123,4 +125,7 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%')
         ->arg('$retentionArticles', '%env(int:RETENTION_ARTICLES)%')
         ->arg('$retentionLogs', '%env(int:RETENTION_LOGS)%');
+
+    // Search: SEAL/Loupe engine wired by argument name (loupeEngine → cmsig_seal.engine.loupe alias)
+    $services->alias(ArticleSearchServiceInterface::class, SealArticleSearchService::class);
 };

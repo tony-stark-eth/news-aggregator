@@ -19,7 +19,7 @@ final class DigestController extends AbstractController
     }
 
     #[Route('/digests', name: 'app_digests')]
-    public function index(): Response
+    public function __invoke(): Response
     {
         /** @var list<DigestConfig> $configs */
         $configs = $this->entityManager->getRepository(DigestConfig::class)->findAll();
