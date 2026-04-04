@@ -59,8 +59,15 @@
   - Frontend: plain TypeScript via Bun + AssetMapper, DaisyUI version-pinned
   - Added D32-D37 decisions
 
+- [x] Initialized git repo, created .gitignore (Phase 1.5)
+- [x] Created private GitHub repo tony-stark-eth/news-aggregator (Phase 1.4)
+- [x] Created CLAUDE.md with planning discipline rules (Phase 1.13)
+- [x] Created PITCH.md for open-source readiness
+- [x] Committed and pushed initial planning files
+- [x] Saved feedback memory for planning file update discipline
+
 ### Current Status
-Planning complete. All open questions resolved. Ready to begin Phase 1 (Project Scaffolding).
+Phase 1 in progress. 3 of 15 tasks complete (1.4, 1.5, 1.13). Next: clone dunglas/symfony-docker (1.1).
 
 ### Blockers
 - None

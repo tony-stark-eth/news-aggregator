@@ -202,8 +202,8 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [ ] 1.1 Clone dunglas/symfony-docker (latest main) into news-aggregator/
 - [ ] 1.2 `docker compose build --no-cache` + `docker compose up --pull always -d --wait` to scaffold Symfony 8.0.x
 - [ ] 1.3 Verify Symfony version (`bin/console --version`) is 8.0.x
-- [ ] 1.4 Create private GitHub repo (`gh repo create tony-stark-eth/news-aggregator --private`)
-- [ ] 1.5 Initialize git repo, create .gitignore (ensure no secrets, .env.local, vendor/ committed)
+- [x] 1.4 Create private GitHub repo (`gh repo create tony-stark-eth/news-aggregator --private`)
+- [x] 1.5 Initialize git repo, create .gitignore (ensure no secrets, .env.local, vendor/ committed)
 - [ ] 1.6 Open-source preparation (ready to flip to public):
   - MIT LICENSE file
   - README.md (project description, features, setup, configuration, architecture overview)
@@ -219,7 +219,7 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [ ] 1.10 Create docker/postgres/init.sql (app_test DB for integration tests)
 - [ ] 1.11 Create Makefile (docker, quality, test, db, backup/restore targets — modeled on template)
 - [ ] 1.12 Add `make export-postgres` / `make import-postgres` backup/restore targets
-- [ ] 1.13 Create CLAUDE.md (project root) with:
+- [x] 1.13 Create CLAUDE.md (project root) with:
   - Quick start commands (`make up`, `make quality`, `make test`)
   - Project type and stack summary
   - Links to `.claude/` guideline files
