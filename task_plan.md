@@ -366,16 +366,19 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 6.1 Install symfony/ai-bundle 0.6.x + symfony/ai-open-router-platform + symfony/ai-failover-platform
 - [x] 6.2 Configure OpenRouter via dedicated platform bridge (PHP config):
   - API key via `%env(OPENROUTER_API_KEY)%`
-  - Model: `openrouter/auto` (auto-routes to best available model)
+  - Primary model: `openrouter/free` (auto-routes to best available free model, zero cost)
+  - Registered openrouter/free in model catalog via additionalModels (not in vendor catalog by default)
 - [x] 6.3 Write ModelDiscoveryService tests → implement (in `Shared/AI/Service/`):
   - Query `GET /api/v1/models` (public, no auth needed)
   - Filter: free pricing, context_length >= 8192
   - Cache results (TTL: 1 hour) via Symfony Cache
   - Circuit breaker: 3 consecutive failures → stop retrying for 24h
   - Filter out models in `OPENROUTER_BLOCKED_MODELS` env var
-- [x] 6.4 Configure FailoverPlatform chain via ai-failover-platform bundle:
-  - Platform chain: openrouter → failover
-  - Rate limiter: sliding window, 20 req/min
+- [x] 6.4 Configure model failover chain:
+  - `ModelFailoverPlatform` (PlatformInterface decorator) — model-level failover on single provider
+  - Chain: openrouter/free → minimax-m2.5:free → glm-4.5-air:free → gpt-oss-120b:free → qwen3.6-plus:free → nemotron-3-super:free
+  - Eager evaluation of DeferredResult to catch rate limit errors
+  - FailoverPlatform (bundle) for platform-level failover with rate limiter
   - Rule-based fallback handled in AI service decorators
 - [x] 6.5 Write AiQualityGateService tests → implement (in `Enrichment/Service/`):
   - Summary heuristics: reject if < 20 chars, > 500 chars, or title-repeat detection
