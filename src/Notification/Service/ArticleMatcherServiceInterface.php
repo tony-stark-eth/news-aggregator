@@ -5,12 +5,9 @@ declare(strict_types=1);
 namespace App\Notification\Service;
 
 use App\Article\Entity\Article;
-use App\Notification\ValueObject\MatchResult;
+use App\Notification\ValueObject\MatchResultCollection;
 
 interface ArticleMatcherServiceInterface
 {
-    /**
-     * @return list<MatchResult>
-     */
-    public function match(Article $article): array;
+    public function match(Article $article): MatchResultCollection;
 }

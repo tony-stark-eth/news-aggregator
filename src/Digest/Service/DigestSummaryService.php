@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Digest\Service;
 
-use App\Article\Entity\Article;
+use App\Article\ValueObject\ArticleCollection;
 use App\Digest\ValueObject\GroupedArticles;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Message\Message;
@@ -54,7 +54,7 @@ PROMPT;
     }
 
     /**
-     * @param array<string, list<Article>> $groupedArticles
+     * @param array<string, ArticleCollection> $groupedArticles
      */
     private function formatArticles(array $groupedArticles): string
     {
@@ -71,7 +71,7 @@ PROMPT;
     }
 
     /**
-     * @param array<string, list<Article>> $groupedArticles
+     * @param array<string, ArticleCollection> $groupedArticles
      */
     private function ruleBasedFallback(array $groupedArticles): string
     {

@@ -7,6 +7,7 @@ namespace App\Article\MessageHandler;
 use App\Article\Entity\Article;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\Service\ScoringServiceInterface;
+use App\Article\ValueObject\ArticleCollection;
 use App\Article\ValueObject\ArticleFingerprint;
 use App\Article\ValueObject\FetchResult;
 use App\Article\ValueObject\PersistItemResult;
@@ -22,6 +23,7 @@ use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
 use App\Source\Service\FeedFetcherServiceInterface;
 use App\Source\Service\FeedItem;
+use App\Source\Service\FeedItemCollection;
 use App\Source\Service\FeedParserServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -82,13 +84,9 @@ final readonly class FetchSourceHandler
         }
     }
 
-    /**
-     * @param list<FeedItem> $items
-     */
-    private function processItems(array $items, Source $source, int $sourceId, \DateTimeImmutable $now): FetchResult
+    private function processItems(FeedItemCollection $items, Source $source, int $sourceId, \DateTimeImmutable $now): FetchResult
     {
         $persisted = 0;
-        /** @var list<Article> $newArticles */
         $newArticles = [];
 
         foreach ($items as $item) {
@@ -102,7 +100,7 @@ final readonly class FetchSourceHandler
 
             $itemResult = $this->persistItem($item, $source, $sourceId, $now, $fingerprint);
             if (! $itemResult instanceof \App\Article\ValueObject\PersistItemResult) {
-                return new FetchResult($persisted, $newArticles, null);
+                return new FetchResult($persisted, new ArticleCollection($newArticles), null);
             }
 
             $source = $itemResult->source;
@@ -112,7 +110,7 @@ final readonly class FetchSourceHandler
             }
         }
 
-        return new FetchResult($persisted, $newArticles, $source);
+        return new FetchResult($persisted, new ArticleCollection($newArticles), $source);
     }
 
     /**
@@ -208,10 +206,7 @@ final readonly class FetchSourceHandler
         $article->setAiModelUsed($aiResult?->modelUsed);
     }
 
-    /**
-     * @param list<Article> $articles
-     */
-    private function dispatchAlerts(array $articles): void
+    private function dispatchAlerts(ArticleCollection $articles): void
     {
         foreach ($articles as $article) {
             $articleId = $article->getId();

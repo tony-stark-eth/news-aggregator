@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Digest\Service;
 
 use App\Article\Entity\Article;
+use App\Article\ValueObject\ArticleCollection;
 use App\Digest\Entity\DigestConfig;
 use App\Digest\ValueObject\GroupedArticles;
 use Doctrine\ORM\EntityManagerInterface;
@@ -46,6 +47,11 @@ final readonly class DigestGeneratorService
             $grouped[$slug][] = $article;
         }
 
-        return new GroupedArticles($grouped);
+        $groupedCollections = [];
+        foreach ($grouped as $slug => $groupArticles) {
+            $groupedCollections[$slug] = new ArticleCollection($groupArticles);
+        }
+
+        return new GroupedArticles($groupedCollections);
     }
 }

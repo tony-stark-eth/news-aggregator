@@ -199,3 +199,19 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 - [x] Updated all unit tests for enrichment services to assert on `$result->value` and `$result->method`
 - [x] All quality tools pass: ECS, PHPStan, Rector
 - [x] All 105 tests pass
+
+## Session 9 — 2026-04-04
+
+### Completed
+- [x] Replaced `list<X>` PHPDoc array annotations with typed `ArrayCollection` subclasses throughout the codebase:
+  - `FeedParserServiceInterface::parse()` + `LaminasFeedParserService::parse()` — return `FeedItemCollection`
+  - `ArticleMatcherServiceInterface::match()` + `ArticleMatcherService::match()` — return `MatchResultCollection`
+  - `FetchResult::$newArticles` — type changed from `array` to `ArticleCollection`
+  - `FetchSourceHandler::processItems()` — param changed to `FeedItemCollection`, builds `ArticleCollection` for `FetchResult`
+  - `FetchSourceHandler::dispatchAlerts()` — param changed to `ArticleCollection`
+  - `GroupedArticles::$byCategory` — type changed to `array<string, ArticleCollection>`
+  - `DigestGeneratorService::collectArticles()` — builds `ArticleCollection` per category group
+  - `DigestSummaryService::formatArticles()` + `ruleBasedFallback()` — param annotations updated to `array<string, ArticleCollection>`
+- [x] Updated tests to use `->toArray()` before array-index access (PHPStan: `offsetGet()` returns `?T`)
+- [x] All quality tools pass: ECS clean, Rector clean, PHPStan 0 errors
+- [x] All 95 unit tests pass

@@ -8,7 +8,7 @@ use Laminas\Feed\Reader\Reader;
 
 final readonly class LaminasFeedParserService implements FeedParserServiceInterface
 {
-    public function parse(string $feedContent): array
+    public function parse(string $feedContent): FeedItemCollection
     {
         $feed = Reader::importString($feedContent);
         $items = [];
@@ -51,7 +51,7 @@ final readonly class LaminasFeedParserService implements FeedParserServiceInterf
             );
         }
 
-        return $items;
+        return new FeedItemCollection($items);
     }
 
     private function stripHtml(string $html): string

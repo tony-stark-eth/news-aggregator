@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Digest\ValueObject;
 
-use App\Article\Entity\Article;
+use App\Article\ValueObject\ArticleCollection;
 
 final readonly class GroupedArticles
 {
     /**
-     * @param array<string, list<Article>> $byCategory
+     * @param array<string, ArticleCollection> $byCategory
      */
     public function __construct(
         public array $byCategory,

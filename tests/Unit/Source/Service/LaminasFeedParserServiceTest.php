@@ -43,7 +43,8 @@ final class LaminasFeedParserServiceTest extends TestCase
 </rss>
 XML;
 
-        $items = $this->parser->parse($xml);
+        $collection = $this->parser->parse($xml);
+        $items = $collection->toArray();
 
         self::assertCount(2, $items);
 
@@ -74,7 +75,8 @@ XML;
 </feed>
 XML;
 
-        $items = $this->parser->parse($xml);
+        $collection = $this->parser->parse($xml);
+        $items = $collection->toArray();
 
         self::assertCount(1, $items);
         self::assertSame('Atom Article', $items[0]->title);
@@ -142,7 +144,8 @@ XML;
 </rss>
 XML;
 
-        $items = $this->parser->parse($xml);
+        $collection = $this->parser->parse($xml);
+        $items = $collection->toArray();
 
         self::assertCount(1, $items);
         self::assertStringContainsString('AT&T', $items[0]->contentText ?? '');

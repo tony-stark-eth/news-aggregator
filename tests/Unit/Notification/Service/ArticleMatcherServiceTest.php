@@ -32,9 +32,10 @@ final class ArticleMatcherServiceTest extends TestCase
         $article = $this->createArticle('Major earthquake strikes region');
 
         $results = $matcher->match($article);
+        $resultsArray = $results->toArray();
 
-        self::assertCount(1, $results);
-        self::assertSame(['earthquake'], $results[0]->matchedKeywords);
+        self::assertCount(1, $resultsArray);
+        self::assertSame(['earthquake'], $resultsArray[0]->matchedKeywords);
     }
 
     public function testMatchesKeywordInContent(): void
@@ -47,9 +48,10 @@ final class ArticleMatcherServiceTest extends TestCase
         $article = $this->createArticle('Security Update', 'Critical vulnerability found in software');
 
         $results = $matcher->match($article);
+        $resultsArray = $results->toArray();
 
-        self::assertCount(1, $results);
-        self::assertSame(['vulnerability'], $results[0]->matchedKeywords);
+        self::assertCount(1, $resultsArray);
+        self::assertSame(['vulnerability'], $resultsArray[0]->matchedKeywords);
     }
 
     public function testNoMatchReturnsEmpty(): void

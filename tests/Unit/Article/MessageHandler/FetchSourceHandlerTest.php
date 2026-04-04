@@ -19,6 +19,7 @@ use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
 use App\Source\Service\FeedFetcherServiceInterface;
 use App\Source\Service\FeedItem;
+use App\Source\Service\FeedItemCollection;
 use App\Source\Service\FeedParserServiceInterface;
 use App\Source\ValueObject\SourceHealth;
 use Doctrine\ORM\EntityManagerInterface;
@@ -97,10 +98,10 @@ final class FetchSourceHandlerTest extends TestCase
     public function testHandlesFetchAndPersistsArticles(): void
     {
         $this->fetcher->method('fetch')->willReturn('<rss>...</rss>');
-        $this->parser->method('parse')->willReturn([
+        $this->parser->method('parse')->willReturn(new FeedItemCollection([
             new FeedItem('Article 1', 'https://example.com/1', '<p>Content</p>', 'Content text here for summarization', null),
             new FeedItem('Article 2', 'https://example.com/2', null, null, null),
-        ]);
+        ]));
 
         $persisted = [];
         $this->em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {

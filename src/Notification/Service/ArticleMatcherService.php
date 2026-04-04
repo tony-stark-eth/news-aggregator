@@ -8,6 +8,7 @@ use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Entity\NotificationLog;
 use App\Notification\ValueObject\MatchResult;
+use App\Notification\ValueObject\MatchResultCollection;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
@@ -19,10 +20,7 @@ final readonly class ArticleMatcherService implements ArticleMatcherServiceInter
     ) {
     }
 
-    /**
-     * @return list<MatchResult>
-     */
-    public function match(Article $article): array
+    public function match(Article $article): MatchResultCollection
     {
         /** @var list<AlertRule> $rules */
         $rules = $this->entityManager
@@ -52,7 +50,7 @@ final readonly class ArticleMatcherService implements ArticleMatcherServiceInter
             $results[] = new MatchResult($rule, $matchedKeywords);
         }
 
-        return $results;
+        return new MatchResultCollection($results);
     }
 
     private function matchesCategory(AlertRule $rule, ?string $articleCategory): bool

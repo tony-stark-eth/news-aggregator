@@ -7,9 +7,7 @@ namespace App\Source\Service;
 interface FeedParserServiceInterface
 {
     /**
-     * Parse raw feed XML content into an array of parsed items.
-     *
-     * @return list<FeedItem>
+     * Parse raw feed XML content into a typed collection of parsed items.
      */
-    public function parse(string $feedContent): array;
+    public function parse(string $feedContent): FeedItemCollection;
 }
