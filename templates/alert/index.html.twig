@@ -2,5 +2,46 @@
 {% block title %}Alert Rules{% endblock %}
 {% block body %}
     <h1 class="text-2xl font-bold mb-6">Alert Rules</h1>
-    {% include 'components/_empty_state.html.twig' with { message: 'Alert rules page — coming soon.' } %}
+
+    {% if rules is empty %}
+        {% include 'components/_empty_state.html.twig' with {
+            message: 'No alert rules configured yet.'
+        } %}
+    {% else %}
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Keywords</th>
+                        <th>Urgency</th>
+                        <th>Cooldown</th>
+                        <th>Enabled</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                        <tr>
+                            <td class="font-bold">{{ rule.name }}</td>
+                            <td><span class="badge badge-outline badge-sm">{{ rule.type.value }}</span></td>
+                            <td class="text-sm max-w-xs truncate">{{ rule.keywords|join(', ') }}</td>
+                            <td>
+                                {% set urgency_class = { 'high': 'badge-error', 'medium': 'badge-warning', 'low': 'badge-info' } %}
+                                <span class="badge badge-sm {{ urgency_class[rule.urgency.value] ?? 'badge-ghost' }}">{{ rule.urgency.value }}</span>
+                            </td>
+                            <td>{{ rule.cooldownMinutes }}m</td>
+                            <td>
+                                {% if rule.enabled %}
+                                    <span class="badge badge-success badge-sm">yes</span>
+                                {% else %}
+                                    <span class="badge badge-ghost badge-sm">no</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
 {% endblock %}

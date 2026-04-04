@@ -1,6 +1,27 @@
 {% extends 'base.html.twig' %}
-{% block title %}Search{% endblock %}
+{% block title %}Search{% if query %} — {{ query }}{% endif %}{% endblock %}
 {% block body %}
     <h1 class="text-2xl font-bold mb-6">Search</h1>
-    {% include 'components/_empty_state.html.twig' with { message: 'Search — coming soon with SEAL + Loupe.' } %}
+
+    <form action="{{ path('app_search') }}" method="GET" class="mb-6">
+        <div class="join w-full max-w-lg">
+            <input type="text" name="q" value="{{ query }}" placeholder="Search articles..." class="input input-bordered join-item w-full" autofocus>
+            <button type="submit" class="btn btn-primary join-item">Search</button>
+        </div>
+    </form>
+
+    {% if query %}
+        {% if results is empty %}
+            {% include 'components/_empty_state.html.twig' with {
+                message: 'No results for "' ~ query ~ '"'
+            } %}
+        {% else %}
+            <p class="text-base-content/50 mb-4">{{ results|length }} result(s) for "{{ query }}"</p>
+            <div class="flex flex-col gap-3">
+                {% for article in results %}
+                    {% include 'components/_article_card.html.twig' %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endif %}
 {% endblock %}

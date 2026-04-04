@@ -8,7 +8,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     {% block stylesheets %}{% endblock %}
     <script>
-        // Apply saved theme before render to prevent flash
         const savedTheme = localStorage.getItem('theme') || 'night';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
@@ -16,7 +15,6 @@
 <body class="min-h-screen bg-base-200">
     {% include 'components/_flash_messages.html.twig' %}
 
-    {# Navbar #}
     <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
         <div class="navbar-start">
             <div class="dropdown">
@@ -33,11 +31,11 @@
                     <li><a href="{{ path('app_notifications') }}">Notifications</a></li>
                 </ul>
             </div>
-            <a href="{{ path('app_dashboard') }}" class="btn btn-ghost text-xl">📰 News Aggregator</a>
+            <a href="{{ path('app_dashboard') }}" class="btn btn-ghost text-xl">News Aggregator</a>
         </div>
         <div class="navbar-center hidden lg:flex">
             <form action="{{ path('app_search') }}" method="GET" class="form-control">
-                <input type="text" name="q" placeholder="Search articles..." class="input input-bordered w-64" value="{{ app.request.query.get('q', '') }}">
+                <input type="text" name="q" placeholder="Search articles..." class="input input-bordered w-64" value="{{ nav.searchQuery }}">
             </form>
         </div>
         <div class="navbar-end gap-2">
@@ -64,19 +62,18 @@
         </div>
     </div>
 
-    {# Main content area with optional sidebar #}
     <div class="flex">
         {% block sidebar %}
         <aside class="hidden lg:block w-64 p-4 bg-base-100 min-h-[calc(100vh-4rem)]">
             <div class="menu">
                 <li class="menu-title">Navigation</li>
-                <li><a href="{{ path('app_dashboard') }}" class="{{ app.request.attributes.get('_route') == 'app_dashboard' ? 'active' : '' }}">Dashboard</a></li>
-                <li><a href="{{ path('app_sources') }}" class="{{ app.request.attributes.get('_route') == 'app_sources' ? 'active' : '' }}">Sources</a></li>
-                <li><a href="{{ path('app_alerts') }}" class="{{ app.request.attributes.get('_route') == 'app_alerts' ? 'active' : '' }}">Alert Rules</a></li>
-                <li><a href="{{ path('app_digests') }}" class="{{ app.request.attributes.get('_route') == 'app_digests' ? 'active' : '' }}">Digests</a></li>
-                <li><a href="{{ path('app_notifications') }}" class="{{ app.request.attributes.get('_route') == 'app_notifications' ? 'active' : '' }}">Notification Log</a></li>
-                <li><a href="{{ path('app_ai_stats') }}" class="{{ app.request.attributes.get('_route') == 'app_ai_stats' ? 'active' : '' }}">AI Stats</a></li>
-                <li><a href="{{ path('app_settings') }}" class="{{ app.request.attributes.get('_route') == 'app_settings' ? 'active' : '' }}">Settings</a></li>
+                <li><a href="{{ path('app_dashboard') }}" class="{{ nav.activeRoute == 'app_dashboard' ? 'active' : '' }}">Dashboard</a></li>
+                <li><a href="{{ path('app_sources') }}" class="{{ nav.activeRoute == 'app_sources' ? 'active' : '' }}">Sources</a></li>
+                <li><a href="{{ path('app_alerts') }}" class="{{ nav.activeRoute == 'app_alerts' ? 'active' : '' }}">Alert Rules</a></li>
+                <li><a href="{{ path('app_digests') }}" class="{{ nav.activeRoute == 'app_digests' ? 'active' : '' }}">Digests</a></li>
+                <li><a href="{{ path('app_notifications') }}" class="{{ nav.activeRoute == 'app_notifications' ? 'active' : '' }}">Notification Log</a></li>
+                <li><a href="{{ path('app_ai_stats') }}" class="{{ nav.activeRoute == 'app_ai_stats' ? 'active' : '' }}">AI Stats</a></li>
+                <li><a href="{{ path('app_settings') }}" class="{{ nav.activeRoute == 'app_settings' ? 'active' : '' }}">Settings</a></li>
             </div>
         </aside>
         {% endblock %}

@@ -2,5 +2,45 @@
 {% block title %}Notification Log{% endblock %}
 {% block body %}
     <h1 class="text-2xl font-bold mb-6">Notification Log</h1>
-    {% include 'components/_empty_state.html.twig' with { message: 'Notification log — coming soon.' } %}
+
+    {% if logs is empty %}
+        {% include 'components/_empty_state.html.twig' with {
+            message: 'No notifications sent yet.'
+        } %}
+    {% else %}
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Alert Rule</th>
+                        <th>Article</th>
+                        <th>Type</th>
+                        <th>Severity</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                        <tr>
+                            <td><time datetime="{{ log.sentAt|date('c') }}" class="timeago">{{ log.sentAt|date('Y-m-d H:i') }}</time></td>
+                            <td>{{ log.alertRule.name }}</td>
+                            <td class="max-w-xs truncate">
+                                <a href="{{ log.article.url }}" target="_blank" rel="noopener" class="link link-hover">{{ log.article.title }}</a>
+                            </td>
+                            <td><span class="badge badge-outline badge-sm">{{ log.matchType }}</span></td>
+                            <td>{{ log.aiSeverity ?? '-' }}</td>
+                            <td>
+                                {% if log.success %}
+                                    <span class="badge badge-success badge-sm">sent</span>
+                                {% else %}
+                                    <span class="badge badge-error badge-sm">failed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
 {% endblock %}
