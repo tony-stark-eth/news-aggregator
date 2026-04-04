@@ -113,12 +113,18 @@
 - [x] Updated Doctrine mapping to domain-based structure (6 domains: Shared, Article, Source, User, Notification, Digest)
 - [x] 23 unit tests passing, all quality checks clean
 
+- [x] Phase 3.6: PHPat architecture tests — LayerDependencyTest + NamingConventionTest in tests/Architecture/
+  - Tests registered in phpstan.neon with phpat.test tag
+  - PHPat 0.12 API: shouldNot().dependOn() and should().extend/implement() (not deprecated shorthand)
+  - Tests immediately caught SeedDataCommand in wrong namespace (Shared instead of Source domain)
+  - Moved SeedDataCommand to App\Source\Command + fixed PHPStan type annotations
+- [x] Phase 3.8: SeedDataCommand (app:seed-data) — 5 categories + 16 sources, idempotent (skip existing by slug/URL)
+
 ### Current Status
-Phase 3 in progress. 5 of 8 tasks done. Remaining: PHPat architecture tests (3.6), repository integration tests (3.7), seed command (3.8).
+Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred — needs test DB config. Ready for Phase 4.
 
 ### Blockers
 - None
 
 ### Next Steps
-- Phase 3.6-3.8: Architecture tests, repository integration tests, seed command
-- Commit as PR #2
+- Phase 4: Feed fetching + parsing

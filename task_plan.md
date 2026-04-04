@@ -316,9 +316,9 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
   - NO `read_at` on Article — read state is per-user
 - [x] 3.4 Write UserArticleRead entity (user_id, article_id, read_at) — per-user read tracking
 - [x] 3.5 Create & run migrations
-- [ ] 3.6 Write architecture tests (PHPat): layer deps, naming conventions, interface-first enforcement
-- [ ] 3.7 Write repository integration tests
-- [ ] 3.8 Create data fixtures / seed command for default sources + categories
+- [x] 3.6 Write architecture tests (PHPat): layer deps, naming conventions, interface-first enforcement
+- [ ] 3.7 Write repository integration tests (deferred — needs test DB config)
+- [x] 3.8 Create data fixtures / seed command for default sources + categories
 
 ### Phase 4: Feed Fetching & Parsing (TDD)
 - [ ] 4.1 Install laminas/laminas-feed 2.26.x (framework-agnostic, register as Symfony service behind interface)
