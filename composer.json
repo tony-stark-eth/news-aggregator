@@ -12,6 +12,7 @@
         "doctrine/doctrine-bundle": "^3.2",
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",
+        "laminas/laminas-feed": "^2.26",
         "symfony/asset-mapper": "8.0.*",
         "symfony/clock": "8.0.*",
         "symfony/console": "8.0.*",

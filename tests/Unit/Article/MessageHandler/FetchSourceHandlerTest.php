@@ -1,0 +1,117 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Tests\Unit\Article\MessageHandler;
+
+use App\Article\Entity\Article;
+use App\Article\MessageHandler\FetchSourceHandler;
+use App\Shared\Entity\Category;
+use App\Source\Entity\Source;
+use App\Source\Exception\FeedFetchException;
+use App\Source\Message\FetchSourceMessage;
+use App\Source\Service\FeedFetcherServiceInterface;
+use App\Source\Service\FeedItem;
+use App\Source\Service\FeedParserServiceInterface;
+use App\Source\ValueObject\SourceHealth;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\MockObject\MockObject;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+use Symfony\Component\Clock\MockClock;
+
+#[CoversClass(FetchSourceHandler::class)]
+final class FetchSourceHandlerTest extends TestCase
+{
+    /**
+     * @var EntityManagerInterface&MockObject
+     */
+    private \PHPUnit\Framework\MockObject\MockObject $em;
+
+    /**
+     * @var FeedFetcherServiceInterface&MockObject
+     */
+    private \PHPUnit\Framework\MockObject\MockObject $fetcher;
+
+    /**
+     * @var FeedParserServiceInterface&MockObject
+     */
+    private \PHPUnit\Framework\MockObject\MockObject $parser;
+
+    private MockClock $clock;
+
+    private FetchSourceHandler $handler;
+
+    private Source $source;
+
+    protected function setUp(): void
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $this->source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+
+        $this->em = $this->createMock(EntityManagerInterface::class);
+        $this->fetcher = $this->createMock(FeedFetcherServiceInterface::class);
+        $this->parser = $this->createMock(FeedParserServiceInterface::class);
+        $this->clock = new MockClock('2026-04-04 12:00:00');
+
+        /** @var EntityRepository<Article>&MockObject $repository */
+        $repository = $this->createMock(EntityRepository::class);
+        $repository->method('findOneBy')->willReturn(null);
+        $this->em->method('getRepository')->willReturn($repository);
+        $this->em->method('find')->willReturn($this->source);
+
+        $this->handler = new FetchSourceHandler(
+            $this->em,
+            $this->fetcher,
+            $this->parser,
+            $this->clock,
+            new NullLogger(),
+        );
+    }
+
+    public function testHandlesFetchAndPersistsArticles(): void
+    {
+        $this->fetcher->method('fetch')->willReturn('<rss>...</rss>');
+        $this->parser->method('parse')->willReturn([
+            new FeedItem('Article 1', 'https://example.com/1', '<p>Content</p>', 'Content', null),
+            new FeedItem('Article 2', 'https://example.com/2', null, null, null),
+        ]);
+
+        $persisted = [];
+        $this->em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
+            $persisted[] = $entity;
+        });
+
+        ($this->handler)(new FetchSourceMessage(1));
+
+        self::assertCount(2, $persisted);
+        self::assertInstanceOf(Article::class, $persisted[0]);
+        self::assertSame('Article 1', $persisted[0]->getTitle());
+        self::assertSame(SourceHealth::Healthy, $this->source->getHealthStatus());
+    }
+
+    public function testRecordsFailureOnFetchError(): void
+    {
+        $this->fetcher->method('fetch')->willThrowException(
+            FeedFetchException::fromUrl('https://example.com/feed', 'timeout'),
+        );
+
+        ($this->handler)(new FetchSourceMessage(1));
+
+        self::assertSame(SourceHealth::Degraded, $this->source->getHealthStatus());
+        self::assertSame(1, $this->source->getErrorCount());
+    }
+
+    public function testSkipsDisabledSource(): void
+    {
+        $this->source->setEnabled(false);
+
+        $this->fetcher->expects(self::never())->method('fetch');
+
+        ($this->handler)(new FetchSourceMessage(1));
+
+        self::assertFalse($this->source->isEnabled());
+    }
+}
