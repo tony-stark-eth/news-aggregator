@@ -101,12 +101,24 @@
 - Ember container deferred to Phase 12 (monitoring)
 - ShipMonk forbidden functions configured via services override (not via `list` config param)
 
+## Session 3 — 2026-04-04
+
+### Completed
+- [x] Phase 3.1: Category entity + tests (name, slug, weight, color)
+- [x] Phase 3.2: Source entity + SourceHealth enum + FeedUrl VO + InvalidFeedUrlException + tests (health state machine: recordSuccess/recordFailure)
+- [x] Phase 3.3: Article entity + ArticleFingerprint VO + Url VO + tests (content_raw/content_text, enrichment tracking)
+- [x] Phase 3.4: User entity (UserInterface + PasswordAuthenticatedUserInterface) + UserArticleRead entity
+- [x] Phase 3.5: Migration generated and applied, schema validated
+- [x] Added pdo_pgsql to Dockerfile (was missing from dunglas template)
+- [x] Updated Doctrine mapping to domain-based structure (6 domains: Shared, Article, Source, User, Notification, Digest)
+- [x] 23 unit tests passing, all quality checks clean
+
 ### Current Status
-Phase 1 + Phase 2 complete (30 of 30 tasks). Ready for PR #1 and Phase 3 (domain entities).
+Phase 3 in progress. 5 of 8 tasks done. Remaining: PHPat architecture tests (3.6), repository integration tests (3.7), seed command (3.8).
 
 ### Blockers
 - None
 
 ### Next Steps
-- Commit all changes as PR #1
-- Phase 3: Domain entities + database migrations
+- Phase 3.6-3.8: Architecture tests, repository integration tests, seed command
+- Commit as PR #2

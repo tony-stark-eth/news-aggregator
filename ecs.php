@@ -12,6 +12,9 @@ return ECSConfig::configure()
         __DIR__ . '/tests',
     ])
     ->withRootFiles()
+    ->withSkip([
+        __DIR__ . '/config/reference.php',
+    ])
     ->withPreparedSets(
         psr12: true,
         common: true,

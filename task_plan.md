@@ -307,15 +307,15 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 2.15 Verify all tools pass on scaffolded project (zero errors)
 
 ### Phase 3: Domain Entities & Database (TDD)
-- [ ] 3.1 Write Category entity tests → implement in `Shared/Entity/Category` (name, slug, weight, color)
-- [ ] 3.2 Write Source entity tests → implement Source entity + ValueObjects (FeedUrl, SourceHealth enum: healthy/degraded/failing/disabled) + error tracking fields (error_count, last_error_message)
-- [ ] 3.3 Write Article entity tests → implement Article entity + ValueObjects (Url, ArticleFingerprint, Score):
+- [x] 3.1 Write Category entity tests → implement in `Shared/Entity/Category` (name, slug, weight, color)
+- [x] 3.2 Write Source entity tests → implement Source entity + ValueObjects (FeedUrl, SourceHealth enum: healthy/degraded/failing/disabled) + error tracking fields (error_count, last_error_message)
+- [x] 3.3 Write Article entity tests → implement Article entity + ValueObjects (Url, ArticleFingerprint, Score):
   - Store `content_raw` (original HTML from feed) and `content_text` (stripped, for search/dedup)
   - `enrichment_method` (EnrichmentMethod enum from Shared/ValueObject: Ai/RuleBased, nullable)
   - `ai_model_used` (string, nullable)
   - NO `read_at` on Article — read state is per-user
-- [ ] 3.4 Write UserArticleRead entity (user_id, article_id, read_at) — per-user read tracking
-- [ ] 3.5 Create & run migrations
+- [x] 3.4 Write UserArticleRead entity (user_id, article_id, read_at) — per-user read tracking
+- [x] 3.5 Create & run migrations
 - [ ] 3.6 Write architecture tests (PHPat): layer deps, naming conventions, interface-first enforcement
 - [ ] 3.7 Write repository integration tests
 - [ ] 3.8 Create data fixtures / seed command for default sources + categories
