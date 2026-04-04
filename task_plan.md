@@ -493,7 +493,7 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
   - If due: dispatch GenerateDigestMessage, update last_run_at
 - [x] 10.7 Create GenerateDigestMessage + GenerateDigestHandler (async via Messenger)
 - [x] 10.8 Dispatch via Symfony Notifier in GenerateDigestHandler
-- [ ] 10.9 Write integration test (deferred to E2E phase)
+- [x] 10.9 Write integration test: digest pipeline (collect → summarize → log → update lastRunAt) + skip when no articles
 - [ ] 10.10 Create seed data: "Daily Tech Digest" daily 8am, "Weekly Summary" Monday 9am
 
 ### Phase 11: Frontend — Twig + DaisyUI + TypeScript
