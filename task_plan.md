@@ -321,20 +321,20 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 3.8 Create data fixtures / seed command for default sources + categories
 
 ### Phase 4: Feed Fetching & Parsing (TDD)
-- [ ] 4.1 Install laminas/laminas-feed 2.26.x (framework-agnostic, register as Symfony service behind interface)
-- [ ] 4.2 Write FeedParserServiceInterface + implementation unit tests → implement parser:
+- [x] 4.1 Install laminas/laminas-feed 2.26.x (framework-agnostic, register as Symfony service behind interface)
+- [x] 4.2 Write FeedParserServiceInterface + implementation unit tests → implement parser:
   - Parse RSS `<description>` and `<content:encoded>` — store both raw HTML and stripped text
   - Handle encoding edge cases (UTF-8, HTML entities)
-- [ ] 4.3 Write FeedFetcherServiceInterface + implementation unit tests → implement fetcher (Symfony HttpClient)
-- [ ] 4.4 Write FetchSourceMessage + FetchSourceHandler tests → implement async handler
-- [ ] 4.5 Feed error handling:
+- [x] 4.3 Write FeedFetcherServiceInterface + implementation unit tests → implement fetcher (Symfony HttpClient)
+- [x] 4.4 Write FetchSourceMessage + FetchSourceHandler tests → implement async handler
+- [x] 4.5 Feed error handling:
   - Increment Source.error_count on fetch failure (HTTP error, malformed XML, timeout)
   - Store last_error_message on Source entity
   - Update Source.health_status (healthy → degraded after 2 failures → failing after 4 → auto-disable after 5)
   - Reset error_count on successful fetch
   - Log all errors with source name and URL
 - [ ] 4.6 Write integration test: fetch RSS feed (using recorded fixture via Symfony HttpClient MockResponse) → parse → persist articles with content. Add separate `make smoke` target that hits real feeds (optional, not in CI)
-- [ ] 4.7 Configure Messenger transport (doctrine, retry strategy: max 3, exponential backoff)
+- [x] 4.7 Configure Messenger transport (doctrine, retry strategy: max 3, exponential backoff) — already done in Phase 2
 
 ### Phase 5: Deduplication & Rule-Based Enrichment (TDD)
 > **Note**: Rule-based services are implemented here (before AI in Phase 6) so the system is fully functional without any external API dependency. Phase 6 layers AI on top as an enhancement.

@@ -128,3 +128,14 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 
 ### Next Steps
 - Phase 4: Feed fetching + parsing
+
+## Session 4 — 2026-04-04
+
+### Completed
+- [x] Phase 4.2: FeedParserServiceInterface, FeedItem DTO, LaminasFeedParserService (laminas/laminas-feed), unit test (RSS 2.0, Atom, skip missing title/link, HTML entity decoding)
+- [x] Phase 4.3: FeedFetcherServiceInterface + HttpFeedFetcherService (Symfony HttpClient, 15s timeout, RSS Accept header) + FeedFetchException + unit tests (success, HTTP 4xx, network error)
+- [x] Phase 4.4: FetchSourceMessage + FetchSourceHandler (async handler: fetch → parse → persist articles → update source health) + unit tests (persist articles, failure recording, skip disabled)
+  - FetchSourceHandler placed in App\Article\MessageHandler (not App\Source) to respect PHPat architecture rule: App\Source must not depend on App\Article
+  - FeedFetchException.fromUrl() accepts optional $previous throwable for proper exception chaining
+  - Test uses createMock() with @var MockObject intersection types (PHPStan-compatible)
+  - 42 tests, 126 assertions — all passing
