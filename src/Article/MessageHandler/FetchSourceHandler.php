@@ -6,6 +6,7 @@ namespace App\Article\MessageHandler;
 
 use App\Article\Entity\Article;
 use App\Article\Service\DeduplicationServiceInterface;
+use App\Article\Service\ScoringServiceInterface;
 use App\Article\ValueObject\ArticleFingerprint;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
@@ -32,6 +33,7 @@ final readonly class FetchSourceHandler
         private DeduplicationServiceInterface $deduplication,
         private CategorizationServiceInterface $categorization,
         private SummarizationServiceInterface $summarization,
+        private ScoringServiceInterface $scoring,
         private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
@@ -121,6 +123,8 @@ final readonly class FetchSourceHandler
                 $article->setEnrichmentMethod(EnrichmentMethod::RuleBased);
             }
         }
+
+        $article->setScore($this->scoring->score($article));
 
         return $article;
     }

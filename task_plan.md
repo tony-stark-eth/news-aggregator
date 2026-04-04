@@ -394,16 +394,15 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 6.12 EnrichmentMethod::RuleBased set on articles (AI method tracking ready in Article entity)
 
 ### Phase 7: Scoring & Ranking (TDD)
-- [ ] 7.1 Write ScoringServiceInterface + implementation unit tests:
-  - Category weight scoring
-  - Recency decay scoring
-  - Source reliability weight
-  - Multi-source coverage bonus
-  - AI confidence boost
-  - Combined score calculation
-- [ ] 7.2 Implement ScoringService
-- [ ] 7.3 Integrate scoring into article persistence (score on insert + periodic rescore)
-- [ ] 7.4 Write rescore command/message for bulk updates
+- [x] 7.1 Write ScoringServiceInterface + implementation unit tests:
+  - Category weight scoring (0.3 weight, normalized to max 10)
+  - Recency decay scoring (0.4 weight, 12h half-life, 7d max)
+  - Source reliability weight (0.2 weight, health-based)
+  - AI enrichment boost (0.1 weight, AI > RuleBased > none)
+  - Combined score 0.0-1.0
+- [x] 7.2 Implement ScoringService
+- [x] 7.3 Integrate scoring into article persistence (FetchSourceHandler calls score on buildArticle)
+- [x] 7.4 Write rescore command/message for bulk updates (app:rescore-articles + RescoreArticlesMessage/Handler)
 
 ### Phase 8: Scheduler & Background Jobs
 - [ ] 8.1 Create FetchScheduleProvider (Symfony Scheduler)

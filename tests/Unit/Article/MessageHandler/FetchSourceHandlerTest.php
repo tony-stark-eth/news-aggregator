@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Article\MessageHandler;
 use App\Article\Entity\Article;
 use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Service\DeduplicationServiceInterface;
+use App\Article\Service\ScoringServiceInterface;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Shared\Entity\Category;
@@ -82,6 +83,7 @@ final class FetchSourceHandlerTest extends TestCase
             $dedup,
             $categorization,
             $summarization,
+            $this->createStub(ScoringServiceInterface::class),
             $this->clock,
             new NullLogger(),
         );
