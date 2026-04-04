@@ -154,3 +154,21 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 
 ### Next Steps
 - Phase 5.7: Integrate rule-based services into FetchSourceHandler pipeline
+
+## Session 6 — 2026-04-04
+
+### Completed
+- [x] Phase 10.1: DigestConfig entity + unit test (name, schedule, categories, articleLimit, user FK, enabled, lastRunAt, createdAt, updatedAt)
+- [x] Phase 10.2: DigestLog entity + unit test (digestConfig FK, generatedAt, articleCount, content, deliverySuccess, transport)
+- [x] Phase 10.3: Doctrine migration generated and applied (digest_config + digest_log tables, 6 SQL queries)
+- [x] Phase 10.4: DigestGeneratorService — queries top-scored articles since lastRunAt, filtered by category slugs, grouped by category
+- [x] Phase 10.5: DigestSummaryService — AI via PlatformInterface (openrouter/auto) with rule-based fallback; wired in services.php
+- [x] Phase 10.6: ProcessDigestsCommand (app:process-digests) — checks enabled configs against cron schedule via CronExpressionTrigger, dispatches GenerateDigestMessage when due
+- [x] Phase 10.7: GenerateDigestMessage + GenerateDigestHandler — async Messenger handler, collects articles, generates summary, sends Notifier notification, persists DigestLog, updates lastRunAt
+- [x] Deleted src/Digest/Entity/.gitkeep
+- [x] ECS, PHPStan, Rector all pass (fixed: null-safe comparison for getNextRunDate(), FlipTypeControlToUseExclusiveTypeRector applied)
+
+### Key Findings
+- CronExpressionTrigger::fromSpec() + getNextRunDate() works correctly (symfony/scheduler v8.0.8, dragonmantank/cron-expression v3.x)
+- getNextRunDate() returns ?DateTimeImmutable — null check required before comparison
+- Integration test failures (ArticleRepositoryTest) are pre-existing schema drift (fetch_interval_minutes column), not caused by Phase 10

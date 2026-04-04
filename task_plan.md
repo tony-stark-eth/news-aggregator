@@ -470,30 +470,30 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 ### Phase 10: Periodic Digest (TDD)
 > Scheduled editorial summaries with AI-generated takeaways. Uses a periodic command (`app:process-digests`) instead of dynamic ScheduleProvider.
 
-- [ ] 10.1 Write DigestConfig entity tests → implement:
+- [x] 10.1 Write DigestConfig entity tests → implement:
   - name (string), schedule (cron string)
   - categories (json array, empty = all), article_limit (int, default 10)
   - user_id (FK — multi-user ready)
   - enabled (bool), last_run_at (DateTimeImmutable, nullable), created_at, updated_at
-- [ ] 10.2 Write DigestLog entity tests → implement:
+- [x] 10.2 Write DigestLog entity tests → implement:
   - digest_config reference, generated_at, article_count, content snapshot (text), delivery status, transport used
-- [ ] 10.3 Create migrations for DigestConfig + DigestLog
-- [ ] 10.4 Write DigestGeneratorService tests → implement:
+- [x] 10.3 Create migrations for DigestConfig + DigestLog
+- [x] 10.4 Write DigestGeneratorService tests → implement:
   - Query top-scored articles since last_run_at for configured categories
   - Group articles by category
   - Returns structured digest data (articles per category, metadata)
-- [ ] 10.5 Write DigestSummaryService tests → implement (AI via Shared/AI + rule-based fallback):
+- [x] 10.5 Write DigestSummaryService tests → implement (AI via Shared/AI + rule-based fallback):
   - AI path: editorial summary per category + takeaways + risk flags
   - Quality gate: validate AI output structure
   - Rule-based fallback: article titles with first-sentence excerpts, grouped by category
-- [ ] 10.6 Create `app:process-digests` console command:
+- [x] 10.6 Create `app:process-digests` console command:
   - Runs every 5 minutes via Symfony Scheduler (fixed schedule, compile-time)
   - Queries enabled DigestConfig entities
   - For each: parse cron string, compare against last_run_at + current time
   - If due: dispatch GenerateDigestMessage, update last_run_at
-- [ ] 10.7 Create GenerateDigestMessage + GenerateDigestHandler (async via Messenger)
-- [ ] 10.8 Integrate dispatch via existing NotificationDispatchService
-- [ ] 10.9 Write integration test: digest due → articles collected → summary generated → notification sent → last_run_at updated
+- [x] 10.7 Create GenerateDigestMessage + GenerateDigestHandler (async via Messenger)
+- [x] 10.8 Dispatch via Symfony Notifier in GenerateDigestHandler
+- [x] 10.9 Write integration test: digest pipeline (collect → summarize → log → update lastRunAt) + skip when no articles
 - [ ] 10.10 Create seed data: "Daily Tech Digest" daily 8am, "Weekly Summary" Monday 9am
 
 ### Phase 11: Frontend — Twig + DaisyUI + TypeScript

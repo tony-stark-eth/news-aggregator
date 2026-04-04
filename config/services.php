@@ -68,4 +68,8 @@ return static function (ContainerConfigurator $container): void {
     // Wire OpenRouter platform for AI alert evaluation
     $services->set(\App\Notification\Service\AiAlertEvaluationService::class)
         ->arg('$platform', service('ai.platform.openrouter'));
+
+    // Wire OpenRouter platform for digest summary generation
+    $services->set(\App\Digest\Service\DigestSummaryService::class)
+        ->arg('$platform', service('ai.platform.openrouter'));
 };
