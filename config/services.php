@@ -73,6 +73,10 @@ return static function (ContainerConfigurator $container): void {
     $services->set(\App\Digest\Service\DigestSummaryService::class)
         ->arg('$platform', service('ai.platform.openrouter'));
 
+    // Wire OpenRouter platform for smoke test command
+    $services->set(\App\Shared\AI\Command\AiSmokeTestCommand::class)
+        ->arg('$platform', service('ai.platform.openrouter'));
+
     // Wire env vars for SettingsController
     $services->set(\App\Shared\Controller\SettingsController::class)
         ->arg('$openrouterApiKey', '%env(default::OPENROUTER_API_KEY)%')

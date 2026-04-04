@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Article\Service;
 
 use Psr\Log\LoggerInterface;
+use Symfony\AI\Platform\Message\Message;
+use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\PlatformInterface;
 
 /**
@@ -45,7 +47,8 @@ PROMPT;
     {
         try {
             $prompt = sprintf(self::PROMPT_TEMPLATE, $title1, $title2);
-            $result = $this->platform->invoke(self::MODEL, $prompt);
+            $input = new MessageBag(Message::ofUser($prompt));
+            $result = $this->platform->invoke(self::MODEL, $input);
             $answer = mb_strtolower(trim($result->asText()));
 
             return str_starts_with($answer, 'yes');

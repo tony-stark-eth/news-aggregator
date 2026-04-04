@@ -22,8 +22,12 @@ return static function (ContainerConfigurator $container): void {
                 'scheduler_fetch' => 'symfony://scheduler_fetch',
                 // 'failed' => ['dsn' => 'doctrine://default?queue_name=failed'],
             ],
-            // Route messages to transports:
-            // 'routing' => ['App\Message\YourMessage' => 'async'],
+            'routing' => [
+                'App\Source\Message\FetchSourceMessage' => 'async',
+                'App\Notification\Message\SendNotificationMessage' => 'async',
+                'App\Digest\Message\GenerateDigestMessage' => 'async',
+                'App\Article\Message\RescoreArticlesMessage' => 'async',
+            ],
         ],
     ]);
 };

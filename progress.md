@@ -183,3 +183,19 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 - [x] Stub controllers: AlertRuleController, NotificationLogController, DigestController, SearchController, SettingsController, AiStatsController, LoginController, ReadStateController
 - [x] Stub templates: alert/index, notification/index, digest/index, search/index, settings/index, stats/ai, security/login
 - [x] LoginController includes logout route (firewall-intercepted); ReadStateController handles POST /articles/{id}/read with UserArticleRead persistence
+
+## Session 8 — 2026-04-04
+
+### Completed
+- [x] Updated enrichment service return types from `?string` to `EnrichmentResult`:
+  - `RuleBasedCategorizationService::categorize()` — wraps result in `EnrichmentResult(value, EnrichmentMethod::RuleBased)`
+  - `RuleBasedSummarizationService::summarize()` — wraps result in `EnrichmentResult(value, EnrichmentMethod::RuleBased)`
+  - `AiCategorizationService::categorize()` — returns `EnrichmentResult(slug, EnrichmentMethod::Ai, MODEL)` on success; delegates to rule-based fallback on failure
+  - `AiSummarizationService::summarize()` — returns `EnrichmentResult(summary, EnrichmentMethod::Ai, MODEL)` on success; delegates to rule-based fallback on failure
+- [x] Updated `FetchSourceHandler::buildArticle()` to use `EnrichmentResult`:
+  - `applyCategory()` extracted method — uses `$catResult->value`
+  - `applyEnrichment()` extracted method — sets `EnrichmentMethod` from actual AI/RuleBased result, sets `aiModelUsed` from AI result
+  - `processItems()` + `persistItem()` extracted to reduce `__invoke` complexity under 8
+- [x] Updated all unit tests for enrichment services to assert on `$result->value` and `$result->method`
+- [x] All quality tools pass: ECS, PHPStan, Rector
+- [x] All 105 tests pass

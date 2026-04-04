@@ -10,6 +10,7 @@ use App\Article\Service\ScoringServiceInterface;
 use App\Article\ValueObject\ArticleFingerprint;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
+use App\Enrichment\ValueObject\EnrichmentResult;
 use App\Notification\Message\SendNotificationMessage;
 use App\Notification\Service\ArticleMatcherServiceInterface;
 use App\Shared\Entity\Category;
@@ -55,36 +56,19 @@ final readonly class FetchSourceHandler
             $feedContent = $this->feedFetcher->fetch($source->getFeedUrl());
             $items = $this->feedParser->parse($feedContent);
             $now = $this->clock->now();
-            $persisted = 0;
-            /** @var list<Article> $newArticles */
-            $newArticles = [];
 
-            foreach ($items as $item) {
-                $fingerprint = $item->contentText !== null
-                    ? ArticleFingerprint::fromContent($item->contentText)->value
-                    : null;
+            [$persisted, $newArticles, $source] = $this->processItems($items, $source, $message->sourceId, $now);
 
-                if ($this->deduplication->isDuplicate($item->url, $item->title, $fingerprint)) {
-                    continue;
-                }
-
-                $article = $this->buildArticle($item, $source, $now, $fingerprint);
-                $this->entityManager->persist($article);
-                $newArticles[] = $article;
-                $persisted++;
+            if ($source !== null) {
+                $source->recordSuccess($now);
+                $this->entityManager->flush();
+                $this->dispatchAlerts($newArticles);
+                $this->logger->info('Fetched {source}: {count} new articles from {total} items', [
+                    'source' => $source->getName(),
+                    'count' => $persisted,
+                    'total' => \count($items),
+                ]);
             }
-
-            $source->recordSuccess($now);
-            $this->entityManager->flush();
-
-            // Match new articles against alert rules (after flush so articles have IDs)
-            $this->dispatchAlerts($newArticles);
-
-            $this->logger->info('Fetched {source}: {count} new articles from {total} items', [
-                'source' => $source->getName(),
-                'count' => $persisted,
-                'total' => \count($items),
-            ]);
         } catch (FeedFetchException $e) {
             $source->recordFailure($e->getMessage());
             $this->entityManager->flush();
@@ -93,6 +77,77 @@ final readonly class FetchSourceHandler
                 'source' => $source->getName(),
                 'error' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * @param list<FeedItem> $items
+     * @return array{int, list<Article>, Source|null}
+     */
+    private function processItems(array $items, Source $source, int $sourceId, \DateTimeImmutable $now): array
+    {
+        $persisted = 0;
+        /** @var list<Article> $newArticles */
+        $newArticles = [];
+
+        foreach ($items as $item) {
+            $fingerprint = $item->contentText !== null
+                ? ArticleFingerprint::fromContent($item->contentText)->value
+                : null;
+
+            if ($this->deduplication->isDuplicate($item->url, $item->title, $fingerprint)) {
+                continue;
+            }
+
+            $result = $this->persistItem($item, $source, $sourceId, $now, $fingerprint);
+            if ($result === null) {
+                return [$persisted, $newArticles, null];
+            }
+
+            [$article, $source] = $result;
+            if ($article !== null) {
+                $newArticles[] = $article;
+                $persisted++;
+            }
+        }
+
+        return [$persisted, $newArticles, $source];
+    }
+
+    /**
+     * Attempts to build and persist one article. Returns null if the EM is
+     * irrecoverably broken and the loop must abort, or [Article|null, Source]
+     * otherwise (Article is null when the item was skipped due to an error).
+     *
+     * @return array{Article|null, Source}|null
+     */
+    private function persistItem(
+        FeedItem $item,
+        Source $source,
+        int $sourceId,
+        \DateTimeImmutable $now,
+        ?string $fingerprint,
+    ): ?array {
+        try {
+            $article = $this->buildArticle($item, $source, $now, $fingerprint);
+            $this->entityManager->persist($article);
+            $this->entityManager->flush();
+
+            return [$article, $source];
+        } catch (\Throwable $e) {
+            $this->logger->debug('Skipped article "{url}": {error}', [
+                'url' => $item->url,
+                'error' => $e->getMessage(),
+            ]);
+
+            if (! $this->entityManager->isOpen()) {
+                return null;
+            }
+
+            $this->entityManager->clear();
+            $source = $this->entityManager->find(Source::class, $sourceId);
+
+            return $source !== null ? [null, $source] : null;
         }
     }
 
@@ -108,36 +163,50 @@ final readonly class FetchSourceHandler
         $article->setPublishedAt($item->publishedAt);
         $article->setFingerprint($fingerprint);
 
-        // Rule-based categorization
-        $categorySlug = $this->categorization->categorize($item->title, $item->contentText);
-        if ($categorySlug !== null) {
+        $catResult = $this->categorization->categorize($item->title, $item->contentText);
+        $this->applyCategory($article, $catResult, $source);
+
+        if ($item->contentText !== null) {
+            $sumResult = $this->summarization->summarize($item->contentText);
+            $this->applyEnrichment($article, $catResult, $sumResult);
+        }
+
+        $article->setScore($this->scoring->score($article));
+
+        return $article;
+    }
+
+    private function applyCategory(Article $article, EnrichmentResult $catResult, Source $source): void
+    {
+        if ($catResult->value !== null) {
             $category = $this->entityManager
                 ->getRepository(Category::class)
                 ->findOneBy([
-                    'slug' => $categorySlug,
+                    'slug' => $catResult->value,
                 ]);
             if ($category !== null) {
                 $article->setCategory($category);
             }
         }
 
-        // Fall back to source category if rule-based didn't match
-        if (! $article->getCategory() instanceof \App\Shared\Entity\Category) {
+        if (! $article->getCategory() instanceof Category) {
             $article->setCategory($source->getCategory());
         }
+    }
 
-        // Rule-based summarization
-        if ($item->contentText !== null) {
-            $summary = $this->summarization->summarize($item->contentText);
-            if ($summary !== null) {
-                $article->setSummary($summary);
-                $article->setEnrichmentMethod(EnrichmentMethod::RuleBased);
-            }
+    private function applyEnrichment(Article $article, EnrichmentResult $catResult, EnrichmentResult $sumResult): void
+    {
+        if ($sumResult->value === null) {
+            return;
         }
 
-        $article->setScore($this->scoring->score($article));
+        $article->setSummary($sumResult->value);
 
-        return $article;
+        $aiResult = $sumResult->method === EnrichmentMethod::Ai ? $sumResult : null;
+        $aiResult ??= $catResult->method === EnrichmentMethod::Ai ? $catResult : null;
+
+        $article->setEnrichmentMethod($aiResult instanceof \App\Enrichment\ValueObject\EnrichmentResult ? EnrichmentMethod::Ai : EnrichmentMethod::RuleBased);
+        $article->setAiModelUsed($aiResult?->modelUsed);
     }
 
     /**

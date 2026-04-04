@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Enrichment\Service;
 use App\Enrichment\Service\AiCategorizationService;
 use App\Enrichment\Service\AiQualityGateService;
 use App\Enrichment\Service\RuleBasedCategorizationService;
+use App\Shared\ValueObject\EnrichmentMethod;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -33,7 +34,9 @@ final class AiCategorizationServiceTest extends TestCase
 
         $result = $service->categorize('Google AI announcement', 'New AI model for developers');
 
-        self::assertSame('tech', $result);
+        self::assertSame('tech', $result->value);
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
+        self::assertSame('openrouter/auto', $result->modelUsed);
     }
 
     public function testFallsBackToRuleBasedOnFailure(): void
@@ -54,7 +57,8 @@ final class AiCategorizationServiceTest extends TestCase
             'The government coalition passed the new policy with opposition support.',
         );
 
-        self::assertSame('politics', $result);
+        self::assertSame('politics', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     public function testFallsBackOnInvalidAiResponse(): void
@@ -75,7 +79,8 @@ final class AiCategorizationServiceTest extends TestCase
             'The research team published their experiment results.',
         );
 
-        self::assertSame('science', $result);
+        self::assertSame('science', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     private function makeDeferredResult(string $text): DeferredResult
