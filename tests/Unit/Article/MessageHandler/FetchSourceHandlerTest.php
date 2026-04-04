@@ -10,6 +10,7 @@ use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\Service\ScoringServiceInterface;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
+use App\Enrichment\ValueObject\EnrichmentResult;
 use App\Notification\Service\ArticleMatcherServiceInterface;
 use App\Shared\Entity\Category;
 use App\Shared\ValueObject\EnrichmentMethod;
@@ -67,10 +68,10 @@ final class FetchSourceHandlerTest extends TestCase
         $dedup->method('isDuplicate')->willReturn(false);
 
         $categorization = $this->createStub(CategorizationServiceInterface::class);
-        $categorization->method('categorize')->willReturn(null);
+        $categorization->method('categorize')->willReturn(new EnrichmentResult(null, EnrichmentMethod::RuleBased));
 
         $summarization = $this->createStub(SummarizationServiceInterface::class);
-        $summarization->method('summarize')->willReturn('A test summary.');
+        $summarization->method('summarize')->willReturn(new EnrichmentResult('A test summary.', EnrichmentMethod::RuleBased));
 
         /** @var EntityRepository<Article>&MockObject $repository */
         $repository = $this->createMock(EntityRepository::class);

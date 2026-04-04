@@ -131,7 +131,7 @@ final class ModelDiscoveryService
             return $item->get();
         }
 
-        // No cache, return empty — callers should fall back to openrouter/auto
+        // No cache, return empty — callers should fall back to openrouter/free
         return [];
     }
 

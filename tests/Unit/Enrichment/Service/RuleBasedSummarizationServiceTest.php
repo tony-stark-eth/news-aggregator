@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Enrichment\Service;
 
 use App\Enrichment\Service\RuleBasedSummarizationService;
+use App\Shared\ValueObject\EnrichmentMethod;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -24,14 +25,16 @@ final class RuleBasedSummarizationServiceTest extends TestCase
 
         $result = $this->service->summarize($content);
 
-        self::assertSame('This is the first sentence of the article. This is the second sentence with more detail.', $result);
+        self::assertSame('This is the first sentence of the article. This is the second sentence with more detail.', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
-    public function testReturnsNullForShortContent(): void
+    public function testReturnsNullValueForShortContent(): void
     {
         $result = $this->service->summarize('Too short.');
 
-        self::assertNull($result);
+        self::assertNull($result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     public function testHandlesSingleSentence(): void
@@ -40,7 +43,8 @@ final class RuleBasedSummarizationServiceTest extends TestCase
 
         $result = $this->service->summarize($content);
 
-        self::assertSame($content, $result);
+        self::assertSame($content, $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     public function testTruncatesLongSummary(): void
@@ -50,16 +54,18 @@ final class RuleBasedSummarizationServiceTest extends TestCase
 
         $result = $this->service->summarize($content);
 
-        self::assertNotNull($result);
-        self::assertLessThanOrEqual(500, mb_strlen($result));
-        self::assertStringEndsWith('...', $result);
+        self::assertNotNull($result->value);
+        self::assertLessThanOrEqual(500, mb_strlen($result->value));
+        self::assertStringEndsWith('...', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     public function testHandlesEmptyContent(): void
     {
         $result = $this->service->summarize('');
 
-        self::assertNull($result);
+        self::assertNull($result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     public function testFiltersShortFragments(): void
@@ -69,6 +75,7 @@ final class RuleBasedSummarizationServiceTest extends TestCase
         $result = $this->service->summarize($content);
 
         // "Dr." alone is too short, so it should be filtered and the real sentences used
-        self::assertNotNull($result);
+        self::assertNotNull($result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 }

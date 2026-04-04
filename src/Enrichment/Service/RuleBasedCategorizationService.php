@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Enrichment\Service;
 
+use App\Enrichment\ValueObject\EnrichmentResult;
+use App\Shared\ValueObject\EnrichmentMethod;
+
 final readonly class RuleBasedCategorizationService implements CategorizationServiceInterface
 {
     /**
@@ -46,7 +49,7 @@ final readonly class RuleBasedCategorizationService implements CategorizationSer
         ],
     ];
 
-    public function categorize(string $title, ?string $contentText): ?string
+    public function categorize(string $title, ?string $contentText): EnrichmentResult
     {
         $text = mb_strtolower($title . ' ' . ($contentText ?? ''));
 
@@ -69,9 +72,9 @@ final readonly class RuleBasedCategorizationService implements CategorizationSer
 
         // Require at least 2 keyword matches to classify
         if ($bestScore < 2) {
-            return null;
+            return new EnrichmentResult(null, EnrichmentMethod::RuleBased);
         }
 
-        return $bestCategory;
+        return new EnrichmentResult($bestCategory, EnrichmentMethod::RuleBased);
     }
 }

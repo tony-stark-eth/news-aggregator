@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Enrichment\Service;
 
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\RuleBasedSummarizationService;
+use App\Shared\ValueObject\EnrichmentMethod;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -33,7 +34,9 @@ final class AiSummarizationServiceTest extends TestCase
 
         $result = $service->summarize('Long article content about government economic measures and inflation...');
 
-        self::assertSame($aiSummary, $result);
+        self::assertSame($aiSummary, $result->value);
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
+        self::assertSame('openrouter/free', $result->modelUsed);
     }
 
     public function testFallsBackToRuleBasedOnFailure(): void
@@ -51,7 +54,8 @@ final class AiSummarizationServiceTest extends TestCase
         $result = $service->summarize($content);
 
         // Should get rule-based: first 2 sentences
-        self::assertStringContainsString('first sentence', $result ?? '');
+        self::assertStringContainsString('first sentence', $result->value ?? '');
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     public function testFallsBackOnTooShortAiResponse(): void
@@ -69,7 +73,8 @@ final class AiSummarizationServiceTest extends TestCase
         $result = $service->summarize($content);
 
         // AI response too short, should fall back
-        self::assertNotSame('Short.', $result);
+        self::assertNotSame('Short.', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 
     private function makeDeferredResult(string $text): DeferredResult

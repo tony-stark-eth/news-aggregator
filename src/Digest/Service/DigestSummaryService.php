@@ -6,11 +6,13 @@ namespace App\Digest\Service;
 
 use App\Article\Entity\Article;
 use Psr\Log\LoggerInterface;
+use Symfony\AI\Platform\Message\Message;
+use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\PlatformInterface;
 
 final readonly class DigestSummaryService
 {
-    private const string MODEL = 'openrouter/auto';
+    private const string MODEL = 'openrouter/free';
 
     private const string PROMPT_TEMPLATE = <<<'PROMPT'
 Generate a concise editorial digest for the following news articles grouped by category.
@@ -37,7 +39,8 @@ PROMPT;
 
         try {
             $prompt = sprintf(self::PROMPT_TEMPLATE, $articleText);
-            $result = $this->platform->invoke(self::MODEL, $prompt);
+            $input = new MessageBag(Message::ofUser($prompt));
+            $result = $this->platform->invoke(self::MODEL, $input);
             $content = trim($result->asText());
 
             if (mb_strlen($content) >= 50) {

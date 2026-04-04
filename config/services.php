@@ -41,16 +41,50 @@ return static function (ContainerConfigurator $container): void {
         \App\Article\Service\AiDeduplicationService::class,
     );
 
-    // Wire OpenRouter platform for AI services
+    // Register openrouter/free router in the model catalog (not included by default)
+    $services->set('ai.platform.model_catalog.openrouter', \Symfony\AI\Platform\Bridge\OpenRouter\ModelCatalog::class)
+        ->arg('$additionalModels', [
+            'openrouter/free' => [
+                'class' => \Symfony\AI\Platform\Bridge\Generic\CompletionsModel::class,
+                'capabilities' => [
+                    \Symfony\AI\Platform\Capability::INPUT_TEXT,
+                    \Symfony\AI\Platform\Capability::OUTPUT_TEXT,
+                    \Symfony\AI\Platform\Capability::OUTPUT_STREAMING,
+                ],
+            ],
+        ]);
+
+    // Model failover platform: openrouter/free → specific :free models → exception
+    // Wraps the OpenRouter platform with model-level failover (complements FailoverPlatform's platform-level failover)
+    $services->set('ai.platform.openrouter.failover', \App\Shared\AI\Platform\ModelFailoverPlatform::class)
+        ->arg('$innerPlatform', service('ai.platform.openrouter'))
+        ->arg('$fallbackModels', [
+            'minimax/minimax-m2.5:free',
+            'z-ai/glm-4.5-air:free',
+            'openai/gpt-oss-120b:free',
+            'qwen/qwen3.6-plus:free',
+            'nvidia/nemotron-3-super-120b-a12b:free',
+        ]);
+
+    // All AI services use the failover-wrapped platform
     $services->set(\App\Enrichment\Service\AiCategorizationService::class)
-        ->arg('$platform', service('ai.platform.openrouter'));
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(\App\Enrichment\Service\AiSummarizationService::class)
-        ->arg('$platform', service('ai.platform.openrouter'));
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(\App\Article\Service\AiDeduplicationService::class)
         ->arg('$ruleBasedFallback', service(\App\Article\Service\DeduplicationService::class))
-        ->arg('$platform', service('ai.platform.openrouter'));
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    $services->set(\App\Notification\Service\AiAlertEvaluationService::class)
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    $services->set(\App\Digest\Service\DigestSummaryService::class)
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    $services->set(\App\Shared\AI\Command\AiSmokeTestCommand::class)
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     // Wire OPENROUTER_BLOCKED_MODELS env var for ModelDiscoveryService
     $services->set(\App\Shared\AI\Service\ModelDiscoveryService::class)
@@ -64,14 +98,6 @@ return static function (ContainerConfigurator $container): void {
     // Wire default fetch interval for FetchScheduleProvider
     $services->set(\App\Source\Scheduler\FetchScheduleProvider::class)
         ->arg('$defaultIntervalMinutes', '%env(int:FETCH_DEFAULT_INTERVAL_MINUTES)%');
-
-    // Wire OpenRouter platform for AI alert evaluation
-    $services->set(\App\Notification\Service\AiAlertEvaluationService::class)
-        ->arg('$platform', service('ai.platform.openrouter'));
-
-    // Wire OpenRouter platform for digest summary generation
-    $services->set(\App\Digest\Service\DigestSummaryService::class)
-        ->arg('$platform', service('ai.platform.openrouter'));
 
     // Wire env vars for SettingsController
     $services->set(\App\Shared\Controller\SettingsController::class)

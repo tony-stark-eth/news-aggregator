@@ -276,6 +276,23 @@ Occupied: 21, 22, 53, 80, 443, 631, 1883, 3000, 3389, 4000, 4431, 4444, 5173, 54
 | symfony/panther | latest | E2E browser tests |
 | ember | 1.0.1 | gh releases |
 
+### Symfony AI Platform API (2026-04-04)
+- `Platform::invoke(model, input)` requires `MessageBag` as input, NOT raw string
+- Correct: `$platform->invoke('openrouter/auto', new MessageBag(Message::ofUser($prompt)))`
+- Incorrect: `$platform->invoke('openrouter/auto', $prompt)` → "Payload must be an array"
+- `->asText()` on the DeferredResult to get the response string
+- Model `openrouter/auto` works and routes to free models (Gemini via BYOK)
+- Rate: ~0.5-1s per call, 20 req/min free tier limit
+- Smoke test verified: 127/127 articles AI-enriched with fresh cache
+
+### AI Enrichment Performance (2026-04-04)
+- **100% AI enrichment rate** when OpenRouter is available and cache is fresh
+- Per-article: 2 AI calls (categorize + summarize) × ~0.5-1s = ~1-2s per article
+- Per-source (~15 articles): ~15-30s total
+- 16 sources sequentially via Messenger: ~4-8 minutes total
+- Free model routing confirmed: `openrouter/auto` → no credits consumed
+- Fallback to rule-based is seamless when AI fails (rate limits, timeouts)
+
 ### CI/CD & Maintenance Strategy (2026-04-04)
 - **Docker-based CI**: All GitHub Actions jobs run inside Docker Compose (same containers as local dev). No "works on CI but not locally" drift.
 - **Parallelized jobs**: Static analysis (ECS, PHPStan, Rector) run in parallel — no DB needed, independent. Tests run sequentially after (need DB).

@@ -19,6 +19,7 @@
         "symfony/asset-mapper": "8.0.*",
         "symfony/clock": "8.0.*",
         "symfony/console": "8.0.*",
+        "symfony/doctrine-messenger": "8.0.*",
         "symfony/dotenv": "8.0.*",
         "symfony/flex": "^2",
         "symfony/form": "8.0.*",

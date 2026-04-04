@@ -366,16 +366,19 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 6.1 Install symfony/ai-bundle 0.6.x + symfony/ai-open-router-platform + symfony/ai-failover-platform
 - [x] 6.2 Configure OpenRouter via dedicated platform bridge (PHP config):
   - API key via `%env(OPENROUTER_API_KEY)%`
-  - Model: `openrouter/auto` (auto-routes to best available model)
+  - Primary model: `openrouter/free` (auto-routes to best available free model, zero cost)
+  - Registered openrouter/free in model catalog via additionalModels (not in vendor catalog by default)
 - [x] 6.3 Write ModelDiscoveryService tests → implement (in `Shared/AI/Service/`):
   - Query `GET /api/v1/models` (public, no auth needed)
   - Filter: free pricing, context_length >= 8192
   - Cache results (TTL: 1 hour) via Symfony Cache
   - Circuit breaker: 3 consecutive failures → stop retrying for 24h
   - Filter out models in `OPENROUTER_BLOCKED_MODELS` env var
-- [x] 6.4 Configure FailoverPlatform chain via ai-failover-platform bundle:
-  - Platform chain: openrouter → failover
-  - Rate limiter: sliding window, 20 req/min
+- [x] 6.4 Configure model failover chain:
+  - `ModelFailoverPlatform` (PlatformInterface decorator) — model-level failover on single provider
+  - Chain: openrouter/free → minimax-m2.5:free → glm-4.5-air:free → gpt-oss-120b:free → qwen3.6-plus:free → nemotron-3-super:free
+  - Eager evaluation of DeferredResult to catch rate limit errors
+  - FailoverPlatform (bundle) for platform-level failover with rate limiter
   - Rule-based fallback handled in AI service decorators
 - [x] 6.5 Write AiQualityGateService tests → implement (in `Enrichment/Service/`):
   - Summary heuristics: reject if < 20 chars, > 500 chars, or title-repeat detection
@@ -629,6 +632,15 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [ ] 13.12 Final README polish: badges (CI status, license, PHP version), screenshots, architecture diagram preview, quickstart guide
 - [ ] 13.13 Update CHANGELOG.md with initial release notes
 
+### Phase 14: ModelFailoverPlatform Extraction to Symfony AI
+> Analyse and plan extraction of `ModelFailoverPlatform` as a contribution to `symfony/ai-platform`.
+
+- [ ] 14.1 Analyse gap: Symfony AI's `FailoverPlatform` chains platforms (same model), but there's no native support for model-level failover on a single platform. Document the use case (single provider, multiple free models).
+- [ ] 14.2 Research existing Symfony AI issues/PRs for model failover — check if someone already proposed this or if there's a design reason it doesn't exist.
+- [ ] 14.3 Design the contribution: should it be a new component (`ModelFailoverPlatform`), an extension to `FailoverPlatform`, or a new option on `Platform::invoke()`? Consider backward compatibility and the existing `FailoverPlatform` contract.
+- [ ] 14.4 Write RFC/proposal for symfony/ai: describe the problem, our `PlatformInterface` decorator approach, configuration via bundle config, and how it complements `FailoverPlatform`.
+- [ ] 14.5 Extract, clean up, add tests, and submit PR to `symfony/ai`.
+
 ---
 
 ## Resolved Questions
@@ -649,4 +661,14 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 
 ## Error Log
 
-_(Track errors and blockers here during implementation)_
+| # | Date | Phase | Error | Root Cause | Resolution |
+|---|------|-------|-------|------------|------------|
+| E1 | 2026-04-04 | 6 | `Payload must be an array` when calling AI platform | `Platform::invoke()` requires `MessageBag(Message::ofUser(...))`, not raw string. Symfony AI docs were not consulted before implementation. | Fixed all 5 AI services to use MessageBag. Added `app:ai-smoke-test` command for quick verification. |
+| E2 | 2026-04-04 | 11 | `app.request.get()` in Twig templates caused 500 errors | Anti-pattern: templates directly accessed HTTP layer. `app.request.get('_route')` doesn't exist in Symfony. | Created `NavigationExtension` (Twig global) providing `nav.activeRoute` and `nav.searchQuery`. Templates never access `app.request`. |
+| E3 | 2026-04-04 | 11 | PgBouncer "wrong password type" error | `edoburu/pgbouncer` defaults to `md5` auth, PostgreSQL 17 uses `scram-sha-256`. | Added `AUTH_TYPE: scram-sha-256` to pgbouncer env in compose.yaml. |
+| E4 | 2026-04-04 | 11 | AI enrichment tracked as `rule_based` despite AI responses succeeding | `FetchSourceHandler` hardcoded `EnrichmentMethod::RuleBased`. Interfaces returned `?string` with no method metadata. | Created `EnrichmentResult` DTO (value + method + modelUsed). All interfaces + implementations updated. |
+| E5 | 2026-04-04 | 11 | `Unique violation` on article URL when fetching multiple sources | Multiple sources sharing same article URL. Batch flush failed, rolled back all articles. | Per-article flush with try-catch. EM recovery on constraint violation (clear + re-find source). |
+| E6 | 2026-04-04 | 11 | Only 26/83 articles AI-enriched after fix | Stale container cache: Messenger worker used old compiled container without MessageBag fix. | Fresh `cache:clear` + restart resolved: 127/127 articles AI-enriched on re-run. |
+| E7 | 2026-04-04 | 11 | `ModelDiscoveryService::$blockedModels must be type string, null given` | `%env(default::OPENROUTER_BLOCKED_MODELS)%` returns null for empty env var. | Changed to `%env(string:OPENROUTER_BLOCKED_MODELS)%` which guarantees string type. |
+| E8 | 2026-04-04 | 11 | Feed URLs returning 404: Handelsblatt, Reuters Business, Kicker DNS | External feeds went offline. | Feeds auto-degrade via Source health tracking. Should update seed data with verified URLs. |
+| E9 | 2026-04-04 | 6,11 | `openrouter/auto` consumed Vertex AI credits via BYOK | `openrouter/auto` selects the "best" model (paid) and prioritizes BYOK keys. With user's Vertex AI BYOK, it routed to Gemini and consumed Vertex credits. Plan D24 specified `openrouter/free` but implementation used `openrouter/auto`. | Changed to `openrouter/free`. Added `ModelFailoverPlatform` (PlatformInterface decorator) with chain: free → minimax → glm → gpt-oss → qwen → nemotron. Registered openrouter/free in catalog via additionalModels. |

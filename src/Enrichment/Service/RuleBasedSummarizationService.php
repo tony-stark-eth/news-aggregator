@@ -4,33 +4,36 @@ declare(strict_types=1);
 
 namespace App\Enrichment\Service;
 
+use App\Enrichment\ValueObject\EnrichmentResult;
+use App\Shared\ValueObject\EnrichmentMethod;
+
 final readonly class RuleBasedSummarizationService implements SummarizationServiceInterface
 {
     private const int MIN_CONTENT_LENGTH = 50;
 
     private const int MAX_SUMMARY_LENGTH = 500;
 
-    public function summarize(string $contentText): ?string
+    public function summarize(string $contentText): EnrichmentResult
     {
         $text = trim($contentText);
 
         if (mb_strlen($text) < self::MIN_CONTENT_LENGTH) {
-            return null;
+            return new EnrichmentResult(null, EnrichmentMethod::RuleBased);
         }
 
         $sentences = $this->extractSentences($text);
 
         if ($sentences === []) {
-            return null;
+            return new EnrichmentResult(null, EnrichmentMethod::RuleBased);
         }
 
         $summary = implode(' ', array_slice($sentences, 0, 2));
 
         if (mb_strlen($summary) > self::MAX_SUMMARY_LENGTH) {
-            return mb_substr($summary, 0, self::MAX_SUMMARY_LENGTH - 3) . '...';
+            return new EnrichmentResult(mb_substr($summary, 0, self::MAX_SUMMARY_LENGTH - 3) . '...', EnrichmentMethod::RuleBased);
         }
 
-        return $summary;
+        return new EnrichmentResult($summary, EnrichmentMethod::RuleBased);
     }
 
     /**
