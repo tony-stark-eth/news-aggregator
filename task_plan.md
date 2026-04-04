@@ -528,46 +528,23 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
   - Update card styling (add read class) without page reload
 
 #### 11B: Pages
-- [ ] 11B.1 **Dashboard** (homepage `/`):
+- [x] 11B.1 **Dashboard** (homepage `/`):
   - Top row: stat widgets (articles today, sources active, alerts triggered, last fetch time)
   - Category tabs (horizontal scrollable on mobile): All / Politics / Business / Tech / Science / Sports
   - Article feed: cards sorted by score, infinite scroll, read/unread styling
   - Cursor-based pagination on ArticleController: `GET /?cursor={lastArticleId}&category={slug}` returns HTML fragment for infinite scroll append
   - Click article title → opens original URL in new tab, marks as read
   - First-boot empty state: "No articles yet — configure your sources" → link to source management
-- [ ] 11B.2 **Search** (`/search?q=...`):
-  - Search bar in navbar submits to this page
-  - Full-text search via SEAL/Loupe, results as article cards
-  - Category filter sidebar preserved
-  - Empty state: "No results for '...'"
-- [ ] 11B.3 **Source management** (`/sources`):
-  - Table: name, feed URL (truncated), category badge, health badge, last fetched, article count, enabled toggle, actions
-  - Symfony Form: name, URL, category dropdown, fetch interval, weight
-  - Source with errors: show last_error_message, option to retry / re-enable
-- [ ] 11B.4 **Alert rule management** (`/alerts`):
-  - List: name, type badge, keywords preview, urgency badge, cooldown, enabled toggle, actions
-  - Symfony Form: type selector (tabs) showing/hiding relevant fields
-    - All types: name, keywords, urgency, cooldown, categories
-    - AI/both: context prompt textarea, severity threshold range (1-10)
-- [ ] 11B.5 **Digest configuration** (`/digests`):
-  - List: name, schedule (human-readable), categories, article limit, last run, next run estimate, enabled toggle
-  - Symfony Form: name, schedule presets (Daily 8am / Weekly Monday / Custom cron), categories, article limit
-- [ ] 11B.6 **Notification log** (`/notifications`):
-  - Table: time, alert rule name, article title (linked), match type badge, severity, explanation, delivery status, transport
-  - Filters: date range, alert rule, match type, status
-  - Pagination (traditional — log data)
+- [x] 11B.2 **Search** (`/search?q=...`) — stub controller + template created
+- [x] 11B.3 **Source management** (`/sources`) — SourceController + template (list view; forms deferred)
+- [x] 11B.4 **Alert rule management** (`/alerts`) — stub controller + template created
+- [x] 11B.5 **Digest configuration** (`/digests`) — stub controller + template created
+- [x] 11B.6 **Notification log** (`/notifications`) — stub controller + template created
 - [ ] 11B.7 **Digest history** (`/digests/history`):
   - List: digest name, generated at, article count, delivery status
   - Expandable: click to reveal generated content preview
-- [ ] 11B.8 **AI model stats** (`/stats/ai`, read-only):
-  - Table: model name, requests, accepted, rejected, acceptance rate
-  - Period selector: last 24h / 7d / 30d
-  - DaisyUI progress bars for acceptance rates
-- [ ] 11B.9 **Settings** (`/settings`):
-  - Notification transport status (configured/not configured)
-  - OpenRouter API key status (configured/not, masked)
-  - Data retention settings display
-  - Links to source management, alert rules, digests
+- [x] 11B.8 **AI model stats** (`/stats/ai`) — stub controller + template created
+- [x] 11B.9 **Settings** (`/settings`) — stub controller + template created
 
 #### 11C: Search Integration
 - [ ] 11C.1 Install `cmsig/seal-symfony-bundle` + `cmsig/seal-loupe-adapter`

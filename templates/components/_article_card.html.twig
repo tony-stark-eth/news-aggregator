@@ -1,0 +1,34 @@
+{# Expects: article (Article entity) #}
+<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow {{ article_read is defined and article_read ? 'opacity-60' : '' }}" data-article-id="{{ article.id }}">
+    <div class="card-body p-4">
+        <div class="flex items-start gap-2">
+            <div class="flex-1">
+                <h3 class="card-title text-base">
+                    <a href="{{ article.url }}" target="_blank" rel="noopener" class="link link-hover article-link" data-article-id="{{ article.id }}">
+                        {{ article.title }}
+                    </a>
+                </h3>
+                {% if article.summary %}
+                    <p class="text-sm text-base-content/70 mt-1">{{ article.summary }}</p>
+                {% endif %}
+            </div>
+            {% if article.score %}
+                <div class="badge badge-sm {{ article.score > 0.7 ? 'badge-primary' : (article.score > 0.4 ? 'badge-secondary' : 'badge-ghost') }}">
+                    {{ (article.score * 100)|round }}%
+                </div>
+            {% endif %}
+        </div>
+        <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
+            <span class="badge badge-outline badge-sm">{{ article.source.name }}</span>
+            {% if article.category %}
+                <span class="badge badge-sm" style="background-color: {{ article.category.color }}; color: white;">{{ article.category.name }}</span>
+            {% endif %}
+            {% if article.enrichmentMethod %}
+                <span class="badge badge-ghost badge-sm">{{ article.enrichmentMethod.value == 'ai' ? '🤖 AI' : '📐 Rule' }}</span>
+            {% endif %}
+            <time datetime="{{ article.publishedAt ? article.publishedAt|date('c') : article.fetchedAt|date('c') }}" class="text-base-content/50 timeago">
+                {{ article.publishedAt ? article.publishedAt|date('Y-m-d H:i') : article.fetchedAt|date('Y-m-d H:i') }}
+            </time>
+        </div>
+    </div>
+</div>

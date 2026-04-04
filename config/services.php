@@ -54,7 +54,7 @@ return static function (ContainerConfigurator $container): void {
 
     // Wire OPENROUTER_BLOCKED_MODELS env var for ModelDiscoveryService
     $services->set(\App\Shared\AI\Service\ModelDiscoveryService::class)
-        ->arg('$blockedModels', '%env(default::OPENROUTER_BLOCKED_MODELS)%');
+        ->arg('$blockedModels', '%env(string:OPENROUTER_BLOCKED_MODELS)%');
 
     // Wire retention env vars for CleanupCommand
     $services->set(\App\Shared\Command\CleanupCommand::class)
@@ -72,4 +72,11 @@ return static function (ContainerConfigurator $container): void {
     // Wire OpenRouter platform for digest summary generation
     $services->set(\App\Digest\Service\DigestSummaryService::class)
         ->arg('$platform', service('ai.platform.openrouter'));
+
+    // Wire env vars for SettingsController
+    $services->set(\App\Shared\Controller\SettingsController::class)
+        ->arg('$openrouterApiKey', '%env(default::OPENROUTER_API_KEY)%')
+        ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%')
+        ->arg('$retentionArticles', '%env(int:RETENTION_ARTICLES)%')
+        ->arg('$retentionLogs', '%env(int:RETENTION_LOGS)%');
 };

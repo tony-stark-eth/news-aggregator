@@ -172,3 +172,14 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 - CronExpressionTrigger::fromSpec() + getNextRunDate() works correctly (symfony/scheduler v8.0.8, dragonmantank/cron-expression v3.x)
 - getNextRunDate() returns ?DateTimeImmutable — null check required before comparison
 - Integration test failures (ArticleRepositoryTest) are pre-existing schema drift (fetch_interval_minutes column), not caused by Phase 10
+
+## Session 7 — 2026-04-04
+
+### Completed
+- [x] Phase 11B.1: DashboardController + templates/dashboard/index.html.twig + templates/dashboard/_article_list.html.twig
+  - Stats row (articles today, active sources), category tabs, article feed with infinite scroll support
+  - AJAX fragment support via isXmlHttpRequest() returning _article_list partial
+- [x] Phase 11B.3: SourceController + templates/source/index.html.twig (list view; forms deferred to next iteration)
+- [x] Stub controllers: AlertRuleController, NotificationLogController, DigestController, SearchController, SettingsController, AiStatsController, LoginController, ReadStateController
+- [x] Stub templates: alert/index, notification/index, digest/index, search/index, settings/index, stats/ai, security/login
+- [x] LoginController includes logout route (firewall-intercepted); ReadStateController handles POST /articles/{id}/read with UserArticleRead persistence

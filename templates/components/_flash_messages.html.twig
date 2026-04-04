@@ -1,0 +1,9 @@
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="toast toast-top toast-end z-50">
+            <div class="alert {{ type == 'success' ? 'alert-success' : (type == 'error' ? 'alert-error' : 'alert-info') }}">
+                <span>{{ message }}</span>
+            </div>
+        </div>
+    {% endfor %}
+{% endfor %}

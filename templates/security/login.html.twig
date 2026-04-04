@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+{% block sidebar %}{% endblock %}
+{% block title %}Login{% endblock %}
+{% block body %}
+<div class="flex items-center justify-center min-h-[60vh]">
+    <div class="card w-96 bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title">Login</h2>
+            {% if error %}
+                <div class="alert alert-error">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
+            {% endif %}
+            <form method="post">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Email</span></label>
+                    <input type="email" name="_username" value="{{ last_username }}" class="input input-bordered" required autofocus>
+                </div>
+                <div class="form-control mt-2">
+                    <label class="label"><span class="label-text">Password</span></label>
+                    <input type="password" name="_password" class="input input-bordered" required>
+                </div>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                <div class="form-control mt-4">
+                    <button type="submit" class="btn btn-primary">Sign In</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

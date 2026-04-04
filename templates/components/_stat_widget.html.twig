@@ -1,0 +1,8 @@
+{# Expects: label, value, description (optional), color (optional) #}
+<div class="stat bg-base-100 rounded-lg shadow-sm">
+    <div class="stat-title">{{ label }}</div>
+    <div class="stat-value text-{{ color|default('primary') }}">{{ value }}</div>
+    {% if description is defined %}
+        <div class="stat-desc">{{ description }}</div>
+    {% endif %}
+</div>

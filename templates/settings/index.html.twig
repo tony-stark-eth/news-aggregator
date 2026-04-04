@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+{% block title %}Settings{% endblock %}
+{% block body %}
+    <h1 class="text-2xl font-bold mb-6">Settings</h1>
+
+    <div class="grid gap-4 max-w-lg">
+        <div class="card bg-base-100 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-base">OpenRouter AI</h3>
+                {% if hasOpenrouterKey %}
+                    <span class="badge badge-success">Configured</span>
+                {% else %}
+                    <span class="badge badge-warning">Not configured</span>
+                    <p class="text-sm text-base-content/50">Set OPENROUTER_API_KEY in .env.local for AI features.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-base">Notifications</h3>
+                {% if hasNotifierDsn %}
+                    <span class="badge badge-success">Configured</span>
+                {% else %}
+                    <span class="badge badge-warning">Not configured</span>
+                    <p class="text-sm text-base-content/50">Set NOTIFIER_CHATTER_DSN in .env.local for notifications.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-base">Data Retention</h3>
+                <p class="text-sm">Articles: {{ retentionArticles }} days</p>
+                <p class="text-sm">Logs: {{ retentionLogs }} days</p>
+            </div>
+        </div>
+
+        <div class="card bg-base-100 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-base">Quick Links</h3>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ path('app_sources') }}" class="btn btn-sm btn-outline">Sources</a>
+                    <a href="{{ path('app_alerts') }}" class="btn btn-sm btn-outline">Alert Rules</a>
+                    <a href="{{ path('app_digests') }}" class="btn btn-sm btn-outline">Digests</a>
+                    <a href="{{ path('app_ai_stats') }}" class="btn btn-sm btn-outline">AI Stats</a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

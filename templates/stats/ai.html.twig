@@ -1,0 +1,48 @@
+{% extends 'base.html.twig' %}
+{% block title %}AI Model Stats{% endblock %}
+{% block body %}
+    <h1 class="text-2xl font-bold mb-6">AI Model Statistics</h1>
+
+    {% if stats is empty %}
+        <div class="alert alert-info mb-6">No model quality data yet. Stats populate after AI enrichment runs.</div>
+    {% else %}
+        <div class="overflow-x-auto mb-8">
+            <table class="table table-zebra">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>Accepted</th>
+                        <th>Rejected</th>
+                        <th>Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for model, data in stats %}
+                        <tr>
+                            <td class="font-mono text-sm">{{ model }}</td>
+                            <td>{{ data.accepted }}</td>
+                            <td>{{ data.rejected }}</td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <progress class="progress {{ data.acceptance_rate > 0.7 ? 'progress-success' : (data.acceptance_rate > 0.4 ? 'progress-warning' : 'progress-error') }} w-20" value="{{ (data.acceptance_rate * 100)|round }}" max="100"></progress>
+                                    <span class="text-sm">{{ (data.acceptance_rate * 100)|round(1) }}%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+
+    <h2 class="text-xl font-bold mb-4">Available Free Models ({{ freeModels|length }})</h2>
+    {% if freeModels is empty %}
+        <div class="alert alert-warning">No free models discovered. Circuit breaker may be open or API unreachable.</div>
+    {% else %}
+        <div class="flex flex-wrap gap-2">
+            {% for model in freeModels %}
+                <span class="badge badge-outline">{{ model }}</span>
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endblock %}

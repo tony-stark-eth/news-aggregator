@@ -1,0 +1,62 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Sources — News Aggregator{% endblock %}
+
+{% block body %}
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Feed Sources</h1>
+    </div>
+
+    {% if sources is empty %}
+        {% include 'components/_empty_state.html.twig' with {
+            message: 'No sources configured yet.',
+            action_label: 'Run Seed Data',
+        } %}
+    {% else %}
+        <div class="overflow-x-auto">
+            <table class="table table-zebra">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Health</th>
+                        <th>Errors</th>
+                        <th>Last Fetched</th>
+                        <th>Enabled</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for source in sources %}
+                        <tr>
+                            <td>
+                                <div class="font-bold">{{ source.name }}</div>
+                                <div class="text-xs text-base-content/50 truncate max-w-xs">{{ source.feedUrl }}</div>
+                            </td>
+                            <td>
+                                <span class="badge badge-sm" style="background-color: {{ source.category.color }}; color: white;">
+                                    {{ source.category.name }}
+                                </span>
+                            </td>
+                            <td>{% include 'components/_source_health_badge.html.twig' with { health: source.healthStatus.value } %}</td>
+                            <td>{{ source.errorCount }}</td>
+                            <td>
+                                {% if source.lastFetchedAt %}
+                                    <time datetime="{{ source.lastFetchedAt|date('c') }}" class="timeago">{{ source.lastFetchedAt|date('Y-m-d H:i') }}</time>
+                                {% else %}
+                                    <span class="text-base-content/30">never</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if source.enabled %}
+                                    <span class="badge badge-success badge-sm">yes</span>
+                                {% else %}
+                                    <span class="badge badge-ghost badge-sm">no</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+{% endblock %}

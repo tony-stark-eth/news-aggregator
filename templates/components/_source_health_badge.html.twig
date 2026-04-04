@@ -1,0 +1,8 @@
+{# Expects: health (SourceHealth enum value string) #}
+{% set badge_class = {
+    'healthy': 'badge-success',
+    'degraded': 'badge-warning',
+    'failing': 'badge-error',
+    'disabled': 'badge-ghost'
+} %}
+<span class="badge badge-sm {{ badge_class[health] ?? 'badge-ghost' }}">{{ health }}</span>

@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Dashboard — News Aggregator{% endblock %}
+
+{% block body %}
+    {# Stats row #}
+    <div class="stats shadow mb-6 w-full">
+        {% include 'components/_stat_widget.html.twig' with { label: 'Articles Today', value: articlesToday, color: 'primary' } %}
+        {% include 'components/_stat_widget.html.twig' with { label: 'Active Sources', value: activeSources, color: 'secondary' } %}
+    </div>
+
+    {# Category tabs #}
+    <div class="tabs tabs-boxed mb-4 overflow-x-auto">
+        <a href="{{ path('app_dashboard') }}" class="tab {{ currentCategory is null ? 'tab-active' : '' }}">All</a>
+        <a href="{{ path('app_dashboard', {category: 'politics'}) }}" class="tab {{ currentCategory == 'politics' ? 'tab-active' : '' }}">Politics</a>
+        <a href="{{ path('app_dashboard', {category: 'business'}) }}" class="tab {{ currentCategory == 'business' ? 'tab-active' : '' }}">Business</a>
+        <a href="{{ path('app_dashboard', {category: 'tech'}) }}" class="tab {{ currentCategory == 'tech' ? 'tab-active' : '' }}">Tech</a>
+        <a href="{{ path('app_dashboard', {category: 'science'}) }}" class="tab {{ currentCategory == 'science' ? 'tab-active' : '' }}">Science</a>
+        <a href="{{ path('app_dashboard', {category: 'sports'}) }}" class="tab {{ currentCategory == 'sports' ? 'tab-active' : '' }}">Sports</a>
+    </div>
+
+    {# Article feed #}
+    {% if articles is empty %}
+        {% include 'components/_empty_state.html.twig' with {
+            message: 'No articles yet — configure your sources and fetch some feeds.',
+            action_label: 'Manage Sources',
+            action_url: path('app_sources')
+        } %}
+    {% else %}
+        <div id="article-feed" class="flex flex-col gap-3">
+            {% for article in articles %}
+                {% include 'components/_article_card.html.twig' %}
+            {% endfor %}
+        </div>
+        {% include 'components/_pagination_loader.html.twig' %}
+    {% endif %}
+{% endblock %}
