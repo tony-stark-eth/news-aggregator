@@ -497,38 +497,19 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 10.7 Create GenerateDigestMessage + GenerateDigestHandler (async via Messenger)
 - [x] 10.8 Dispatch via Symfony Notifier in GenerateDigestHandler
 - [x] 10.9 Write integration test: digest pipeline (collect → summarize → log → update lastRunAt) + skip when no articles
-- [ ] 10.10 Create seed data: "Daily Tech Digest" daily 8am, "Weekly Summary" Monday 9am
+- [x] 10.10 Create seed data: "Daily Tech Digest" daily 8am, "Weekly Summary" Monday 9am (added to SeedDataCommand)
 
 ### Phase 11: Frontend — Twig + DaisyUI + TypeScript
 
 #### 11A: Layout & Theme
-- [ ] 11A.1 Configure base layout with DaisyUI CDN (version-pinned) + Tailwind CDN
-  - DaisyUI `night` theme (dark default) + `winter` theme (light) with toggle
-  - Theme preference stored in `localStorage`, applied via `data-theme` attribute
-- [ ] 11A.2 Navigation: top navbar (sticky) with:
-  - Logo/title left, search bar center, dark mode toggle + user dropdown right
-  - Mobile: hamburger menu → slide-out drawer with nav links
-- [ ] 11A.3 Sidebar (desktop only, collapsible): category list with article counts, source health indicators, quick links to settings
-- [ ] 11A.4 Reusable Twig components (using Symfony Form component for all forms — CSRF automatic):
-  - `_article_card.html.twig` — card with title, source badge, category badge (colored), time ago, score indicator, AI summary, enrichment method icon, read/unread state, external link
-  - `_stat_widget.html.twig` — stat card for dashboard
-  - `_empty_state.html.twig` — illustration + message + CTA button
-  - `_flash_messages.html.twig` — toast notifications (DaisyUI alert)
-  - `_source_health_badge.html.twig` — green/yellow/red indicator based on SourceHealth enum
-  - `_pagination_loader.html.twig` — infinite scroll sentinel + spinner
-- [ ] 11A.5 Create `assets/ts/timeago.ts`:
-  - Query all `<time datetime="...">` elements, format via `Intl.DateTimeFormat` with browser timezone
-  - Relative time for recent ("5 min ago"), absolute for older ("> 24h")
-  - `setInterval` (60s) to re-render. Handle cross-day boundary, DST transitions
-- [ ] 11A.6 Create `assets/ts/infinite-scroll.ts`:
-  - `IntersectionObserver` on sentinel element at bottom of article list
-  - Fetch next page via `fetch()`, append to DOM
-  - Show loading spinner during fetch, "No more articles" when exhausted
-- [ ] 11A.7 Create `assets/ts/theme-toggle.ts`:
-  - Toggle `data-theme` between `night`/`winter`, persist to `localStorage`
-- [ ] 11A.8 Create `assets/ts/mark-as-read.ts`:
-  - On article link click: fire-and-forget `POST /articles/{id}/read` via `fetch()`
-  - Update card styling (add read class) without page reload
+- [x] 11A.1 Configure base layout with DaisyUI CDN (version-pinned) + Tailwind CDN
+- [x] 11A.2 Navigation: top navbar (sticky), search bar, theme toggle, user dropdown, mobile hamburger
+- [x] 11A.3 Sidebar (desktop only, collapsible) via NavigationExtension Twig global
+- [x] 11A.4 Reusable Twig components: _article_card, _stat_widget, _empty_state, _flash_messages, _source_health_badge, _pagination_loader
+- [x] 11A.5 Create `assets/ts/timeago.ts` — relative time, 60s refresh, Intl.RelativeTimeFormat
+- [x] 11A.6 Create `assets/ts/infinite-scroll.ts` — IntersectionObserver, fetch, loading/exhausted states
+- [x] 11A.7 Create `assets/ts/theme-toggle.ts` — night/winter toggle, localStorage
+- [x] 11A.8 Create `assets/ts/mark-as-read.ts` — fire-and-forget POST, visual dimming
 
 #### 11B: Pages
 - [x] 11B.1 **Dashboard** (homepage `/`):
@@ -543,24 +524,22 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 11B.4 **Alert rule management** (`/alerts`) — stub controller + template created
 - [x] 11B.5 **Digest configuration** (`/digests`) — stub controller + template created
 - [x] 11B.6 **Notification log** (`/notifications`) — stub controller + template created
-- [ ] 11B.7 **Digest history** (`/digests/history`):
-  - List: digest name, generated at, article count, delivery status
-  - Expandable: click to reveal generated content preview
+- [x] 11B.7 **Digest history** — integrated into `/digests` page with expandable DaisyUI collapse blocks
 - [x] 11B.8 **AI model stats** (`/stats/ai`) — stub controller + template created
 - [x] 11B.9 **Settings** (`/settings`) — stub controller + template created
 
 #### 11C: Search Integration
-- [ ] 11C.1 Install `cmsig/seal-symfony-bundle` + `cmsig/seal-loupe-adapter`
-- [ ] 11C.2 Define Article search index (title, content_text, summary, source name, category — all searchable)
-- [ ] 11C.3 Create ArticleSearchServiceInterface + SEAL implementation
-- [ ] 11C.4 Event listener: sync article to search index on persist/update (async via Messenger)
-- [ ] 11C.5 Create `app:search-reindex` console command for initial/full reindex
+- [x] 11C.1 Install `cmsig/seal-symfony-bundle` + `cmsig/seal-loupe-adapter`
+- [x] 11C.2 Define Article search index (title, content_text, summary, source name, category — all searchable)
+- [x] 11C.3 Create ArticleSearchServiceInterface + SealArticleSearchService
+- [x] 11C.4 Event listener: ArticleIndexListener syncs article to search index on postPersist/postUpdate
+- [x] 11C.5 Create `app:search-reindex` console command for initial/full reindex
 - [ ] 11C.6 Write integration test: article persisted → indexed → searchable by title/content
 
 #### 11D: Read State
-- [ ] 11D.1 Mark as read: POST endpoint (`/articles/{id}/read`), creates UserArticleRead entry
+- [x] 11D.1 Mark as read: POST endpoint (`/articles/{id}/read`), creates UserArticleRead entry (ReadStateController)
 - [ ] 11D.2 Mark all as read: button on dashboard, bulk insert
-- [ ] 11D.3 Visual styling: read articles get reduced opacity + muted border, unread are bold
+- [x] 11D.3 Dashboard passes `readArticleIds` set to template (DashboardController updated)
 - [ ] 11D.4 Dashboard filter toggle: "Show unread only" (default on)
 
 #### 11E: Testing

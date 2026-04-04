@@ -4,8 +4,271 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7752a89547d4f53e1fd5498793b39201",
+    "content-hash": "74794a0e92db86ac3a30c1c2013aa016",
     "packages": [
+        {
+            "name": "cmsig/seal",
+            "version": "0.12.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHP-CMSIG/seal.git",
+                "reference": "b69e586f78f3dcb4c8468f607f2972d80901a961"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHP-CMSIG/seal/zipball/b69e586f78f3dcb4c8468f607f2972d80901a961",
+                "reference": "b69e586f78f3dcb4c8468f607f2972d80901a961",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1"
+            },
+            "replace": {
+                "schranz-search/seal": "self.version"
+            },
+            "require-dev": {
+                "php-cs-fixer/shim": "^3.51",
+                "phpstan/extension-installer": "^1.0",
+                "phpstan/phpstan": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^10.3",
+                "rector/rector": "^2.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "CmsIg\\Seal\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Alexander Schranz",
+                    "email": "alexander@sulu.io"
+                }
+            ],
+            "description": "Search Engine Abstraction Layer",
+            "keywords": [
+                "abstraction",
+                "algolia",
+                "cmsig",
+                "elasticsearch",
+                "meilisearch",
+                "opensearch",
+                "redisearch",
+                "seal",
+                "search",
+                "search-abstraction",
+                "search-client",
+                "solr",
+                "typesense"
+            ],
+            "support": {
+                "source": "https://github.com/PHP-CMSIG/seal/tree/0.12.9"
+            },
+            "funding": [
+                {
+                    "url": "https://paypal.me/L91",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/alexander-schranz",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-03-01T16:18:30+00:00"
+        },
+        {
+            "name": "cmsig/seal-loupe-adapter",
+            "version": "0.12.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHP-CMSIG/seal-loupe-adapter.git",
+                "reference": "cdc659af5c06dd018afad004bb324724531e5291"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHP-CMSIG/seal-loupe-adapter/zipball/cdc659af5c06dd018afad004bb324724531e5291",
+                "reference": "cdc659af5c06dd018afad004bb324724531e5291",
+                "shasum": ""
+            },
+            "require": {
+                "cmsig/seal": "^0.12",
+                "loupe/loupe": "^0.12.11 || ^0.13",
+                "php": "^8.1",
+                "psr/container": "^1.0 || ^2.0"
+            },
+            "provide": {
+                "cmsig/seal-adapter-implementation": "self.version"
+            },
+            "replace": {
+                "schranz-search/seal-loupe-adapter": "self.version"
+            },
+            "require-dev": {
+                "php-cs-fixer/shim": "^3.51",
+                "phpstan/extension-installer": "^1.0",
+                "phpstan/phpstan": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^10.3",
+                "rector/rector": "^2.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "CmsIg\\Seal\\Adapter\\Loupe\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Alexander Schranz",
+                    "email": "alexander@sulu.io"
+                }
+            ],
+            "description": "An adapter to support loupe in cmsig/seal search abstraction.",
+            "keywords": [
+                "cmsig",
+                "cmsig-seal-adapter",
+                "loupe",
+                "seal",
+                "seal-adapter",
+                "search-client"
+            ],
+            "support": {
+                "source": "https://github.com/PHP-CMSIG/seal-loupe-adapter/tree/0.12.9"
+            },
+            "funding": [
+                {
+                    "url": "https://paypal.me/L91",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/Toflar",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/alexander-schranz",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-03-01T16:18:30+00:00"
+        },
+        {
+            "name": "cmsig/seal-symfony-bundle",
+            "version": "0.12.9",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHP-CMSIG/seal-symfony-bundle.git",
+                "reference": "75b63e0cd2792110fd5e6c93ac38b69ed258e7f5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHP-CMSIG/seal-symfony-bundle/zipball/75b63e0cd2792110fd5e6c93ac38b69ed258e7f5",
+                "reference": "75b63e0cd2792110fd5e6c93ac38b69ed258e7f5",
+                "shasum": ""
+            },
+            "require": {
+                "cmsig/seal": "^0.12",
+                "php": "^8.1",
+                "symfony/config": "^6.1 || ^7.0 || ^8.0",
+                "symfony/console": "^6.1 || ^7.0 || ^8.0",
+                "symfony/dependency-injection": "^6.1 || ^7.0 || ^8.0",
+                "symfony/http-kernel": "^6.1 || ^7.0 || ^8.0"
+            },
+            "conflict": {
+                "cmsig/seal-algolia-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-elasticsearch-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-loupe-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-meilisearch-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-memory-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-multi-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-opensearch-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-read-write-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-redisearch-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-solr-adapter": "<0.12 || >=0.13",
+                "cmsig/seal-typesense-adapter": "<0.12 || >=0.13"
+            },
+            "replace": {
+                "schranz-search/symfony-bundle": "self.version"
+            },
+            "require-dev": {
+                "cmsig/seal-algolia-adapter": "^0.12",
+                "cmsig/seal-elasticsearch-adapter": "^0.12",
+                "cmsig/seal-loupe-adapter": "^0.12",
+                "cmsig/seal-meilisearch-adapter": "^0.12",
+                "cmsig/seal-memory-adapter": "^0.12",
+                "cmsig/seal-multi-adapter": "^0.12",
+                "cmsig/seal-opensearch-adapter": "^0.12",
+                "cmsig/seal-read-write-adapter": "^0.12",
+                "cmsig/seal-redisearch-adapter": "^0.12",
+                "cmsig/seal-solr-adapter": "^0.12",
+                "cmsig/seal-typesense-adapter": "^0.12",
+                "php-cs-fixer/shim": "^3.51",
+                "phpstan/extension-installer": "^1.0",
+                "phpstan/phpstan": "^2.0",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpunit/phpunit": "^10.3",
+                "rector/rector": "^2.0"
+            },
+            "type": "symfony-bundle",
+            "autoload": {
+                "psr-4": {
+                    "CmsIg\\Seal\\Integration\\Symfony\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Alexander Schranz",
+                    "email": "alexander@sulu.io"
+                }
+            ],
+            "description": "An integration of CMS-IG SEAL search abstraction into Symfony Framework.",
+            "keywords": [
+                "Bridge",
+                "abstraction",
+                "algolia",
+                "bundle",
+                "cmsig",
+                "elasticsearch",
+                "integration",
+                "loupe",
+                "meilisearch",
+                "opensearch",
+                "redisearch",
+                "seal",
+                "search",
+                "search-abstraction",
+                "search-client",
+                "solr",
+                "symfony",
+                "symfony-bundle",
+                "typesense"
+            ],
+            "support": {
+                "source": "https://github.com/PHP-CMSIG/seal-symfony-bundle/tree/0.12.9"
+            },
+            "funding": [
+                {
+                    "url": "https://paypal.me/L91",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/alexander-schranz",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-03-01T16:18:30+00:00"
+        },
         {
             "name": "composer/semver",
             "version": "3.4.4",
@@ -1197,6 +1460,60 @@
             "time": "2026-02-08T16:21:46+00:00"
         },
         {
+            "name": "joomla/string",
+            "version": "4.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/joomla-framework/string.git",
+                "reference": "da2329e05f1f5fc98b709f8638f279513bcd1108"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/joomla-framework/string/zipball/da2329e05f1f5fc98b709f8638f279513bcd1108",
+                "reference": "da2329e05f1f5fc98b709f8638f279513bcd1108",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.3.0",
+                "symfony/deprecation-contracts": "^2|^3",
+                "symfony/polyfill-mbstring": "^1.31.0"
+            },
+            "require-dev": {
+                "doctrine/inflector": "^2.0.10",
+                "joomla/test": "^4.0",
+                "phpstan/phpstan": "2.1.17",
+                "phpstan/phpstan-deprecation-rules": "2.0.3",
+                "phpunit/phpunit": "^12.2.6",
+                "squizlabs/php_codesniffer": "^3.7.2"
+            },
+            "suggest": {
+                "doctrine/inflector": "To use the string inflector",
+                "ext-mbstring": "For improved processing"
+            },
+            "type": "joomla-package",
+            "autoload": {
+                "psr-4": {
+                    "Joomla\\String\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL-2.0-or-later"
+            ],
+            "description": "Joomla String Package",
+            "homepage": "https://github.com/joomla-framework/string",
+            "keywords": [
+                "framework",
+                "joomla",
+                "string"
+            ],
+            "support": {
+                "issues": "https://github.com/joomla-framework/string/issues",
+                "source": "https://github.com/joomla-framework/string/tree/4.0.0"
+            },
+            "time": "2025-07-23T18:42:26+00:00"
+        },
+        {
             "name": "laminas/laminas-escaper",
             "version": "2.18.0",
             "source": {
@@ -1398,6 +1715,214 @@
             "time": "2025-10-11T18:13:12+00:00"
         },
         {
+            "name": "loupe/loupe",
+            "version": "0.13.11",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/loupe-php/loupe.git",
+                "reference": "b9a9f2e553c608161a8d2ba043d8eaccf7e69d46"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/loupe-php/loupe/zipball/b9a9f2e553c608161a8d2ba043d8eaccf7e69d46",
+                "reference": "b9a9f2e553c608161a8d2ba043d8eaccf7e69d46",
+                "shasum": ""
+            },
+            "require": {
+                "doctrine/dbal": "^3.10.2 || ^4.0",
+                "doctrine/lexer": "^2.0 || ^3.0",
+                "ext-intl": "*",
+                "ext-mbstring": "*",
+                "ext-pdo_sqlite": "*",
+                "lib-pdo_sqlite-sqlite": ">= 3.35.0",
+                "loupe/matcher": "^0.2.1",
+                "mjaschen/phpgeo": "^5.0 || ^6.0",
+                "nitotm/efficient-language-detector": "^3.1",
+                "php": "^8.1",
+                "psr/log": "^2.0 || ^3.0",
+                "toflar/state-set-index": "^3.0",
+                "wamania/php-stemmer": "^4.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.1.31",
+                "phpunit/phpunit": "^10.5.58",
+                "symfony/filesystem": "^7.3.2",
+                "symfony/finder": "^7.3.5",
+                "symfony/process": "^7.3.4",
+                "symfony/var-dumper": "^7.3.5",
+                "symplify/easy-coding-standard": "^12.6.2"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Loupe\\Loupe\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Yanick Witschi",
+                    "email": "yanick.witschi@terminal42.ch"
+                }
+            ],
+            "description": "A full text search engine with tokenization, stemming, typo tolerance, filters and geo support based on only PHP and SQLite",
+            "support": {
+                "issues": "https://github.com/loupe-php/loupe/issues",
+                "source": "https://github.com/loupe-php/loupe/tree/0.13.11"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/Toflar",
+                    "type": "github"
+                }
+            ],
+            "time": "2026-03-26T15:34:20+00:00"
+        },
+        {
+            "name": "loupe/matcher",
+            "version": "0.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/loupe-php/matcher.git",
+                "reference": "cff4f32b0fda4163a099a435bb3295a790c85261"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/loupe-php/matcher/zipball/cff4f32b0fda4163a099a435bb3295a790c85261",
+                "reference": "cff4f32b0fda4163a099a435bb3295a790c85261",
+                "shasum": ""
+            },
+            "require": {
+                "ext-intl": "*",
+                "ext-mbstring": "*",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^10.5",
+                "symfony/finder": "^6.2",
+                "symplify/easy-coding-standard": "^12.5"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Loupe\\Matcher\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Yanick Witschi",
+                    "email": "yanick.witschi@terminal42.ch"
+                },
+                {
+                    "name": "Philipp Daun",
+                    "email": "daun@daun.ltd"
+                }
+            ],
+            "description": "Highlight and crop around search terms",
+            "support": {
+                "issues": "https://github.com/loupe-php/matcher/issues",
+                "source": "https://github.com/loupe-php/matcher/tree/0.2.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/Toflar",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-12-31T11:31:03+00:00"
+        },
+        {
+            "name": "mjaschen/phpgeo",
+            "version": "6.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mjaschen/phpgeo.git",
+                "reference": "8152f70d8ed257665fd73f82f2e6a88707309786"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mjaschen/phpgeo/zipball/8152f70d8ed257665fd73f82f2e6a88707309786",
+                "reference": "8152f70d8ed257665fd73f82f2e6a88707309786",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.0",
+                "phpunit/phpunit": "^11.0",
+                "squizlabs/php_codesniffer": "^3.7"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Location\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Marcus Jaschen",
+                    "email": "mjaschen@gmail.com",
+                    "homepage": "https://www.marcusjaschen.de/"
+                }
+            ],
+            "description": "Simple Yet Powerful Geo Library",
+            "homepage": "https://phpgeo.marcusjaschen.de/",
+            "keywords": [
+                "Polygon",
+                "area",
+                "bearing",
+                "bounds",
+                "calculation",
+                "coordinate",
+                "distance",
+                "earth",
+                "ellipsoid",
+                "geo",
+                "geofence",
+                "gis",
+                "gps",
+                "haversine",
+                "length",
+                "perpendicular",
+                "point",
+                "polyline",
+                "projection",
+                "simplify",
+                "track",
+                "vincenty"
+            ],
+            "support": {
+                "docs": "https://phpgeo.marcusjaschen.de/Installation.html",
+                "email": "mjaschen@gmail.com",
+                "issues": "https://github.com/mjaschen/phpgeo/issues",
+                "source": "https://github.com/mjaschen/phpgeo/tree/6.0.2"
+            },
+            "funding": [
+                {
+                    "url": "https://www.paypal.com/paypalme/mjaschen",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/mjaschen",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-12-02T13:10:24+00:00"
+        },
+        {
             "name": "monolog/monolog",
             "version": "3.10.0",
             "source": {
@@ -1499,6 +2024,76 @@
                 }
             ],
             "time": "2026-01-02T08:56:05+00:00"
+        },
+        {
+            "name": "nitotm/efficient-language-detector",
+            "version": "v3.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nitotm/efficient-language-detector.git",
+                "reference": "f20a5aa1773586744b47e00c53a56e39b0c33ab4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nitotm/efficient-language-detector/zipball/f20a5aa1773586744b47e00c53a56e39b0c33ab4",
+                "reference": "f20a5aa1773586744b47e00c53a56e39b0c33ab4",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^7.4 || ^8.0"
+            },
+            "bin": [
+                "bin/eld",
+                "bin/eld-php"
+            ],
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Nitotm\\Eld\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "Apache-2.0"
+            ],
+            "authors": [
+                {
+                    "name": "Nito T.M.",
+                    "homepage": "https://github.com/nitotm"
+                }
+            ],
+            "description": "Fast and accurate natural language detection. Detector written in PHP. Nito-ELD, ELD.",
+            "homepage": "https://github.com/nitotm/efficient-language-detector",
+            "keywords": [
+                "detection",
+                "detector",
+                "language",
+                "language classification",
+                "language detection",
+                "language detector",
+                "language identification",
+                "language recognition"
+            ],
+            "support": {
+                "issues": "https://github.com/nitotm/efficient-language-detector/issues",
+                "source": "https://github.com/nitotm/efficient-language-detector/tree/v3.1.1"
+            },
+            "funding": [
+                {
+                    "url": "https://linktr.ee/nitotm",
+                    "type": "custom"
+                },
+                {
+                    "url": "https://github.com/nitotm",
+                    "type": "github"
+                },
+                {
+                    "url": "https://ko-fi.com/nitotm",
+                    "type": "ko_fi"
+                }
+            ],
+            "time": "2026-01-12T10:51:25+00:00"
         },
         {
             "name": "oskarstark/enum-helper",
@@ -7425,6 +8020,53 @@
             "time": "2026-03-30T15:14:47+00:00"
         },
         {
+            "name": "toflar/state-set-index",
+            "version": "3.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Toflar/state-set-index.git",
+                "reference": "29df429b827676c9cf64cb79b5e8411dd9e0bd7e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Toflar/state-set-index/zipball/29df429b827676c9cf64cb79b5e8411dd9e0bd7e",
+                "reference": "29df429b827676c9cf64cb79b5e8411dd9e0bd7e",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "fakerphp/faker": "^1.24",
+                "phpbench/phpbench": "^1.4",
+                "phpunit/phpunit": "^10.2",
+                "symplify/easy-coding-standard": "^11.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Toflar\\StateSetIndex\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Yanick Witschi",
+                    "email": "yanick.witschi@terminal42.ch"
+                }
+            ],
+            "description": "Implementation of the State Set Index Algorithm",
+            "support": {
+                "issues": "https://github.com/Toflar/state-set-index/issues",
+                "source": "https://github.com/Toflar/state-set-index/tree/3.2.0"
+            },
+            "time": "2026-03-31T12:30:08+00:00"
+        },
+        {
             "name": "twig/extra-bundle",
             "version": "v3.24.0",
             "source": {
@@ -7577,6 +8219,55 @@
                 }
             ],
             "time": "2026-03-17T21:31:11+00:00"
+        },
+        {
+            "name": "wamania/php-stemmer",
+            "version": "v4.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/wamania/php-stemmer.git",
+                "reference": "d96509294ea843b4b86e4900df27424a6ea0ace8"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/wamania/php-stemmer/zipball/d96509294ea843b4b86e4900df27424a6ea0ace8",
+                "reference": "d96509294ea843b4b86e4900df27424a6ea0ace8",
+                "shasum": ""
+            },
+            "require": {
+                "joomla/string": ">=2.0.1",
+                "php": ">=7.3"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Wamania\\Snowball\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Wamania",
+                    "homepage": "http://wamania.com"
+                }
+            ],
+            "description": "Native PHP Stemmer",
+            "keywords": [
+                "php",
+                "porter",
+                "stemmer"
+            ],
+            "support": {
+                "issues": "https://github.com/wamania/php-stemmer/issues",
+                "source": "https://github.com/wamania/php-stemmer/tree/v4.0.0"
+            },
+            "time": "2024-12-22T08:54:03+00:00"
         },
         {
             "name": "webmozart/assert",

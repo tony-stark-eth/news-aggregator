@@ -215,3 +215,37 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 - [x] Updated tests to use `->toArray()` before array-index access (PHPStan: `offsetGet()` returns `?T`)
 - [x] All quality tools pass: ECS clean, Rector clean, PHPStan 0 errors
 - [x] All 95 unit tests pass
+
+## Session 10 — 2026-04-04
+
+### Completed
+
+#### Phase 11C: Search Integration (SEAL + Loupe)
+- [x] Created `config/packages/seal.php` — SEAL bundle config (loupe engine, `config/seal/` schema dir)
+- [x] Created `config/seal/articles.php` — PHP schema file with Index, IdentifierField, TextField, FloatField, DateTimeField
+- [x] `src/Shared/Search/Service/ArticleSearchServiceInterface.php` — index/remove/search API
+- [x] `src/Shared/Search/Service/SealArticleSearchService.php` — SEAL engine implementation (saveDocument, deleteDocument, createSearchBuilder + Condition::search + Condition::equal)
+- [x] `src/Shared/Search/EventListener/ArticleIndexListener.php` — Doctrine postPersist/postUpdate listener via `#[AsEntityListener]`
+- [x] `src/Shared/Search/Command/SearchReindexCommand.php` — app:search-reindex with batch processing
+- [x] Updated `SearchController` to use `ArticleSearchServiceInterface` (IDs → load by IDs, category filter)
+- [x] Updated `services.php`: `ArticleSearchServiceInterface` alias to `SealArticleSearchService`
+- [x] Updated PHPat architecture test: `App\Shared\Search` excluded from "Shared must not depend on domains" rule (variadic `excluding()`)
+
+#### Phase 11D: Read State
+- [x] Verified `ReadStateController` at `src/User/Controller/ReadStateController.php` — complete
+- [x] Updated `DashboardController` to query `UserArticleRead` for current user, pass `readArticleIds` map to templates (both full-page and AJAX fragment)
+
+#### Phase 10.10: Digest Seed Data
+- [x] Added `User::setPassword()` method
+- [x] Updated `SeedDataCommand` with `UserPasswordHasherInterface` dependency
+- [x] Added `seedDemoUser()` — creates `demo@example.com` user if none exists (idempotent)
+- [x] Added `seedDigestConfigs()` — creates "Daily Tech Digest" (`0 8 * * *`, tech, limit 10) and "Weekly Summary" (`0 9 * * 1`, all categories, limit 20), both idempotent
+
+#### Phase 11B.7: Digest history
+- [x] Verified `templates/digest/index.html.twig` — expandable content preview already present (DaisyUI `collapse` component with `<pre>{{ log.content }}</pre>`)
+
+### Quality
+- ECS: OK (2 fixes applied: `!` spacing)
+- PHPStan: 0 errors
+- Rector: clean
+- PHPUnit unit suite: 95 tests pass
