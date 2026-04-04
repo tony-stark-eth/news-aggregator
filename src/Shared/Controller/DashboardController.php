@@ -10,14 +10,15 @@ use App\User\Entity\User;
 use App\User\Entity\UserArticleRead;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class DashboardController extends AbstractController
+final class DashboardController
 {
     public function __construct(
+        private readonly ControllerHelper $controller,
         private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
     ) {
@@ -31,6 +32,8 @@ final class DashboardController extends AbstractController
         int $page = 1,
         #[MapQueryParameter(name: '_fragment')]
         ?string $fragment = null,
+        #[MapQueryParameter]
+        bool $unreadOnly = false,
     ): Response {
         $page = max(1, $page);
         $limit = 20;
@@ -47,6 +50,25 @@ final class DashboardController extends AbstractController
 
         if ($category !== null && $category !== '') {
             $qb->andWhere('c.slug = :cat')->setParameter('cat', $category);
+        }
+
+        if ($unreadOnly) {
+            $currentUser = $this->controller->getUser();
+            if ($currentUser instanceof User) {
+                $qb->andWhere(
+                    $qb->expr()->not(
+                        $qb->expr()->exists(
+                            $this->entityManager
+                                ->getRepository(UserArticleRead::class)
+                                ->createQueryBuilder('r2')
+                                ->select('1')
+                                ->where('r2.article = a')
+                                ->andWhere('r2.user = :currentUser')
+                                ->getDQL(),
+                        ),
+                    ),
+                )->setParameter('currentUser', $currentUser);
+            }
         }
 
         /** @var list<Article> $articles */
@@ -73,19 +95,20 @@ final class DashboardController extends AbstractController
 
         // AJAX fragment for infinite scroll
         if ($fragment !== null) {
-            return $this->render('dashboard/_article_list.html.twig', [
+            return $this->controller->render('dashboard/_article_list.html.twig', [
                 'articles' => $articles,
                 'readArticleIds' => $readArticleIds,
             ]);
         }
 
-        return $this->render('dashboard/index.html.twig', [
+        return $this->controller->render('dashboard/index.html.twig', [
             'articles' => $articles,
             'currentCategory' => $category,
             'articlesToday' => $articlesToday,
             'activeSources' => $activeSources,
             'page' => $page,
             'readArticleIds' => $readArticleIds,
+            'unreadOnly' => $unreadOnly,
         ]);
     }
 
@@ -96,7 +119,7 @@ final class DashboardController extends AbstractController
      */
     private function getReadArticleIds(array $articles): array
     {
-        $user = $this->getUser();
+        $user = $this->controller->getUser();
         if (! $user instanceof User || $articles === []) {
             return [];
         }

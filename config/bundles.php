@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use CmsIg\Seal\Integration\Symfony\SealBundle;
 use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
 use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
 use Symfony\AI\AiBundle\AiBundle;
@@ -33,6 +34,9 @@ return [
         'all' => true,
     ],
     AiBundle::class => [
+        'all' => true,
+    ],
+    SealBundle::class => [
         'all' => true,
     ],
 ];

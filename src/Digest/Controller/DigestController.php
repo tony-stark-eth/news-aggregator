@@ -7,13 +7,14 @@ namespace App\Digest\Controller;
 use App\Digest\Entity\DigestConfig;
 use App\Digest\Entity\DigestLog;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class DigestController extends AbstractController
+final class DigestController
 {
     public function __construct(
+        private readonly ControllerHelper $controller,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -33,7 +34,7 @@ final class DigestController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        return $this->render('digest/index.html.twig', [
+        return $this->controller->render('digest/index.html.twig', [
             'configs' => $configs,
             'recentLogs' => $recentLogs,
         ]);

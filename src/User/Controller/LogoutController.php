@@ -4,10 +4,9 @@ declare(strict_types=1);
 
 namespace App\User\Controller;
 
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class LogoutController extends AbstractController
+final class LogoutController
 {
     #[Route('/logout', name: 'app_logout')]
     public function __invoke(): never

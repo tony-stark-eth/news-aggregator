@@ -32,7 +32,7 @@ final readonly class SealArticleSearchService implements ArticleSearchServiceInt
             'sourceName' => $article->getSource()->getName(),
             'categorySlug' => $article->getCategory()?->getSlug() ?? '',
             'score' => $article->getScore() ?? 0.0,
-            'fetchedAt' => $article->getFetchedAt(),
+            'fetchedAt' => $article->getFetchedAt()->format(\DateTimeInterface::ATOM),
         ];
 
         $this->loupeEngine->saveDocument(self::INDEX, $document);

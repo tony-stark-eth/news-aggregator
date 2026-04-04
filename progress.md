@@ -250,6 +250,46 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 - Rector: clean
 - PHPUnit unit suite: 95 tests pass
 
+## Session 12 — 2026-04-04
+
+### Completed
+
+#### ControllerHelper Refactor (all controllers)
+- [x] Replaced `AbstractController` with `ControllerHelper` injection in all 11 controllers: DashboardController, SearchController, SettingsController, AiStatsController, SourceController, AlertRuleController, NotificationLogController, DigestController, LoginController, LogoutController, ReadStateController
+- [x] Fixed: `SealBundle` missing from `config/bundles.php` (was causing PHP container crash loop)
+- [x] Fixed: SEAL Loupe marshaller requires string for DateTime — `$article->getFetchedAt()->format(DateTimeInterface::ATOM)`
+
+#### Phase 11D.2: Mark All Read
+- [x] Created `src/User/Controller/MarkAllReadController.php` — POST `/articles/read-all`, DQL subquery to find unread articles, bulk insert UserArticleRead
+
+#### Phase 11D.4: Unread Filter
+- [x] Added `#[MapQueryParameter] bool $unreadOnly = false` to DashboardController
+- [x] Unread filter uses NOT EXISTS DQL subquery against UserArticleRead
+- [x] `unreadOnly` passed to template
+- [x] Template: toggle link (Show All / Unread Only) + "Mark All Read" form button before article feed
+
+#### Phase 11E.1: Functional Tests
+- [x] Created `tests/Functional/Controller/PageSmokeTest.php` — `#[DataProvider]` tests 8 protected routes redirect to `/login`, login returns 200
+
+#### Phase 11E.2: E2E Tests (Panther)
+- [x] Created `tests/E2E/DashboardE2ETest.php` — login + dashboard, category filter, theme toggle
+- [x] Created `tests/E2E/SearchE2ETest.php` — search with no results
+- [x] Created `tests/E2E/NavigationE2ETest.php` — all nav links return pages with `.navbar`
+
+#### Phase 11E.3: Golden Path Integration Test
+- [x] Created `tests/Integration/GoldenPathTest.php` — KernelTestCase, transactional rollback: seed → article → enrich → score → alert match
+
+#### phpunit.dist.xml
+- [x] Added `functional` and `e2e` testsuites
+
+### Quality
+- ECS: OK (auto-fixed import order, array formatting)
+- Rector: clean
+- PHPStan: 0 errors
+- PHPUnit unit suite: 95 tests pass
+- PHPUnit integration suite: 11 tests pass
+- PHPUnit functional suite: 9 tests pass (8 data-provider cases + login page)
+
 ## Session 11 — 2026-04-04
 
 ### Completed

@@ -9,14 +9,15 @@ use App\User\Entity\User;
 use App\User\Entity\UserArticleRead;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class ReadStateController extends AbstractController
+final class ReadStateController
 {
     public function __construct(
+        private readonly ControllerHelper $controller,
         private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
     ) {
@@ -25,7 +26,7 @@ final class ReadStateController extends AbstractController
     #[Route('/articles/{id}/read', name: 'app_article_read', methods: ['POST'])]
     public function __invoke(int $id): JsonResponse
     {
-        $user = $this->getUser();
+        $user = $this->controller->getUser();
         if (! $user instanceof User) {
             return new JsonResponse([
                 'error' => 'unauthorized',

@@ -6,13 +6,14 @@ namespace App\Notification\Controller;
 
 use App\Notification\Entity\NotificationLog;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class NotificationLogController extends AbstractController
+final class NotificationLogController
 {
     public function __construct(
+        private readonly ControllerHelper $controller,
         private readonly EntityManagerInterface $entityManager,
     ) {
     }
@@ -29,7 +30,7 @@ final class NotificationLogController extends AbstractController
             ->getQuery()
             ->getResult();
 
-        return $this->render('notification/index.html.twig', [
+        return $this->controller->render('notification/index.html.twig', [
             'logs' => $logs,
         ]);
     }

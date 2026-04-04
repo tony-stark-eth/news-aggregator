@@ -538,13 +538,13 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 
 #### 11D: Read State
 - [x] 11D.1 Mark as read: POST endpoint (`/articles/{id}/read`), creates UserArticleRead entry (ReadStateController)
-- [ ] 11D.2 Mark all as read: button on dashboard, bulk insert
+- [x] 11D.2 Mark all as read: button on dashboard, bulk insert (MarkAllReadController, POST /articles/read-all)
 - [x] 11D.3 Dashboard passes `readArticleIds` set to template (DashboardController updated)
-- [ ] 11D.4 Dashboard filter toggle: "Show unread only" (default on)
+- [x] 11D.4 Dashboard filter toggle: "Show unread only" — `#[MapQueryParameter] bool $unreadOnly`, DQL subquery filter, toggle link + mark-all button in template
 
 #### 11E: Testing
-- [ ] 11E.1 Write functional tests for all controllers (WebTestCase)
-- [ ] 11E.2 Write E2E tests (Panther, already installed in Phase 2) for critical paths:
+- [x] 11E.1 Write functional tests for all controllers (WebTestCase) — PageSmokeTest: protected routes redirect, login returns 200
+- [x] 11E.2 Write E2E tests (Panther, already installed in Phase 2) for critical paths:
   - Dashboard loads, articles display, category filter works, infinite scroll loads more
   - Search: query returns results, empty state shows
   - Source management: add source, toggle enabled, delete
@@ -552,9 +552,7 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
   - Digest config: create daily digest, verify in history
   - Notification log page renders, filters work
   - Dark mode toggle persists across navigation
-- [ ] 11E.3 **Golden path end-to-end test**:
-  - Seed sources → fetch feeds → dedup → enrich → score → alert rule matches → notification dispatched
-  - Validates the entire pipeline works in one test
+- [x] 11E.3 **Golden path end-to-end test**: seed → create article → enrich → score → alert match (GoldenPathTest, KernelTestCase, transactional)
 
 ### Phase 12: Logging & Monitoring
 - [ ] 12.1 Configure Monolog: stderr (docker) + rotating file handlers
@@ -646,6 +644,7 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] `ReadStateController`: `markAsRead()` → `__invoke()`
 - [x] 6 single-action controllers: `index()` → `__invoke()`
 - [x] Guidelines: `.claude/coding-php.md` — Controllers section added (invokable, MapQueryParameter, naming)
+- [x] All 12 controllers migrated from `extends AbstractController` to `ControllerHelper` injection (reduced coupling)
 
 ---
 

@@ -7,14 +7,15 @@ namespace App\Shared\Controller;
 use App\Article\Entity\Article;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class SearchController extends AbstractController
+final class SearchController
 {
     public function __construct(
+        private readonly ControllerHelper $controller,
         private readonly EntityManagerInterface $entityManager,
         private readonly ArticleSearchServiceInterface $searchService,
     ) {
@@ -47,7 +48,7 @@ final class SearchController extends AbstractController
             }
         }
 
-        return $this->render('search/index.html.twig', [
+        return $this->controller->render('search/index.html.twig', [
             'query' => $query,
             'results' => $results,
         ]);

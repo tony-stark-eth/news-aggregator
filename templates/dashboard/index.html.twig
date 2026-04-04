@@ -19,6 +19,18 @@
         <a href="{{ path('app_dashboard', {category: 'sports'}) }}" class="tab {{ currentCategory == 'sports' ? 'tab-active' : '' }}">Sports</a>
     </div>
 
+    {# Unread filter + Mark all read #}
+    <div class="flex items-center gap-3 mb-4">
+        {% if unreadOnly %}
+            <a href="{{ path('app_dashboard', {category: currentCategory}) }}" class="btn btn-sm btn-outline">Show All</a>
+        {% else %}
+            <a href="{{ path('app_dashboard', {category: currentCategory, unreadOnly: 1}) }}" class="btn btn-sm btn-outline">Unread Only</a>
+        {% endif %}
+        <form method="POST" action="{{ path('app_articles_read_all') }}">
+            <button type="submit" class="btn btn-sm btn-ghost">Mark All Read</button>
+        </form>
+    </div>
+
     {# Article feed #}
     {% if articles is empty %}
         {% include 'components/_empty_state.html.twig' with {
