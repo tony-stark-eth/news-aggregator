@@ -25,6 +25,9 @@ parameters:
         - message: '#Throwing checked exception .+ in closure#'
           paths:
             - config/
+        - identifier: staticMethod.dynamicCall
+          paths:
+            - tests/
 
     phpVersion: 80400
 

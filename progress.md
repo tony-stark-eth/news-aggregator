@@ -139,3 +139,18 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
   - FeedFetchException.fromUrl() accepts optional $previous throwable for proper exception chaining
   - Test uses createMock() with @var MockObject intersection types (PHPStan-compatible)
   - 42 tests, 126 assertions — all passing
+
+## Session 5 — 2026-04-04
+
+### Completed
+- [x] Phase 5.5: CategorizationServiceInterface + RuleBasedCategorizationService (5 categories, keyword scoring, requires >=2 matches)
+  - `src/Enrichment/Service/CategorizationServiceInterface.php`
+  - `src/Enrichment/Service/RuleBasedCategorizationService.php`
+  - `tests/Unit/Enrichment/Service/RuleBasedCategorizationServiceTest.php` (5 test cases)
+- [x] Phase 5.6: SummarizationServiceInterface + RuleBasedSummarizationService (first 2 sentences, 500-char cap, short-fragment filter)
+  - `src/Enrichment/Service/SummarizationServiceInterface.php`
+  - `src/Enrichment/Service/RuleBasedSummarizationService.php`
+  - `tests/Unit/Enrichment/Service/RuleBasedSummarizationServiceTest.php` (6 test cases)
+
+### Next Steps
+- Phase 5.7: Integrate rule-based services into FetchSourceHandler pipeline

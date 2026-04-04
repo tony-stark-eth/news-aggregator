@@ -339,22 +339,21 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 ### Phase 5: Deduplication & Rule-Based Enrichment (TDD)
 > **Note**: Rule-based services are implemented here (before AI in Phase 6) so the system is fully functional without any external API dependency. Phase 6 layers AI on top as an enhancement.
 
-- [ ] 5.1 Write DeduplicationServiceInterface + implementation unit tests:
+- [x] 5.1 Write DeduplicationServiceInterface + implementation unit tests:
   - URL exact match
-  - Title similarity (normalized Levenshtein)
-  - Content fingerprint (normalized text hash)
-- [ ] 5.2 Implement DeduplicationService
-- [ ] 5.3 Integrate dedup into FetchSourceHandler (check before persisting)
-- [ ] 5.4 Add DB indexes for fingerprint + URL lookups
-- [ ] 5.5 Write RuleBasedCategorizationService unit tests → implement (behind CategorizationServiceInterface):
-  - Keyword matching against article title + content
-  - Keywords derived from source category + domain-specific term lists per category
-  - Case-insensitive substring matching
-  - Returns category + confidence indicator
-- [ ] 5.6 Write RuleBasedSummarizationService unit tests → implement (behind SummarizationServiceInterface):
+  - Title similarity (similar_text, 85% threshold)
+  - Content fingerprint (xxh128 hash match)
+- [x] 5.2 Implement DeduplicationService
+- [x] 5.3 Integrate dedup into FetchSourceHandler (check before persisting)
+- [x] 5.4 Add DB indexes for fingerprint + URL lookups (done in Phase 3 migration)
+- [x] 5.5 Write RuleBasedCategorizationService unit tests → implement (behind CategorizationServiceInterface):
+  - Keyword matching against article title + content (5 categories, German + English keywords)
+  - Case-insensitive substring matching, minimum 2 keyword matches
+  - Returns category slug or null
+- [x] 5.6 Write RuleBasedSummarizationService unit tests → implement (behind SummarizationServiceInterface):
   - Extract first two sentences of article content_text as fallback summary
-  - Handle edge cases (short content, encoding)
-- [ ] 5.7 Integrate rule-based services into FetchSourceHandler pipeline
+  - Handle edge cases (short content, encoding, truncation at 500 chars)
+- [x] 5.7 Integrate rule-based services into FetchSourceHandler pipeline
 
 ### Phase 6: AI Enrichment Layer — Symfony AI + OpenRouter (TDD)
 > **Note**: AI services are decorators over rule-based services from Phase 5. Same interfaces. Article is always saved regardless of AI availability.

@@ -6,7 +6,11 @@ namespace App\Tests\Unit\Article\MessageHandler;
 
 use App\Article\Entity\Article;
 use App\Article\MessageHandler\FetchSourceHandler;
+use App\Article\Service\DeduplicationServiceInterface;
+use App\Enrichment\Service\CategorizationServiceInterface;
+use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Shared\Entity\Category;
+use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
@@ -28,17 +32,17 @@ final class FetchSourceHandlerTest extends TestCase
     /**
      * @var EntityManagerInterface&MockObject
      */
-    private \PHPUnit\Framework\MockObject\MockObject $em;
+    private MockObject $em;
 
     /**
      * @var FeedFetcherServiceInterface&MockObject
      */
-    private \PHPUnit\Framework\MockObject\MockObject $fetcher;
+    private MockObject $fetcher;
 
     /**
      * @var FeedParserServiceInterface&MockObject
      */
-    private \PHPUnit\Framework\MockObject\MockObject $parser;
+    private MockObject $parser;
 
     private MockClock $clock;
 
@@ -56,6 +60,15 @@ final class FetchSourceHandlerTest extends TestCase
         $this->parser = $this->createMock(FeedParserServiceInterface::class);
         $this->clock = new MockClock('2026-04-04 12:00:00');
 
+        $dedup = $this->createStub(DeduplicationServiceInterface::class);
+        $dedup->method('isDuplicate')->willReturn(false);
+
+        $categorization = $this->createStub(CategorizationServiceInterface::class);
+        $categorization->method('categorize')->willReturn(null);
+
+        $summarization = $this->createStub(SummarizationServiceInterface::class);
+        $summarization->method('summarize')->willReturn('A test summary.');
+
         /** @var EntityRepository<Article>&MockObject $repository */
         $repository = $this->createMock(EntityRepository::class);
         $repository->method('findOneBy')->willReturn(null);
@@ -66,6 +79,9 @@ final class FetchSourceHandlerTest extends TestCase
             $this->em,
             $this->fetcher,
             $this->parser,
+            $dedup,
+            $categorization,
+            $summarization,
             $this->clock,
             new NullLogger(),
         );
@@ -75,7 +91,7 @@ final class FetchSourceHandlerTest extends TestCase
     {
         $this->fetcher->method('fetch')->willReturn('<rss>...</rss>');
         $this->parser->method('parse')->willReturn([
-            new FeedItem('Article 1', 'https://example.com/1', '<p>Content</p>', 'Content', null),
+            new FeedItem('Article 1', 'https://example.com/1', '<p>Content</p>', 'Content text here for summarization', null),
             new FeedItem('Article 2', 'https://example.com/2', null, null, null),
         ]);
 
@@ -90,6 +106,9 @@ final class FetchSourceHandlerTest extends TestCase
         self::assertInstanceOf(Article::class, $persisted[0]);
         self::assertSame('Article 1', $persisted[0]->getTitle());
         self::assertSame(SourceHealth::Healthy, $this->source->getHealthStatus());
+        // First article has content, so it gets rule-based enrichment
+        self::assertSame(EnrichmentMethod::RuleBased, $persisted[0]->getEnrichmentMethod());
+        self::assertSame('A test summary.', $persisted[0]->getSummary());
     }
 
     public function testRecordsFailureOnFetchError(): void
