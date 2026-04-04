@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Article\Service;
 
 use App\Article\Entity\Article;
+use App\Shared\Entity\Category;
 use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\ValueObject\SourceHealth;
 use Psr\Clock\ClockInterface;
@@ -48,7 +49,7 @@ final readonly class ScoringService implements ScoringServiceInterface
     private function scoreCategoryWeight(Article $article): float
     {
         $category = $article->getCategory();
-        if (! $category instanceof \App\Shared\Entity\Category) {
+        if (! $category instanceof Category) {
             return 0.5; // default for uncategorized
         }
 

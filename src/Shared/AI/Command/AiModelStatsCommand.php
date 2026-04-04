@@ -6,6 +6,7 @@ namespace App\Shared\AI\Command;
 
 use App\Shared\AI\Service\ModelDiscoveryService;
 use App\Shared\AI\Service\ModelQualityTracker;
+use App\Shared\AI\ValueObject\ModelId;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,7 +32,7 @@ final class AiModelStatsCommand extends Command
 
         // Show quality stats
         $stats = $this->qualityTracker->getAllStats();
-        if ($stats === []) {
+        if ($stats->isEmpty()) {
             $io->info('No model quality data yet.');
         } else {
             $rows = [];
@@ -52,11 +53,11 @@ final class AiModelStatsCommand extends Command
 
         // Show available free models
         $freeModels = $this->modelDiscovery->discoverFreeModels();
-        if ($freeModels === []) {
+        if ($freeModels->isEmpty()) {
             $io->warning('No free models discovered (circuit breaker may be open).');
         } else {
-            $io->section(sprintf('Available free models (%d)', count($freeModels)));
-            $io->listing($freeModels);
+            $io->section(sprintf('Available free models (%d)', $freeModels->count()));
+            $io->listing(array_map(static fn (ModelId $model): string => (string) $model, $freeModels->toArray()));
         }
 
         return Command::SUCCESS;

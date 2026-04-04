@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\AI\Service;
 
+use App\Shared\AI\ValueObject\ModelId;
+use App\Shared\AI\ValueObject\ModelIdCollection;
 use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -32,10 +34,7 @@ final class ModelDiscoveryService
     ) {
     }
 
-    /**
-     * @return list<string> Free model IDs
-     */
-    public function discoverFreeModels(): array
+    public function discoverFreeModels(): ModelIdCollection
     {
         // Check circuit breaker
         $breakerItem = $this->cache->getItem(self::CIRCUIT_BREAKER_KEY);
@@ -48,8 +47,10 @@ final class ModelDiscoveryService
         // Check cache
         $cacheItem = $this->cache->getItem(self::CACHE_KEY);
         if ($cacheItem->isHit()) {
-            /** @var list<string> */
-            return $cacheItem->get();
+            /** @var list<string> $cached */
+            $cached = $cacheItem->get();
+
+            return $this->toCollection($cached);
         }
 
         // Fetch from API
@@ -57,13 +58,14 @@ final class ModelDiscoveryService
             $models = $this->fetchFreeModels();
             $this->failureCount = 0;
 
-            // Cache results
-            $cacheItem->set($models);
+            // Cache raw strings (serializable)
+            $rawIds = array_map(static fn (ModelId $m): string => $m->value, $models->toArray());
+            $cacheItem->set($rawIds);
             $cacheItem->expiresAfter(self::CACHE_TTL);
             $this->cache->save($cacheItem);
 
             $this->logger->info('Discovered {count} free OpenRouter models', [
-                'count' => count($models),
+                'count' => $models->count(),
             ]);
 
             return $models;
@@ -83,10 +85,7 @@ final class ModelDiscoveryService
         }
     }
 
-    /**
-     * @return list<string>
-     */
-    private function fetchFreeModels(): array
+    private function fetchFreeModels(): ModelIdCollection
     {
         $response = $this->httpClient->request('GET', 'https://openrouter.ai/api/v1/models');
         $data = $response->toArray();
@@ -114,25 +113,32 @@ final class ModelDiscoveryService
                 continue;
             }
 
-            $freeModels[] = $model['id'];
+            $freeModels[] = new ModelId($model['id']);
         }
 
-        return $freeModels;
+        return new ModelIdCollection($freeModels);
     }
 
-    /**
-     * @return list<string>
-     */
-    private function getCachedModels(): array
+    private function getCachedModels(): ModelIdCollection
     {
         $item = $this->cache->getItem(self::CACHE_KEY);
         if ($item->isHit()) {
-            /** @var list<string> */
-            return $item->get();
+            /** @var list<string> $cached */
+            $cached = $item->get();
+
+            return $this->toCollection($cached);
         }
 
         // No cache, return empty — callers should fall back to openrouter/free
-        return [];
+        return new ModelIdCollection();
+    }
+
+    /**
+     * @param list<string> $ids
+     */
+    private function toCollection(array $ids): ModelIdCollection
+    {
+        return new ModelIdCollection(array_map(static fn (string $id): ModelId => new ModelId($id), $ids));
     }
 
     private function openCircuitBreaker(): void

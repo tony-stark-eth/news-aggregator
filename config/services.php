@@ -2,6 +2,24 @@
 
 declare(strict_types=1);
 
+use App\Article\Service\AiDeduplicationService;
+use App\Article\Service\DeduplicationService;
+use App\Article\Service\DeduplicationServiceInterface;
+use App\Digest\Service\DigestSummaryService;
+use App\Enrichment\Service\AiCategorizationService;
+use App\Enrichment\Service\AiSummarizationService;
+use App\Enrichment\Service\CategorizationServiceInterface;
+use App\Enrichment\Service\SummarizationServiceInterface;
+use App\Notification\Service\AiAlertEvaluationService;
+use App\Shared\AI\Command\AiSmokeTestCommand;
+use App\Shared\AI\Platform\ModelFailoverPlatform;
+use App\Shared\AI\Service\ModelDiscoveryService;
+use App\Shared\Command\CleanupCommand;
+use App\Shared\Controller\SettingsController;
+use App\Source\Scheduler\FetchScheduleProvider;
+use Symfony\AI\Platform\Bridge\Generic\CompletionsModel;
+use Symfony\AI\Platform\Bridge\OpenRouter\ModelCatalog;
+use Symfony\AI\Platform\Capability;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
@@ -27,36 +45,36 @@ return static function (ContainerConfigurator $container): void {
 
     // AI implementations as defaults — they fall back to rule-based internally on failure.
     $services->alias(
-        \App\Enrichment\Service\CategorizationServiceInterface::class,
-        \App\Enrichment\Service\AiCategorizationService::class,
+        CategorizationServiceInterface::class,
+        AiCategorizationService::class,
     );
 
     $services->alias(
-        \App\Enrichment\Service\SummarizationServiceInterface::class,
-        \App\Enrichment\Service\AiSummarizationService::class,
+        SummarizationServiceInterface::class,
+        AiSummarizationService::class,
     );
 
     $services->alias(
-        \App\Article\Service\DeduplicationServiceInterface::class,
-        \App\Article\Service\AiDeduplicationService::class,
+        DeduplicationServiceInterface::class,
+        AiDeduplicationService::class,
     );
 
     // Register openrouter/free router in the model catalog (not included by default)
-    $services->set('ai.platform.model_catalog.openrouter', \Symfony\AI\Platform\Bridge\OpenRouter\ModelCatalog::class)
+    $services->set('ai.platform.model_catalog.openrouter', ModelCatalog::class)
         ->arg('$additionalModels', [
             'openrouter/free' => [
-                'class' => \Symfony\AI\Platform\Bridge\Generic\CompletionsModel::class,
+                'class' => CompletionsModel::class,
                 'capabilities' => [
-                    \Symfony\AI\Platform\Capability::INPUT_TEXT,
-                    \Symfony\AI\Platform\Capability::OUTPUT_TEXT,
-                    \Symfony\AI\Platform\Capability::OUTPUT_STREAMING,
+                    Capability::INPUT_TEXT,
+                    Capability::OUTPUT_TEXT,
+                    Capability::OUTPUT_STREAMING,
                 ],
             ],
         ]);
 
     // Model failover platform: openrouter/free → specific :free models → exception
     // Wraps the OpenRouter platform with model-level failover (complements FailoverPlatform's platform-level failover)
-    $services->set('ai.platform.openrouter.failover', \App\Shared\AI\Platform\ModelFailoverPlatform::class)
+    $services->set('ai.platform.openrouter.failover', ModelFailoverPlatform::class)
         ->arg('$innerPlatform', service('ai.platform.openrouter'))
         ->arg('$fallbackModels', [
             'minimax/minimax-m2.5:free',
@@ -67,40 +85,40 @@ return static function (ContainerConfigurator $container): void {
         ]);
 
     // All AI services use the failover-wrapped platform
-    $services->set(\App\Enrichment\Service\AiCategorizationService::class)
+    $services->set(AiCategorizationService::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
-    $services->set(\App\Enrichment\Service\AiSummarizationService::class)
+    $services->set(AiSummarizationService::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
-    $services->set(\App\Article\Service\AiDeduplicationService::class)
-        ->arg('$ruleBasedFallback', service(\App\Article\Service\DeduplicationService::class))
+    $services->set(AiDeduplicationService::class)
+        ->arg('$ruleBasedFallback', service(DeduplicationService::class))
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
-    $services->set(\App\Notification\Service\AiAlertEvaluationService::class)
+    $services->set(AiAlertEvaluationService::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
-    $services->set(\App\Digest\Service\DigestSummaryService::class)
+    $services->set(DigestSummaryService::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
-    $services->set(\App\Shared\AI\Command\AiSmokeTestCommand::class)
+    $services->set(AiSmokeTestCommand::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     // Wire OPENROUTER_BLOCKED_MODELS env var for ModelDiscoveryService
-    $services->set(\App\Shared\AI\Service\ModelDiscoveryService::class)
+    $services->set(ModelDiscoveryService::class)
         ->arg('$blockedModels', '%env(string:OPENROUTER_BLOCKED_MODELS)%');
 
     // Wire retention env vars for CleanupCommand
-    $services->set(\App\Shared\Command\CleanupCommand::class)
+    $services->set(CleanupCommand::class)
         ->arg('$retentionArticleDays', '%env(int:RETENTION_ARTICLES)%')
         ->arg('$retentionLogDays', '%env(int:RETENTION_LOGS)%');
 
     // Wire default fetch interval for FetchScheduleProvider
-    $services->set(\App\Source\Scheduler\FetchScheduleProvider::class)
+    $services->set(FetchScheduleProvider::class)
         ->arg('$defaultIntervalMinutes', '%env(int:FETCH_DEFAULT_INTERVAL_MINUTES)%');
 
     // Wire env vars for SettingsController
-    $services->set(\App\Shared\Controller\SettingsController::class)
+    $services->set(SettingsController::class)
         ->arg('$openrouterApiKey', '%env(default::OPENROUTER_API_KEY)%')
         ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%')
         ->arg('$retentionArticles', '%env(int:RETENTION_ARTICLES)%')

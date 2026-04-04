@@ -21,6 +21,7 @@ parameters:
     excludePaths:
         - config/reference.php
         - config/preload.php
+        - ecs.php
     ignoreErrors:
         - message: '#Throwing checked exception .+ in closure#'
           paths:

@@ -1,30 +1,38 @@
 <?php
 
 declare(strict_types=1);
+use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
+use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
+use Symfony\AI\AiBundle\AiBundle;
+use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
+use Symfony\Bundle\MonologBundle\MonologBundle;
+use Symfony\Bundle\SecurityBundle\SecurityBundle;
+use Symfony\Bundle\TwigBundle\TwigBundle;
+use Twig\Extra\TwigExtraBundle\TwigExtraBundle;
 
 return [
-    Symfony\Bundle\FrameworkBundle\FrameworkBundle::class => [
+    FrameworkBundle::class => [
         'all' => true,
     ],
-    Symfony\Bundle\MonologBundle\MonologBundle::class => [
+    MonologBundle::class => [
         'all' => true,
     ],
-    Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class => [
+    DoctrineBundle::class => [
         'all' => true,
     ],
-    Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle::class => [
+    DoctrineMigrationsBundle::class => [
         'all' => true,
     ],
-    Symfony\Bundle\SecurityBundle\SecurityBundle::class => [
+    SecurityBundle::class => [
         'all' => true,
     ],
-    Symfony\Bundle\TwigBundle\TwigBundle::class => [
+    TwigBundle::class => [
         'all' => true,
     ],
-    Twig\Extra\TwigExtraBundle\TwigExtraBundle::class => [
+    TwigExtraBundle::class => [
         'all' => true,
     ],
-    Symfony\AI\AiBundle\AiBundle::class => [
+    AiBundle::class => [
         'all' => true,
     ],
 ];

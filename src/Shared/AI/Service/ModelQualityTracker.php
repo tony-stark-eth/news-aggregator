@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\AI\Service;
 
 use App\Shared\AI\ValueObject\ModelQualityStats;
+use App\Shared\AI\ValueObject\ModelQualityStatsMap;
 use Psr\Cache\CacheItemPoolInterface;
 
 final class ModelQualityTracker
@@ -42,10 +43,7 @@ final class ModelQualityTracker
         );
     }
 
-    /**
-     * @return array<string, ModelQualityStats>
-     */
-    public function getAllStats(): array
+    public function getAllStats(): ModelQualityStatsMap
     {
         $item = $this->cache->getItem(self::CACHE_PREFIX . 'index');
         /** @var list<string> $modelIds */
@@ -56,7 +54,7 @@ final class ModelQualityTracker
             $stats[$modelId] = $this->getStats($modelId);
         }
 
-        return $stats;
+        return new ModelQualityStatsMap($stats);
     }
 
     private function updateStats(string $modelId, bool $accepted): void

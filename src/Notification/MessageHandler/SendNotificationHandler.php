@@ -9,6 +9,7 @@ use App\Notification\Entity\AlertRule;
 use App\Notification\Message\SendNotificationMessage;
 use App\Notification\Service\AiAlertEvaluationService;
 use App\Notification\Service\NotificationDispatchService;
+use App\Notification\ValueObject\EvaluationResult;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -38,7 +39,7 @@ final readonly class SendNotificationHandler
             $evaluation = $this->aiEvaluationService->evaluate($article, $rule);
 
             // Skip notification if AI severity is below threshold
-            if ($evaluation instanceof \App\Notification\ValueObject\EvaluationResult && $evaluation->severity < $rule->getSeverityThreshold()) {
+            if ($evaluation instanceof EvaluationResult && $evaluation->severity < $rule->getSeverityThreshold()) {
                 $this->logger->info('Alert "{rule}" skipped: AI severity {severity} < threshold {threshold}', [
                     'rule' => $rule->getName(),
                     'severity' => $evaluation->severity,

@@ -52,9 +52,9 @@ final readonly class NotificationDispatchService
             $success = false;
         }
 
-        $matchType = $evaluation instanceof \App\Notification\ValueObject\EvaluationResult ? 'ai' : 'keyword';
+        $matchType = $evaluation instanceof EvaluationResult ? 'ai' : 'keyword';
         $log = new NotificationLog($rule, $article, $matchType, $success, $this->clock->now());
-        if ($evaluation instanceof \App\Notification\ValueObject\EvaluationResult) {
+        if ($evaluation instanceof EvaluationResult) {
             $log->setAiSeverity($evaluation->severity);
             $log->setAiExplanation($evaluation->explanation);
             $log->setAiModelUsed($evaluation->modelUsed);
@@ -83,7 +83,7 @@ final readonly class NotificationDispatchService
             $parts[] = sprintf('Summary: %s', $article->getSummary());
         }
 
-        if ($evaluation instanceof \App\Notification\ValueObject\EvaluationResult) {
+        if ($evaluation instanceof EvaluationResult) {
             $parts[] = sprintf('AI Severity: %d/10', $evaluation->severity);
             $parts[] = sprintf('AI Analysis: %s', $evaluation->explanation);
         }

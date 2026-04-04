@@ -16,6 +16,7 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -104,7 +105,7 @@ final class ArticleMatcherServiceTest extends TestCase
 
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('getRepository')->willReturnCallback(
-            static fn (string $class): \PHPUnit\Framework\MockObject\Stub => $class === AlertRule::class ? $ruleRepo : $logRepo,
+            static fn (string $class): Stub => $class === AlertRule::class ? $ruleRepo : $logRepo,
         );
 
         return new ArticleMatcherService($em, new MockClock('2026-04-04 12:00:00'));

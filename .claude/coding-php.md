@@ -51,10 +51,17 @@
 ## Arrays
 
 - **No untyped arrays** as return types or parameters at service boundaries
-- Return DTOs or value objects instead of associative arrays
-- Collections of objects: use typed `ArrayCollection` subclass with `@template-extends` docblock
-- `list<string>` for simple scalar lists is acceptable (e.g. keywords, category slugs)
-- Internal/private methods may use arrays if the scope is small and contained
+- Associative arrays (`array{key: type}`) → DTOs or value objects
+- Collections of domain objects → typed `ArrayCollection` subclass with `@template-extends`
+  ```php
+  /** @template-extends ArrayCollection<int, FeedItem> */
+  final class FeedItemCollection extends ArrayCollection {}
+  ```
+- Domain primitives → value objects (model IDs, URLs, fingerprints — not raw strings)
+- `list<string>` only for truly generic scalars (HTML tag names, SQL columns)
+  - Keywords, slugs, model IDs → value objects or typed collections
+- Internal/private methods may use plain arrays if scope is small
+- **FQCN**: always import via `use`, never `\App\...` inline — enforced by ECS `FullyQualifiedStrictTypesFixer`
 
 ## Domain Structure
 

@@ -50,8 +50,8 @@ final class ModelQualityTrackerTest extends TestCase
         $all = $this->tracker->getAllStats();
 
         self::assertCount(2, $all);
-        self::assertArrayHasKey('model-x', $all);
-        self::assertArrayHasKey('model-y', $all);
-        self::assertContainsOnlyInstancesOf(ModelQualityStats::class, $all);
+        self::assertTrue($all->containsKey('model-x'));
+        self::assertTrue($all->containsKey('model-y'));
+        self::assertContainsOnlyInstancesOf(ModelQualityStats::class, $all->toArray());
     }
 }

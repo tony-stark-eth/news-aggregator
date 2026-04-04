@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Article\MessageHandler;
 
 use App\Article\Entity\Article;
+use App\Article\Message\RescoreArticlesMessage;
 use App\Article\Service\ScoringServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -22,7 +23,7 @@ final readonly class RescoreArticlesHandler
     ) {
     }
 
-    public function __invoke(\App\Article\Message\RescoreArticlesMessage $message): void
+    public function __invoke(RescoreArticlesMessage $message): void
     {
         $offset = 0;
         $count = 0;

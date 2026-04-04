@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use PhpCsFixer\Fixer\Import\FullyQualifiedStrictTypesFixer;
 use Symplify\EasyCodingStandard\Config\ECSConfig;
 
 return ECSConfig::configure()
@@ -20,4 +21,7 @@ return ECSConfig::configure()
         common: true,
         strict: true,
         cleanCode: true,
-    );
+    )
+    ->withConfiguredRule(FullyQualifiedStrictTypesFixer::class, [
+        'import_symbols' => true,
+    ]);

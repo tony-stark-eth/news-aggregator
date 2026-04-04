@@ -41,7 +41,7 @@
     {% else %}
         <div class="flex flex-wrap gap-2">
             {% for model in freeModels %}
-                <span class="badge badge-outline">{{ model }}</span>
+                <span class="badge badge-outline">{{ model.value }}</span>
             {% endfor %}
         </div>
     {% endif %}

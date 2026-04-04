@@ -23,7 +23,7 @@ final class ReadStateController extends AbstractController
     }
 
     #[Route('/articles/{id}/read', name: 'app_article_read', methods: ['POST'])]
-    public function markAsRead(int $id): \Symfony\Component\HttpFoundation\JsonResponse
+    public function markAsRead(int $id): JsonResponse
     {
         $user = $this->getUser();
         if (! $user instanceof User) {

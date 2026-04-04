@@ -63,7 +63,7 @@ final readonly class FetchSourceHandler
 
             $result = $this->processItems($items, $source, $message->sourceId, $now);
 
-            if ($result->source instanceof \App\Source\Entity\Source) {
+            if ($result->source instanceof Source) {
                 $result->source->recordSuccess($now);
                 $this->entityManager->flush();
                 $this->dispatchAlerts($result->newArticles);
@@ -99,12 +99,12 @@ final readonly class FetchSourceHandler
             }
 
             $itemResult = $this->persistItem($item, $source, $sourceId, $now, $fingerprint);
-            if (! $itemResult instanceof \App\Article\ValueObject\PersistItemResult) {
+            if (! $itemResult instanceof PersistItemResult) {
                 return new FetchResult($persisted, new ArticleCollection($newArticles), null);
             }
 
             $source = $itemResult->source;
-            if ($itemResult->article instanceof \App\Article\Entity\Article) {
+            if ($itemResult->article instanceof Article) {
                 $newArticles[] = $itemResult->article;
                 $persisted++;
             }
@@ -202,7 +202,7 @@ final readonly class FetchSourceHandler
         $aiResult = $sumResult->method === EnrichmentMethod::Ai ? $sumResult : null;
         $aiResult ??= $catResult->method === EnrichmentMethod::Ai ? $catResult : null;
 
-        $article->setEnrichmentMethod($aiResult instanceof \App\Enrichment\ValueObject\EnrichmentResult ? EnrichmentMethod::Ai : EnrichmentMethod::RuleBased);
+        $article->setEnrichmentMethod($aiResult instanceof EnrichmentResult ? EnrichmentMethod::Ai : EnrichmentMethod::RuleBased);
         $article->setAiModelUsed($aiResult?->modelUsed);
     }
 

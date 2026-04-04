@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Shared\AI\Service;
 
 use App\Shared\AI\Service\ModelDiscoveryService;
+use App\Shared\AI\ValueObject\ModelId;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -60,10 +61,13 @@ final class ModelDiscoveryServiceTest extends TestCase
         $models = $service->discoverFreeModels();
 
         self::assertCount(2, $models);
-        self::assertContains('free-model-1', $models);
-        self::assertContains('free-model-2', $models);
-        self::assertNotContains('paid-model', $models);
-        self::assertNotContains('free-small', $models); // context_length < 8192
+        self::assertContainsOnlyInstancesOf(ModelId::class, $models->toArray());
+
+        $values = array_map(static fn (ModelId $m): string => $m->value, $models->toArray());
+        self::assertContains('free-model-1', $values);
+        self::assertContains('free-model-2', $values);
+        self::assertNotContains('paid-model', $values);
+        self::assertNotContains('free-small', $values); // context_length < 8192
     }
 
     public function testFilterBlockedModels(): void
@@ -100,7 +104,11 @@ final class ModelDiscoveryServiceTest extends TestCase
         $models = $service->discoverFreeModels();
 
         self::assertCount(1, $models);
-        self::assertContains('good-model', $models);
+        self::assertContainsOnlyInstancesOf(ModelId::class, $models->toArray());
+
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('good-model', $first->value);
     }
 
     public function testCachesResults(): void
@@ -146,6 +154,6 @@ final class ModelDiscoveryServiceTest extends TestCase
 
         // Fourth call should not hit the API (circuit breaker open)
         $models = $service->discoverFreeModels();
-        self::assertSame([], $models); // empty because no cache exists
+        self::assertTrue($models->isEmpty()); // empty because no cache exists
     }
 }
