@@ -249,3 +249,23 @@ Phase 3 complete (7 of 8 tasks). 3.7 (repository integration tests) deferred —
 - PHPStan: 0 errors
 - Rector: clean
 - PHPUnit unit suite: 95 tests pass
+
+## Session 11 — 2026-04-04
+
+### Completed
+
+#### Invokable Controller Refactor
+- [x] `DashboardController`: removed `Request`, replaced with `#[MapQueryParameter]` for `$category`, `$page`, `$fragment`; AJAX detection via `$fragment !== null`; renamed `index()` → `__invoke()`
+- [x] `SearchController`: removed `Request`, replaced with `#[MapQueryParameter]` for `$q` and `$category`; renamed `index()` → `__invoke()`
+- [x] `LoginController`: split — extracted logout action; renamed `login()` → `__invoke()`
+- [x] `LogoutController` (new): single `__invoke(): never` with `#[Route('/logout', name: 'app_logout')]`
+- [x] `ReadStateController`: renamed `markAsRead()` → `__invoke()`
+- [x] `DigestController`, `AlertRuleController`, `NotificationLogController`, `AiStatsController`, `SettingsController`, `SourceController`: renamed `index()` → `__invoke()`
+- [x] Deleted `config/routes/security.php` (was importing `security.route_loader.logout`; logout route now defined via attribute)
+- [x] Verified no templates use `controller()` Twig function
+
+### Quality
+- ECS: OK (auto-fixed attribute formatting on `#[MapQueryParameter]` args)
+- Rector: clean
+- PHPStan: 0 errors
+- PHPUnit unit suite: 95 tests pass

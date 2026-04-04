@@ -18,7 +18,7 @@ final class SourceController extends AbstractController
     }
 
     #[Route('/sources', name: 'app_sources')]
-    public function index(): Response
+    public function __invoke(): Response
     {
         /** @var list<Source> $sources */
         $sources = $this->entityManager->getRepository(Source::class)->findAll();

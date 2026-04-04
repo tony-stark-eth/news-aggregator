@@ -11,8 +11,8 @@ use App\User\Entity\UserArticleRead;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class DashboardController extends AbstractController
@@ -24,10 +24,15 @@ final class DashboardController extends AbstractController
     }
 
     #[Route('/', name: 'app_dashboard')]
-    public function index(Request $request): Response
-    {
-        $category = $request->query->get('category');
-        $page = max(1, $request->query->getInt('page', 1));
+    public function __invoke(
+        #[MapQueryParameter]
+        ?string $category = null,
+        #[MapQueryParameter]
+        int $page = 1,
+        #[MapQueryParameter(name: '_fragment')]
+        ?string $fragment = null,
+    ): Response {
+        $page = max(1, $page);
         $limit = 20;
 
         $qb = $this->entityManager
@@ -67,7 +72,7 @@ final class DashboardController extends AbstractController
         $readArticleIds = $this->getReadArticleIds($articles);
 
         // AJAX fragment for infinite scroll
-        if ($request->isXmlHttpRequest()) {
+        if ($fragment !== null) {
             return $this->render('dashboard/_article_list.html.twig', [
                 'articles' => $articles,
                 'readArticleIds' => $readArticleIds,

@@ -636,6 +636,17 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
   - `RuleBasedSummarizationService.extractSentences()` — private helper
   - `User.roles` — Symfony security convention
 
+### Refactor: Invokable controllers + request mapping (completed)
+> All controllers converted to single-action invokable pattern with typed parameter mapping.
+
+- [x] All 11 controllers use `__invoke()` as sole action method
+- [x] `DashboardController`: `Request` → `#[MapQueryParameter] ?string $category`, `int $page`, `?string $fragment`
+- [x] `SearchController`: `Request` → `#[MapQueryParameter] string $q`, `?string $category`
+- [x] `LoginController` + `LogoutController`: split from single controller
+- [x] `ReadStateController`: `markAsRead()` → `__invoke()`
+- [x] 6 single-action controllers: `index()` → `__invoke()`
+- [x] Guidelines: `.claude/coding-php.md` — Controllers section added (invokable, MapQueryParameter, naming)
+
 ---
 
 ## Resolved Questions

@@ -8,8 +8,8 @@ use App\Article\Entity\Article;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class SearchController extends AbstractController
@@ -21,11 +21,14 @@ final class SearchController extends AbstractController
     }
 
     #[Route('/search', name: 'app_search')]
-    public function index(Request $request): Response
-    {
-        $query = $request->query->getString('q', '');
-        $rawCategory = $request->query->getString('category', '');
-        $categorySlug = $rawCategory !== '' ? $rawCategory : null;
+    public function __invoke(
+        #[MapQueryParameter]
+        string $q = '',
+        #[MapQueryParameter]
+        string $category = '',
+    ): Response {
+        $query = $q;
+        $categorySlug = $category !== '' ? $category : null;
         $results = [];
 
         if ($query !== '') {

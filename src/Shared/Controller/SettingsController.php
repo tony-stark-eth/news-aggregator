@@ -19,7 +19,7 @@ final class SettingsController extends AbstractController
     }
 
     #[Route('/settings', name: 'app_settings')]
-    public function index(): Response
+    public function __invoke(): Response
     {
         return $this->render('settings/index.html.twig', [
             'hasOpenrouterKey' => $this->openrouterApiKey !== '',
