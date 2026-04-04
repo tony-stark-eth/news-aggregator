@@ -317,7 +317,7 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 - [x] 3.4 Write UserArticleRead entity (user_id, article_id, read_at) — per-user read tracking
 - [x] 3.5 Create & run migrations
 - [x] 3.6 Write architecture tests (PHPat): layer deps, naming conventions, interface-first enforcement
-- [ ] 3.7 Write repository integration tests (deferred — needs test DB config)
+- [x] 3.7 Write repository integration tests
 - [x] 3.8 Create data fixtures / seed command for default sources + categories
 
 ### Phase 4: Feed Fetching & Parsing (TDD)

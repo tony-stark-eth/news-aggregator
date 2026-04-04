@@ -19,6 +19,8 @@
         <server name="APP_ENV" value="test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
         <server name="KERNEL_CLASS" value="App\Kernel" />
+        <!-- Direct DB connection for tests (bypass pgbouncer); Doctrine adds _test suffix -->
+        <server name="DATABASE_URL" value="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17&amp;charset=utf8" force="true" />
     </php>
 
     <testsuites>
