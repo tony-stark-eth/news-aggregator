@@ -10,12 +10,17 @@ Self-hosted, AI-enhanced RSS/Atom news aggregator built with Symfony 8 + Franken
 
 - **RSS/Atom feed aggregation** from configurable sources
 - **AI-powered categorization & summarization** via OpenRouter free models (with rule-based fallback)
+- **Keyword extraction** — AI-extracted entities (people, orgs, places) displayed as tags, searchable
+- **Article translation** — automatic title/summary translation based on source language (original preserved)
 - **Smart alerts** with keyword and AI-based evaluation
+- **Alert rule fixtures** — define alert strategies in YAML files, load via CLI
 - **Periodic digests** with AI-generated editorial summaries
-- **Full-text search** via SEAL + Loupe (zero infrastructure, SQLite-based)
+- **Full-text search** via SEAL + Loupe (zero infrastructure, SQLite-based) with auto-reindexing
+- **Inline article filter** — client-side search-as-you-type on the dashboard
 - **Article scoring & ranking** based on recency, source reliability, and category weights
 - **Deduplication** across sources (URL, title similarity, content fingerprint)
 - **Data retention** with configurable cleanup intervals
+- **Scheduled maintenance** — daily search reindex + cleanup via Symfony Scheduler
 - Single-user auth, multi-user ready architecture
 
 ## Tech Stack
@@ -124,7 +129,33 @@ NOTIFIER_CHATTER_DSN=pushover://USER_KEY@TOKEN
 
 ## Alert Rules
 
-Alert rules watch incoming articles and send notifications when matched. Each rule has a **type**:
+Alert rules watch incoming articles and send notifications when matched.
+
+### Loading from fixtures
+
+Define alert strategies in YAML and load them via CLI:
+
+```bash
+make sf c="app:load-alert-rules fixtures/alert-rules/portfolio.yaml"
+make sf c="app:load-alert-rules fixtures/alert-rules/"  # load all files in directory
+make sf c="app:load-alert-rules fixtures/alert-rules/portfolio.yaml --dry-run"  # preview
+make sf c="app:load-alert-rules fixtures/alert-rules/portfolio.yaml --purge"    # remove rules not in file
+```
+
+Fixture format (`fixtures/alert-rules/portfolio.yaml`):
+```yaml
+- name: "Hormuz De-escalation"
+  type: ai
+  keywords: ["hormuz ceasefire", "iran diplomacy", "iran peace deal"]
+  context_prompt: "I hold CF Industries and K+S stocks that profit from the Hormuz blockade..."
+  urgency: high
+  severity_threshold: 6
+  cooldown_minutes: 30
+```
+
+### Creating via UI
+
+Navigate to **Alerts** in the sidebar. Each rule has a **type**:
 
 | Type | Behavior |
 |------|----------|
@@ -169,9 +200,35 @@ AI features use [OpenRouter](https://openrouter.ai) free models via `symfony/ai-
 - **Blocked models**: Set `OPENROUTER_BLOCKED_MODELS=model-id-1,model-id-2` to permanently skip unreliable models.
 - **Stats**: Run `make sf c="app:ai-stats"` to see model quality metrics.
 
+### AI enrichment pipeline
+
+Each fetched article goes through this pipeline:
+
+1. **Categorization** — assigns a category (politics, tech, business, science, sports)
+2. **Summarization** — generates a 1-2 sentence summary
+3. **Keyword extraction** — extracts 3-5 key entities (people, organizations, places, topics)
+4. **Translation** — translates title and summary if the source language differs from English
+
+All four steps use the same decorator pattern: AI tries first, rule-based fallback on failure. Keywords and translations are stored alongside the original content.
+
+### Source language & translation
+
+Sources have a `language` field (e.g. `de`, `en`). When a source's language is not English, the AI translates the title and summary after enrichment. The original text is preserved (`titleOriginal`, `summaryOriginal`) and shown via a tooltip on the article card.
+
+Add a language when creating a source in the UI, or set it in the seed data.
+
+## Search
+
+Articles are indexed via SEAL + Loupe (SQLite-based, zero infrastructure). Search covers title, content, summary, source name, category, and extracted keywords.
+
+- **Navbar search** — full-text search via `/search?q=...`
+- **Inline filter** — type in the filter input above the dashboard article list for instant client-side filtering
+- **Auto-reindex** — new articles are indexed automatically via a Doctrine event listener. A daily full reindex runs as a safety net via the maintenance scheduler.
+- **Manual reindex**: `make sf c="app:search-reindex"`
+
 ## Data Retention
 
-Old articles and logs are pruned automatically by the `app:cleanup` command (run daily via the Messenger scheduler).
+Old articles and logs are pruned automatically by the `app:cleanup` command (run daily via the maintenance scheduler).
 
 | Variable | Default | Description |
 |----------|---------|-------------|

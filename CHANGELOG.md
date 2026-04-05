@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Post-Release Features
+- Keyword extraction from articles — AI extracts key entities (people, orgs, places), displayed as badges, searchable (#21)
+- Inline search-as-you-type filter on dashboard — client-side article filtering with debounce (#22)
+- Article translation by source language — auto-translates German (and other) titles/summaries to English, preserves originals (#23)
+- Alert rule fixtures — YAML-based alert strategies loadable via `app:load-alert-rules` command with `--dry-run` and `--purge` (#25)
+- Auto-reindex search on article persist/update via Doctrine event listener (#29)
+- Maintenance scheduler — daily `app:search-reindex` + `app:cleanup` via `#[AsSchedule('maintenance')]`
+- Source and alert rule CRUD forms in the UI
+- CSRF protection on mark-all-read and delete forms
+- Search bar visible on all screen sizes (mobile hamburger menu + medium+ navbar)
+
+### Fixed
+- Auth switched from in-memory provider to entity provider — fixes mark-as-read, dashboard read state
+- Dashboard sort by publishedAt (not fetchedAt) to match displayed timestamps
+- Worker now consumes `scheduler_fetch` transport for automatic periodic feed fetching
+- TypeScript modules (theme toggle, timeago, mark-as-read) now loaded via app.js imports
+- CI builds TypeScript assets before functional tests
+- Untracked auto-generated `config/reference.php`
+
 #### Infrastructure & Scaffolding
 - Project scaffolding with dunglas/symfony-docker (FrankenPHP + Caddy)
 - Docker Compose setup with PostgreSQL 17, PgBouncer (transaction pooling), and Messenger worker

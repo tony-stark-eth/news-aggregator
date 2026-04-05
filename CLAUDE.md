@@ -84,7 +84,7 @@ make hooks       # Install git hooks
 ```
 src/
 ├── Article/         # Core: articles, scoring, deduplication, content fingerprinting
-├── Enrichment/      # Rule-based + AI categorization/summarization (decorator pattern)
+├── Enrichment/      # Rule-based + AI categorization/summarization/keywords/translation (decorator pattern)
 ├── Source/          # Feed management, fetching (laminas-feed), health tracking
 ├── Notification/    # Unified alert rules (keyword/AI/both) + Notifier dispatch
 ├── Digest/          # Periodic AI-generated editorial summaries
@@ -94,6 +94,7 @@ src/
     ├── Search/      # SEAL + Loupe full-text search (zero infrastructure)
     ├── Entity/      # Category (shared lookup)
     ├── ValueObject/ # EnrichmentMethod (cross-domain)
+    ├── Scheduler/   # MaintenanceScheduleProvider (daily reindex + cleanup)
     ├── Command/     # app:cleanup, app:search-reindex, app:check-sources, app:process-digests
     ├── Controller/  # DashboardController, HealthController
     └── Twig/        # Extensions, NavigationExtension
@@ -106,7 +107,11 @@ src/
 - **Rule-based fallback**: Always active — AI is an enhancement layer, not a dependency
 - **Quality gates**: `AiQualityGateService` — structured output validation, confidence >= 0.7, summary length heuristic
 - **Circuit breaker**: `ModelDiscoveryService` — 3 consecutive failures → 24h fallback to DB-persisted model list
+- **Keyword extraction**: AI extracts 3-5 entities per article (people, orgs, places), displayed as tags
+- **Translation**: Auto-translates non-English articles (originals preserved), configurable per source
+- **Alert fixtures**: YAML-based alert rule definitions, loadable via `app:load-alert-rules`
 - **Keyword-first**: Alert rules always run keyword matching first; AI evaluation only on keyword matches (~10-20 calls/day)
+- **Auto-reindex**: Doctrine listener indexes articles on persist/update; daily full reindex via maintenance scheduler
 - **Model stats**: `app:ai-stats` command shows model quality metrics
 - **Blocked models**: `OPENROUTER_BLOCKED_MODELS` env var (comma-separated) for persistent manual overrides
 
