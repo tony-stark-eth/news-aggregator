@@ -27,6 +27,7 @@
             <a href="{{ path('app_dashboard', {category: currentCategory, unreadOnly: 1}) }}" class="btn btn-sm btn-outline">Unread Only</a>
         {% endif %}
         <form method="POST" action="{{ path('app_articles_read_all') }}">
+            <input type="hidden" name="_token" value="{{ csrf_token('mark_all_read') }}">
             <button type="submit" class="btn btn-sm btn-ghost">Mark All Read</button>
         </form>
     </div>

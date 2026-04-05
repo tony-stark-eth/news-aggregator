@@ -11,6 +11,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
@@ -21,6 +22,7 @@ final class MarkAllReadController
         private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
         private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly RequestStack $requestStack,
     ) {
     }
 
@@ -32,6 +34,18 @@ final class MarkAllReadController
             return new RedirectResponse($this->urlGenerator->generate('app_login'));
         }
 
+        $token = $this->requestStack->getCurrentRequest()?->request->getString('_token');
+        if (! $this->controller->isCsrfTokenValid('mark_all_read', $token)) {
+            return new RedirectResponse($this->urlGenerator->generate('app_dashboard'));
+        }
+
+        $this->markUnreadArticles($user);
+
+        return new RedirectResponse($this->urlGenerator->generate('app_dashboard'));
+    }
+
+    private function markUnreadArticles(User $user): void
+    {
         $now = $this->clock->now();
 
         $subDql = $this->entityManager
@@ -56,7 +70,5 @@ final class MarkAllReadController
         }
 
         $this->entityManager->flush();
-
-        return new RedirectResponse($this->urlGenerator->generate('app_dashboard'));
     }
 }
