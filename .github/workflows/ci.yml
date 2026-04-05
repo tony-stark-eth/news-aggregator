@@ -94,7 +94,7 @@ jobs:
       - name: Start database
         run: docker compose up -d database pgbouncer && docker compose exec -T database sh -c 'until pg_isready -U app; do sleep 1; done'
       - name: Build TypeScript assets
-        run: docker compose run --rm --no-deps --entrypoint "" php bun build assets/ts/theme-toggle.ts assets/ts/timeago.ts assets/ts/mark-as-read.ts assets/ts/infinite-scroll.ts assets/ts/article-filter.ts --outdir=assets/js
+        run: docker compose run --rm --no-deps --entrypoint "" php bun build assets/ts/theme-toggle.ts assets/ts/timeago.ts assets/ts/mark-as-read.ts assets/ts/infinite-scroll.ts assets/ts/article-filter.ts assets/ts/language-toggle.ts --outdir=assets/js
       - name: Start app (vendor already installed — entrypoint skips composer install)
         run: docker compose up -d --wait --no-build php
       # Tests bypass PgBouncer and connect directly to database.

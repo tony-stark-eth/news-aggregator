@@ -30,6 +30,9 @@
             <input type="hidden" name="_token" value="{{ csrf_token('mark_all_read') }}">
             <button type="submit" class="btn btn-sm btn-ghost">Mark All Read</button>
         </form>
+        <button id="lang-toggle" class="btn btn-sm btn-outline gap-1" title="Switch between translated and original article text">
+            <span id="lang-toggle-label">Translated</span>
+        </button>
         <input id="article-filter" type="text" placeholder="Filter articles..." class="input input-bordered input-sm flex-1" />
     </div>
 
