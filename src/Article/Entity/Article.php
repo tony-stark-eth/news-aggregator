@@ -67,6 +67,14 @@ class Article
     private ?string $summaryOriginal = null;
 
     /**
+     * Translations map: {"de": {"title": "...", "summary": "..."}, "en": {...}, "fr": {...}}
+     *
+     * @var array<string, array{title: string, summary: string|null}>|null
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $translations = null;
+
+    /**
      * @var list<string>|null
      */
     #[ORM\Column(type: 'json', nullable: true)]
@@ -236,6 +244,30 @@ class Article
     public function setKeywords(?array $keywords): void
     {
         $this->keywords = $keywords;
+    }
+
+    /**
+     * @return array<string, array{title: string, summary: string|null}>|null
+     */
+    public function getTranslations(): ?array
+    {
+        return $this->translations;
+    }
+
+    /**
+     * @param array<string, array{title: string, summary: string|null}>|null $translations
+     */
+    public function setTranslations(?array $translations): void
+    {
+        $this->translations = $translations;
+    }
+
+    /**
+     * @return array{title: string, summary: string|null}|null
+     */
+    public function getTranslation(string $lang): ?array
+    {
+        return $this->translations[$lang] ?? null;
     }
 
     public function getFetchedAt(): \DateTimeImmutable

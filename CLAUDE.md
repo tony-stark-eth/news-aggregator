@@ -108,7 +108,7 @@ src/
 - **Quality gates**: `AiQualityGateService` — structured output validation, confidence >= 0.7, summary length heuristic
 - **Circuit breaker**: `ModelDiscoveryService` — 3 consecutive failures → 24h fallback to DB-persisted model list
 - **Keyword extraction**: AI extracts 3-5 entities per article (people, orgs, places), displayed as tags
-- **Translation**: Auto-translates non-English articles (originals preserved), configurable per source
+- **Translation**: Multi-language — translates articles to all configured display languages (`DISPLAY_LANGUAGES`); client-side language selector (EN/DE/FR)
 - **Alert fixtures**: YAML-based alert rule definitions, loadable via `app:load-alert-rules`
 - **Keyword-first**: Alert rules always run keyword matching first; AI evaluation only on keyword matches (~10-20 calls/day)
 - **Auto-reindex**: Doctrine listener indexes articles on persist/update; daily full reindex via maintenance scheduler
@@ -125,6 +125,7 @@ src/
 | `OPENROUTER_BLOCKED_MODELS` | Comma-separated blocked model IDs | (empty) |
 | `NOTIFIER_CHATTER_DSN` | Notifier transport DSN | (optional — alerts disabled without it) |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | Default fetch interval | `60` |
+| `DISPLAY_LANGUAGES` | Comma-separated display languages (e.g. `en,de,fr`) | `en` |
 | `RETENTION_ARTICLES` | Article retention period | `90` |
 | `RETENTION_LOGS` | Notification/digest log retention | `30` |
 | `DATABASE_URL` | PostgreSQL DSN | (set in compose) |

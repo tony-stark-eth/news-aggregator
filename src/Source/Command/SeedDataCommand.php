@@ -145,6 +145,12 @@ final class SeedDataCommand extends Command
                 'language' => 'en',
             ],
             [
+                'name' => 'Le Monde',
+                'url' => 'https://www.lemonde.fr/rss/une.xml',
+                'category' => 'politics',
+                'language' => 'fr',
+            ],
+            [
                 'name' => 'Der Spiegel',
                 'url' => 'https://www.spiegel.de/schlagzeilen/tops/index.rss',
                 'category' => 'politics',

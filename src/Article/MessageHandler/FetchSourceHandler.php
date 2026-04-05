@@ -36,6 +36,11 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class FetchSourceHandler
 {
+    /**
+     * @var list<string>
+     */
+    private array $parsedDisplayLanguages;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private FeedFetcherServiceInterface $feedFetcher,
@@ -50,7 +55,14 @@ final readonly class FetchSourceHandler
         private MessageBusInterface $messageBus,
         private ClockInterface $clock,
         private LoggerInterface $logger,
+        private string $displayLanguages = 'en',
     ) {
+        $this->parsedDisplayLanguages = array_values(
+            array_filter(
+                array_map(trim(...), explode(',', $this->displayLanguages)),
+                static fn (string $lang): bool => $lang !== '',
+            ),
+        );
     }
 
     public function __invoke(FetchSourceMessage $message): void
@@ -220,21 +232,69 @@ final readonly class FetchSourceHandler
 
     private function applyTranslation(Article $article, Source $source): void
     {
-        $language = $source->getLanguage();
-        if ($language === null || $language === 'en') {
-            return;
+        $sourceLanguage = $source->getLanguage() ?? 'en';
+        $originalTitle = $article->getTitle();
+        $originalSummary = $article->getSummary();
+
+        // Store originals in the source language (backward compat)
+        $article->setTitleOriginal($originalTitle);
+        $article->setSummaryOriginal($originalSummary);
+
+        // Build translations map for all display languages
+        $translations = [];
+        $originalKeywords = $article->getKeywords() ?? [];
+
+        // Source language entry — always the original text, no API call
+        $translations[$sourceLanguage] = [
+            'title' => $originalTitle,
+            'summary' => $originalSummary,
+            'keywords' => $originalKeywords,
+        ];
+
+        foreach ($this->parsedDisplayLanguages as $targetLang) {
+            if ($targetLang === $sourceLanguage) {
+                continue;
+            }
+
+            $translations[$targetLang] = $this->translateToLanguage($originalTitle, $originalSummary, $originalKeywords, $sourceLanguage, $targetLang);
         }
 
-        $article->setTitleOriginal($article->getTitle());
-        $translated = $this->translation->translate($article->getTitle(), $language, 'en');
-        $article->setTitle($translated);
+        $article->setTranslations($translations);
 
-        $summary = $article->getSummary();
-        if ($summary !== null) {
-            $article->setSummaryOriginal($summary);
-            $translatedSummary = $this->translation->translate($summary, $language, 'en');
-            $article->setSummary($translatedSummary);
+        // Set the primary display language (first display language, or English)
+        $primaryLang = $this->parsedDisplayLanguages[0] ?? 'en';
+        if ($primaryLang !== $sourceLanguage && isset($translations[$primaryLang])) {
+            $article->setTitle($translations[$primaryLang]['title']);
+            if ($translations[$primaryLang]['summary'] !== null) {
+                $article->setSummary($translations[$primaryLang]['summary']);
+            }
         }
+    }
+
+    /**
+     * @param list<string> $keywords
+     *
+     * @return array{title: string, summary: ?string, keywords: list<string>}
+     */
+    private function translateToLanguage(string $title, ?string $summary, array $keywords, string $from, string $to): array
+    {
+        $translatedTitle = $this->translation->translate($title, $from, $to);
+        $translatedSummary = $summary !== null
+            ? $this->translation->translate($summary, $from, $to)
+            : null;
+
+        $translatedKeywords = $keywords;
+        if ($keywords !== []) {
+            $keywordsText = implode(', ', $keywords);
+            $translatedText = $this->translation->translate($keywordsText, $from, $to);
+            $translatedKeywords = array_map('trim', explode(',', $translatedText));
+        }
+
+        return [
+            'title' => $translatedTitle,
+            'summary' => $translatedSummary,
+            'keywords' => $translatedKeywords,
+        ];
     }
 
     private function dispatchAlerts(ArticleCollection $articles): void

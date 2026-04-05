@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Service\AiDeduplicationService;
 use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
@@ -158,6 +159,10 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%')
         ->arg('$retentionArticles', '%env(int:RETENTION_ARTICLES)%')
         ->arg('$retentionLogs', '%env(int:RETENTION_LOGS)%');
+
+    // Wire DISPLAY_LANGUAGES env var for FetchSourceHandler
+    $services->set(FetchSourceHandler::class)
+        ->arg('$displayLanguages', '%env(string:DISPLAY_LANGUAGES)%');
 
     // Search: SEAL/Loupe engine wired by argument name (loupeEngine → cmsig_seal.engine.loupe alias)
     $services->alias(ArticleSearchServiceInterface::class, SealArticleSearchService::class);
