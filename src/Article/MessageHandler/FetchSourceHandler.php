@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Article\MessageHandler;
 
 use App\Article\Entity\Article;
+use App\Article\Event\ArticleCreated;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\ValueObject\ArticleCollection;
@@ -12,7 +13,6 @@ use App\Article\ValueObject\ArticleFingerprint;
 use App\Article\ValueObject\FetchResult;
 use App\Article\ValueObject\PersistItemResult;
 use App\Enrichment\Service\ArticleEnrichmentServiceInterface;
-use App\Notification\Service\AlertDispatchServiceInterface;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
@@ -24,6 +24,7 @@ use App\Source\Service\FeedParserServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
 #[AsMessageHandler]
@@ -37,7 +38,7 @@ final readonly class FetchSourceHandler
         private FeedParserServiceInterface $feedParser,
         private DeduplicationServiceInterface $deduplication,
         private ArticleEnrichmentServiceInterface $enrichment,
-        private AlertDispatchServiceInterface $alertDispatch,
+        private EventDispatcherInterface $eventDispatcher,
         private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
@@ -60,7 +61,7 @@ final readonly class FetchSourceHandler
             if ($result->source instanceof Source) {
                 $result->source->recordSuccess($now);
                 $this->articleRepository->flush();
-                $this->alertDispatch->dispatchAlerts($result->newArticles);
+                $this->dispatchArticleEvents($result->newArticles);
                 $this->logger->info('Fetched {source}: {count} new articles from {total} items', [
                     'source' => $result->source->getName(),
                     'count' => $result->persistedCount,
@@ -139,6 +140,13 @@ final readonly class FetchSourceHandler
             $source = $this->sourceRepository->findById($sourceId);
 
             return $source instanceof Source ? new PersistItemResult(null, $source) : null;
+        }
+    }
+
+    private function dispatchArticleEvents(ArticleCollection $articles): void
+    {
+        foreach ($articles as $article) {
+            $this->eventDispatcher->dispatch(new ArticleCreated($article));
         }
     }
 }
