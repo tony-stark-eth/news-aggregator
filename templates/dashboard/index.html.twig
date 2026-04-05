@@ -30,6 +30,7 @@
             <input type="hidden" name="_token" value="{{ csrf_token('mark_all_read') }}">
             <button type="submit" class="btn btn-sm btn-ghost">Mark All Read</button>
         </form>
+        <input id="article-filter" type="text" placeholder="Filter articles..." class="input input-bordered input-sm flex-1" />
     </div>
 
     {# Article feed #}
