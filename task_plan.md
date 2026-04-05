@@ -589,7 +589,7 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
   - Build production image, push to `ghcr.io/tony-stark-eth/news-aggregator`
   - Tag with semver + `latest`
   - Users can `docker pull` and run without building from source
-- [ ] 13.5 Verify all quality tools pass in CI
+- [x] 13.5 Verify all quality tools pass in CI — all 4 jobs green (ECS, PHPStan, Rector, Tests)
 - [ ] 13.6 Run acc skills to validate: `audit architecture`, `php-code-review`
 - [x] 13.7 Update CLAUDE.md (created in Phase 1.13) with final architecture, all commands, domain overview
 - [ ] 13.8 Add entry to parent Projects/CLAUDE.md services table
