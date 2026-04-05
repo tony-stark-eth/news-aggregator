@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+{% block title %}New Alert Rule{% endblock %}
+{% block body %}
+    <h1 class="text-2xl font-bold mb-6">New Alert Rule</h1>
+
+    <form method="POST" action="{{ path('app_alerts_new') }}" class="max-w-lg flex flex-col gap-4">
+        <div class="form-control">
+            <label class="label" for="name">
+                <span class="label-text">Name</span>
+            </label>
+            <input type="text" id="name" name="name" class="input input-bordered" required placeholder="e.g. Breaking Tech News">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="type">
+                <span class="label-text">Type</span>
+            </label>
+            <select id="type" name="type" class="select select-bordered" required>
+                <option value="keyword">Keyword</option>
+                <option value="ai">AI</option>
+                <option value="both">Both</option>
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="keywords">
+                <span class="label-text">Keywords (comma-separated)</span>
+            </label>
+            <input type="text" id="keywords" name="keywords" class="input input-bordered" placeholder="e.g. AI, machine learning, GPT">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="urgency">
+                <span class="label-text">Urgency</span>
+            </label>
+            <select id="urgency" name="urgency" class="select select-bordered">
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="context_prompt">
+                <span class="label-text">Context Prompt (optional)</span>
+            </label>
+            <textarea id="context_prompt" name="context_prompt" class="textarea textarea-bordered" rows="3" placeholder="Additional context for AI evaluation..."></textarea>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="severity_threshold">
+                <span class="label-text">Severity Threshold (1-10)</span>
+            </label>
+            <input type="number" id="severity_threshold" name="severity_threshold" class="input input-bordered" value="5" min="1" max="10">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="cooldown_minutes">
+                <span class="label-text">Cooldown (minutes)</span>
+            </label>
+            <input type="number" id="cooldown_minutes" name="cooldown_minutes" class="input input-bordered" value="60" min="1">
+        </div>
+
+        <div class="flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary">Create Rule</button>
+            <a href="{{ path('app_alerts') }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}
