@@ -5,5 +5,7 @@
  * which should already be in your base.html.twig.
  */
 import './styles/app.css';
-
-console.log('This log comes from assets/app.js - welcome to AssetMapper! 🎉');
+import './js/theme-toggle.js';
+import './js/timeago.js';
+import './js/mark-as-read.js';
+import './js/infinite-scroll.js';

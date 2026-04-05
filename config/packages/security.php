@@ -14,14 +14,10 @@ return static function (ContainerConfigurator $container): void {
             ],
         ],
         'providers' => [
-            'users_in_memory' => [
-                'memory' => [
-                    'users' => [
-                        '%env(ADMIN_EMAIL)%' => [
-                            'password' => '%env(ADMIN_PASSWORD_HASH)%',
-                            'roles' => ['ROLE_ADMIN'],
-                        ],
-                    ],
+            'app_user_provider' => [
+                'entity' => [
+                    'class' => 'App\User\Entity\User',
+                    'property' => 'email',
                 ],
             ],
         ],
@@ -32,7 +28,7 @@ return static function (ContainerConfigurator $container): void {
             ],
             'main' => [
                 'lazy' => true,
-                'provider' => 'users_in_memory',
+                'provider' => 'app_user_provider',
                 'form_login' => [
                     'login_path' => 'app_login',
                     'check_path' => 'app_login',

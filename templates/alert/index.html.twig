@@ -1,11 +1,16 @@
 {% extends 'base.html.twig' %}
 {% block title %}Alert Rules{% endblock %}
 {% block body %}
-    <h1 class="text-2xl font-bold mb-6">Alert Rules</h1>
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Alert Rules</h1>
+        <a href="{{ path('app_alerts_new') }}" class="btn btn-primary btn-sm">New Alert Rule</a>
+    </div>
 
     {% if rules is empty %}
         {% include 'components/_empty_state.html.twig' with {
-            message: 'No alert rules configured yet.'
+            message: 'No alert rules configured yet.',
+            action_label: 'Create Alert Rule',
+            action_url: path('app_alerts_new')
         } %}
     {% else %}
         <div class="overflow-x-auto">
@@ -18,6 +23,7 @@
                         <th>Urgency</th>
                         <th>Cooldown</th>
                         <th>Enabled</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -37,6 +43,12 @@
                                 {% else %}
                                     <span class="badge badge-ghost badge-sm">no</span>
                                 {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ path('app_alerts_delete', {id: rule.id}) }}" onsubmit="return confirm('Delete this alert rule?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_alert_rule') }}">
+                                    <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>
+                                </form>
                             </td>
                         </tr>
                     {% endfor %}

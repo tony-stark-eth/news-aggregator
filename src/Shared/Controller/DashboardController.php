@@ -43,8 +43,8 @@ final class DashboardController
             ->createQueryBuilder('a')
             ->leftJoin('a.category', 'c')
             ->leftJoin('a.source', 's')
-            ->orderBy('a.score', 'DESC')
-            ->addOrderBy('a.fetchedAt', 'DESC')
+            ->orderBy('CASE WHEN a.publishedAt IS NOT NULL THEN a.publishedAt ELSE a.fetchedAt END', 'DESC')
+            ->addOrderBy('a.score', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
 

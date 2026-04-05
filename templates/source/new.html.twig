@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+{% block title %}New Source{% endblock %}
+{% block body %}
+    <h1 class="text-2xl font-bold mb-6">New Source</h1>
+
+    <form method="POST" action="{{ path('app_sources_new') }}" class="max-w-lg flex flex-col gap-4">
+        <div class="form-control">
+            <label class="label" for="name">
+                <span class="label-text">Name</span>
+            </label>
+            <input type="text" id="name" name="name" class="input input-bordered" required placeholder="e.g. Ars Technica">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="feed_url">
+                <span class="label-text">Feed URL</span>
+            </label>
+            <input type="url" id="feed_url" name="feed_url" class="input input-bordered" required placeholder="https://example.com/feed.xml">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="site_url">
+                <span class="label-text">Site URL (optional)</span>
+            </label>
+            <input type="url" id="site_url" name="site_url" class="input input-bordered" placeholder="https://example.com">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="category_id">
+                <span class="label-text">Category</span>
+            </label>
+            <select id="category_id" name="category_id" class="select select-bordered" required>
+                {% for category in categories %}
+                    <option value="{{ category.id }}">{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label cursor-pointer justify-start gap-3">
+                <input type="checkbox" name="enabled" value="1" class="checkbox" checked>
+                <span class="label-text">Enabled</span>
+            </label>
+        </div>
+
+        <div class="flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary">Create Source</button>
+            <a href="{{ path('app_sources') }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

@@ -23,10 +23,16 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 )]
 final class SeedDataCommand extends Command
 {
+    /**
+     * @param non-empty-string $adminEmail
+     * @param non-empty-string $adminPassword
+     */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ClockInterface $clock,
         private readonly UserPasswordHasherInterface $passwordHasher,
+        private readonly string $adminEmail = 'demo@localhost',
+        private readonly string $adminPassword = 'demo',
     ) {
         parent::__construct();
     }
@@ -181,6 +187,11 @@ final class SeedDataCommand extends Command
                 'category' => 'tech',
             ],
             [
+                'name' => 'PHP Reads',
+                'url' => 'https://phpreads.com/feed',
+                'category' => 'tech',
+            ],
+            [
                 'name' => 'Nature News',
                 'url' => 'https://www.nature.com/nature.rss',
                 'category' => 'science',
@@ -240,11 +251,12 @@ final class SeedDataCommand extends Command
             return $existing;
         }
 
-        $user = new User('demo@example.com', '');
-        $hashedPassword = $this->passwordHasher->hashPassword($user, 'demo');
+        $user = new User($this->adminEmail, '');
+        $hashedPassword = $this->passwordHasher->hashPassword($user, $this->adminPassword);
         $user->setPassword($hashedPassword);
+        $user->setRoles(['ROLE_ADMIN']);
         $this->entityManager->persist($user);
-        $io->info('Created demo user: demo@example.com (password: demo)');
+        $io->info(sprintf('Created admin user: %s', $this->adminEmail));
 
         return $user;
     }

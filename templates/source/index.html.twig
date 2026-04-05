@@ -5,12 +5,14 @@
 {% block body %}
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Feed Sources</h1>
+        <a href="{{ path('app_sources_new') }}" class="btn btn-primary btn-sm">New Source</a>
     </div>
 
     {% if sources is empty %}
         {% include 'components/_empty_state.html.twig' with {
             message: 'No sources configured yet.',
-            action_label: 'Run Seed Data',
+            action_label: 'Add Source',
+            action_url: path('app_sources_new')
         } %}
     {% else %}
         <div class="overflow-x-auto">
@@ -23,6 +25,7 @@
                         <th>Errors</th>
                         <th>Last Fetched</th>
                         <th>Enabled</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -52,6 +55,12 @@
                                 {% else %}
                                     <span class="badge badge-ghost badge-sm">no</span>
                                 {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ path('app_sources_delete', {id: source.id}) }}" onsubmit="return confirm('Delete this source?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_source') }}">
+                                    <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>
+                                </form>
                             </td>
                         </tr>
                     {% endfor %}
