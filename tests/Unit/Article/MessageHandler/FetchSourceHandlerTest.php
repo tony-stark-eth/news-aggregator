@@ -9,7 +9,6 @@ use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Enrichment\Service\ArticleEnrichmentServiceInterface;
-use App\Notification\Service\AlertDispatchServiceInterface;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
@@ -26,6 +25,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 #[CoversClass(FetchSourceHandler::class)]
 final class FetchSourceHandlerTest extends TestCase
@@ -83,7 +83,7 @@ final class FetchSourceHandlerTest extends TestCase
             $this->parser,
             $dedup,
             $this->createStub(ArticleEnrichmentServiceInterface::class),
-            $this->createStub(AlertDispatchServiceInterface::class),
+            $this->createStub(EventDispatcherInterface::class),
             $this->clock,
             new NullLogger(),
         );
