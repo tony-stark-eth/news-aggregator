@@ -242,10 +242,13 @@ final readonly class FetchSourceHandler
 
         // Build translations map for all display languages
         $translations = [];
+        $originalKeywords = $article->getKeywords() ?? [];
+
         // Source language entry — always the original text, no API call
         $translations[$sourceLanguage] = [
             'title' => $originalTitle,
             'summary' => $originalSummary,
+            'keywords' => $originalKeywords,
         ];
 
         foreach ($this->parsedDisplayLanguages as $targetLang) {
@@ -253,15 +256,7 @@ final readonly class FetchSourceHandler
                 continue;
             }
 
-            $translatedTitle = $this->translation->translate($originalTitle, $sourceLanguage, $targetLang);
-            $translatedSummary = $originalSummary !== null
-                ? $this->translation->translate($originalSummary, $sourceLanguage, $targetLang)
-                : null;
-
-            $translations[$targetLang] = [
-                'title' => $translatedTitle,
-                'summary' => $translatedSummary,
-            ];
+            $translations[$targetLang] = $this->translateToLanguage($originalTitle, $originalSummary, $originalKeywords, $sourceLanguage, $targetLang);
         }
 
         $article->setTranslations($translations);
@@ -274,6 +269,32 @@ final readonly class FetchSourceHandler
                 $article->setSummary($translations[$primaryLang]['summary']);
             }
         }
+    }
+
+    /**
+     * @param list<string> $keywords
+     *
+     * @return array{title: string, summary: ?string, keywords: list<string>}
+     */
+    private function translateToLanguage(string $title, ?string $summary, array $keywords, string $from, string $to): array
+    {
+        $translatedTitle = $this->translation->translate($title, $from, $to);
+        $translatedSummary = $summary !== null
+            ? $this->translation->translate($summary, $from, $to)
+            : null;
+
+        $translatedKeywords = $keywords;
+        if ($keywords !== []) {
+            $keywordsText = implode(', ', $keywords);
+            $translatedText = $this->translation->translate($keywordsText, $from, $to);
+            $translatedKeywords = array_map('trim', explode(',', $translatedText));
+        }
+
+        return [
+            'title' => $translatedTitle,
+            'summary' => $translatedSummary,
+            'keywords' => $translatedKeywords,
+        ];
     }
 
     private function dispatchAlerts(ArticleCollection $articles): void

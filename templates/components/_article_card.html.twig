@@ -22,7 +22,7 @@
                     </p>
                 {% endif %}
                 {% if article.keywords is not null and article.keywords is not empty %}
-                    <div class="flex flex-wrap gap-1 mt-1">
+                    <div class="flex flex-wrap gap-1 mt-1" data-lang-keywords>
                         {% for keyword in article.keywords %}
                             <span class="badge badge-outline badge-xs">{{ keyword }}</span>
                         {% endfor %}

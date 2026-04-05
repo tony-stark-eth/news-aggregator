@@ -44,6 +44,17 @@
             </form>
         </div>
         <div class="navbar-end gap-2">
+            <div class="dropdown dropdown-end">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1" id="lang-selector-btn" title="Display language">
+                    <span id="lang-selector-label">EN</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                </div>
+                <ul tabindex="0" class="dropdown-content menu p-1 shadow bg-base-100 rounded-box w-24 z-10">
+                    <li><a data-lang="en" class="lang-option">EN</a></li>
+                    <li><a data-lang="de" class="lang-option">DE</a></li>
+                    <li><a data-lang="fr" class="lang-option">FR</a></li>
+                </ul>
+            </div>
             <button id="theme-toggle" class="btn btn-ghost btn-circle" title="Toggle theme">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />

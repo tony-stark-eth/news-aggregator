@@ -16,6 +16,7 @@ const DEFAULT_LANG = "en";
 interface Translation {
   title: string;
   summary: string | null;
+  keywords: string[] | null;
 }
 
 type TranslationsMap = Record<string, Translation>;
@@ -66,6 +67,14 @@ function applyLanguage(lang: string): void {
           summaryEl.textContent = defaultSummary;
         }
       }
+    }
+
+    // Swap keywords
+    const keywordsEl = card.querySelector<HTMLElement>("[data-lang-keywords]");
+    if (keywordsEl && translation?.keywords) {
+      keywordsEl.innerHTML = translation.keywords
+        .map((kw: string) => `<span class="badge badge-outline badge-xs">${kw}</span>`)
+        .join("");
     }
   }
 
