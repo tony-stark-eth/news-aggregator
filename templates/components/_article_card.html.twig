@@ -2,7 +2,7 @@
 <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow {{ article_read is defined and article_read ? 'opacity-60' : '' }}" data-article-id="{{ article.id }}" data-searchable="{{ article.title|lower }} {{ article.summary|default('')|lower }}">
     <div class="card-body p-4">
         <div class="flex items-start gap-2">
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
                 <h3 class="card-title text-base">
                     <a href="{{ article.url }}" target="_blank" rel="noopener" class="link link-hover article-link" data-article-id="{{ article.id }}">
                         {{ article.title }}

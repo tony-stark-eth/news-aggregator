@@ -152,7 +152,7 @@ final class SeedDataCommand extends Command
             ],
             [
                 'name' => 'Handelsblatt',
-                'url' => 'https://www.handelsblatt.com/contentexport/feed/top',
+                'url' => 'https://www.handelsblatt.com/contentexport/feed/schlagzeilen',
                 'category' => 'business',
                 'language' => 'de',
             ],
@@ -169,8 +169,8 @@ final class SeedDataCommand extends Command
                 'language' => 'en',
             ],
             [
-                'name' => 'Reuters Business',
-                'url' => 'https://www.reutersagency.com/feed/?best-topics=business-finance',
+                'name' => 'Yahoo Finance',
+                'url' => 'https://finance.yahoo.com/news/rssindex',
                 'category' => 'business',
                 'language' => 'en',
             ],
@@ -218,7 +218,7 @@ final class SeedDataCommand extends Command
             ],
             [
                 'name' => 'Kicker',
-                'url' => 'https://rss.kicker.de/news/aktuell',
+                'url' => 'https://newsfeed.kicker.de/news/aktuell',
                 'category' => 'sports',
                 'language' => 'de',
             ],

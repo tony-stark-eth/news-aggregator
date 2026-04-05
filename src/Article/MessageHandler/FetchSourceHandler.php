@@ -172,12 +172,13 @@ final readonly class FetchSourceHandler
             $this->applyEnrichment($article, $catResult, $sumResult);
         }
 
-        $keywords = $this->keywordExtraction->extract($item->title, $item->contentText);
+        $this->applyTranslation($article, $source);
+
+        // Extract keywords after translation so they're in the display language
+        $keywords = $this->keywordExtraction->extract($article->getTitle(), $article->getSummary() ?? $item->contentText);
         if ($keywords !== []) {
             $article->setKeywords($keywords);
         }
-
-        $this->applyTranslation($article, $source);
 
         $article->setScore($this->scoring->score($article));
 
