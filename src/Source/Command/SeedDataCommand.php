@@ -187,6 +187,11 @@ final class SeedDataCommand extends Command
                 'category' => 'tech',
             ],
             [
+                'name' => 'PHP Reads',
+                'url' => 'https://phpreads.com/feed',
+                'category' => 'tech',
+            ],
+            [
                 'name' => 'Nature News',
                 'url' => 'https://www.nature.com/nature.rss',
                 'category' => 'science',
