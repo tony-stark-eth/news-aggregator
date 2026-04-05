@@ -123,7 +123,7 @@ src/
 | `ADMIN_PASSWORD_HASH` | Bcrypt/argon2 hash | (required) |
 | `OPENROUTER_API_KEY` | OpenRouter API key for AI | (optional — rule-based fallback works without it) |
 | `OPENROUTER_BLOCKED_MODELS` | Comma-separated blocked model IDs | (empty) |
-| `NOTIFIER_CHATTER_DSN` | Notifier transport DSN | (optional — alerts disabled without it) |
+| `NOTIFIER_CHATTER_DSN` | Notifier transport DSN | (optional — matches logged as `skipped` without it) |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | Default fetch interval | `60` |
 | `DISPLAY_LANGUAGES` | Comma-separated display languages (e.g. `en,de,fr`) | `en` |
 | `RETENTION_ARTICLES` | Article retention period | `90` |

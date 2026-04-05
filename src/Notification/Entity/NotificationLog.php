@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notification\Entity;
 
 use App\Article\Entity\Article;
+use App\Notification\ValueObject\DeliveryStatus;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -34,6 +35,11 @@ class NotificationLog
 
     #[ORM\Column]
     private bool $success;
+
+    #[ORM\Column(length: 20, enumType: DeliveryStatus::class, options: [
+        'default' => 'sent',
+    ])]
+    private DeliveryStatus $deliveryStatus = DeliveryStatus::Sent;
 
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $aiSeverity = null;
@@ -94,6 +100,16 @@ class NotificationLog
     public function isSuccess(): bool
     {
         return $this->success;
+    }
+
+    public function getDeliveryStatus(): DeliveryStatus
+    {
+        return $this->deliveryStatus;
+    }
+
+    public function setDeliveryStatus(DeliveryStatus $deliveryStatus): void
+    {
+        $this->deliveryStatus = $deliveryStatus;
     }
 
     public function getAiSeverity(): ?int

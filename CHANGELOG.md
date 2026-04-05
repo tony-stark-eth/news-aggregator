@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Alert matches always logged regardless of notification transport — `DeliveryStatus` enum (sent/skipped/failed), colored badges in notification log UI, `CleanupCommand` now purges old notification and digest logs (#37)
 - Multi-language translation with EN/DE/FR language selector — articles translated to all configured display languages, client-side dropdown to switch, translations stored as JSON on article (#36)
 - Keyword extraction from articles — AI extracts key entities (people, orgs, places), displayed as badges, searchable (#21)
 - Inline search-as-you-type filter on dashboard — client-side article filtering with debounce (#22)

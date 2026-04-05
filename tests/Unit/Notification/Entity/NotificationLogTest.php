@@ -8,6 +8,7 @@ use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Entity\NotificationLog;
 use App\Notification\ValueObject\AlertRuleType;
+use App\Notification\ValueObject\DeliveryStatus;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
 use App\User\Entity\User;
@@ -34,6 +35,7 @@ final class NotificationLogTest extends TestCase
         self::assertTrue($log->isSuccess());
         self::assertNull($log->getAiSeverity());
         self::assertNull($log->getAiExplanation());
+        self::assertSame(DeliveryStatus::Sent, $log->getDeliveryStatus());
     }
 
     public function testSetAiFields(): void
@@ -54,5 +56,23 @@ final class NotificationLogTest extends TestCase
         self::assertSame('Critical policy change affecting markets', $log->getAiExplanation());
         self::assertSame('openrouter/auto', $log->getAiModelUsed());
         self::assertSame('pushover', $log->getTransport());
+    }
+
+    public function testDeliveryStatusCanBeSet(): void
+    {
+        $user = new User('admin@example.com', 'hashed');
+        $rule = new AlertRule('Rule', AlertRuleType::Keyword, $user, new \DateTimeImmutable());
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $source = new Source('Src', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $article = new Article('Title', 'https://example.com/3', $source, new \DateTimeImmutable());
+
+        $log = new NotificationLog($rule, $article, 'keyword', false, new \DateTimeImmutable());
+        $log->setDeliveryStatus(DeliveryStatus::Skipped);
+
+        self::assertSame(DeliveryStatus::Skipped, $log->getDeliveryStatus());
+
+        $log->setDeliveryStatus(DeliveryStatus::Failed);
+
+        self::assertSame(DeliveryStatus::Failed, $log->getDeliveryStatus());
     }
 }
