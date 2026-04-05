@@ -2,13 +2,10 @@
 <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow {{ article_read is defined and article_read ? 'opacity-60' : '' }}"
     data-article-id="{{ article.id }}"
     data-searchable="{{ article.title|lower }} {{ article.summary|default('')|lower }}"
-    {% if article.titleOriginal is not null and article.titleOriginal != article.title %}
-        data-title-translated="{{ article.title|e('html_attr') }}"
-        data-title-original="{{ article.titleOriginal|e('html_attr') }}"
-    {% endif %}
-    {% if article.summaryOriginal is not null and article.summaryOriginal != article.summary %}
-        data-summary-translated="{{ article.summary|e('html_attr') }}"
-        data-summary-original="{{ article.summaryOriginal|e('html_attr') }}"
+    data-title-default="{{ article.title|e('html_attr') }}"
+    data-summary-default="{{ article.summary|default('')|e('html_attr') }}"
+    {% if article.translations is not null %}
+        data-translations="{{ article.translations|json_encode|e('html_attr') }}"
     {% endif %}
 >
     <div class="card-body p-4">

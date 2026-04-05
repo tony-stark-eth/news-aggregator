@@ -17,7 +17,7 @@ Self-hosted, AI-enhanced RSS/Atom news aggregator built with Symfony 8 + Franken
 - **RSS/Atom feed aggregation** from configurable sources
 - **AI-powered categorization & summarization** via OpenRouter free models (with rule-based fallback)
 - **Keyword extraction** — AI-extracted entities (people, orgs, places) displayed as tags, searchable
-- **Article translation** — automatic title/summary translation based on source language (original preserved)
+- **Multi-language translation** — translates articles to all configured display languages (EN/DE/FR) with client-side language selector; originals preserved
 - **Smart alerts** with keyword and AI-based evaluation
 - **Alert rule fixtures** — define alert strategies in YAML files, load via CLI
 - **Periodic digests** with AI-generated editorial summaries
@@ -92,6 +92,7 @@ Copy `.env.example` to `.env.local` and adjust:
 | `OPENROUTER_API_KEY` | OpenRouter API key (optional) | `sk-or-...` |
 | `NOTIFIER_CHATTER_DSN` | Notification transport DSN | see below |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | How often to fetch feeds | `60` |
+| `DISPLAY_LANGUAGES` | Comma-separated display languages | `en` |
 | `RETENTION_ARTICLES` | Article retention period | `90` |
 | `RETENTION_LOGS` | Notification/digest log retention | `30` |
 

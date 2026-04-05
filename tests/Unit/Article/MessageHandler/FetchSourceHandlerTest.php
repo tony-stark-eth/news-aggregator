@@ -102,6 +102,7 @@ final class FetchSourceHandlerTest extends TestCase
             $this->createStub(MessageBusInterface::class),
             $this->clock,
             new NullLogger(),
+            'en',
         );
     }
 

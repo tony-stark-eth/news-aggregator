@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Multi-language translation with EN/DE/FR language selector — articles translated to all configured display languages, client-side dropdown to switch, translations stored as JSON on article (#36)
 - Keyword extraction from articles — AI extracts key entities (people, orgs, places), displayed as badges, searchable (#21)
 - Inline search-as-you-type filter on dashboard — client-side article filtering with debounce (#22)
 - Article translation by source language — auto-translates German (and other) titles/summaries to English, preserves originals (#23)

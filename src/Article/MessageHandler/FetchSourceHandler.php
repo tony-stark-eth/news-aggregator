@@ -36,6 +36,11 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[AsMessageHandler]
 final readonly class FetchSourceHandler
 {
+    /**
+     * @var list<string>
+     */
+    private array $parsedDisplayLanguages;
+
     public function __construct(
         private EntityManagerInterface $entityManager,
         private FeedFetcherServiceInterface $feedFetcher,
@@ -50,7 +55,14 @@ final readonly class FetchSourceHandler
         private MessageBusInterface $messageBus,
         private ClockInterface $clock,
         private LoggerInterface $logger,
+        private string $displayLanguages = 'en',
     ) {
+        $this->parsedDisplayLanguages = array_values(
+            array_filter(
+                array_map(trim(...), explode(',', $this->displayLanguages)),
+                static fn (string $lang): bool => $lang !== '',
+            ),
+        );
     }
 
     public function __invoke(FetchSourceMessage $message): void
@@ -220,20 +232,47 @@ final readonly class FetchSourceHandler
 
     private function applyTranslation(Article $article, Source $source): void
     {
-        $language = $source->getLanguage();
-        if ($language === null || $language === 'en') {
-            return;
+        $sourceLanguage = $source->getLanguage() ?? 'en';
+        $originalTitle = $article->getTitle();
+        $originalSummary = $article->getSummary();
+
+        // Store originals in the source language (backward compat)
+        $article->setTitleOriginal($originalTitle);
+        $article->setSummaryOriginal($originalSummary);
+
+        // Build translations map for all display languages
+        $translations = [];
+        // Source language entry — always the original text, no API call
+        $translations[$sourceLanguage] = [
+            'title' => $originalTitle,
+            'summary' => $originalSummary,
+        ];
+
+        foreach ($this->parsedDisplayLanguages as $targetLang) {
+            if ($targetLang === $sourceLanguage) {
+                continue;
+            }
+
+            $translatedTitle = $this->translation->translate($originalTitle, $sourceLanguage, $targetLang);
+            $translatedSummary = $originalSummary !== null
+                ? $this->translation->translate($originalSummary, $sourceLanguage, $targetLang)
+                : null;
+
+            $translations[$targetLang] = [
+                'title' => $translatedTitle,
+                'summary' => $translatedSummary,
+            ];
         }
 
-        $article->setTitleOriginal($article->getTitle());
-        $translated = $this->translation->translate($article->getTitle(), $language, 'en');
-        $article->setTitle($translated);
+        $article->setTranslations($translations);
 
-        $summary = $article->getSummary();
-        if ($summary !== null) {
-            $article->setSummaryOriginal($summary);
-            $translatedSummary = $this->translation->translate($summary, $language, 'en');
-            $article->setSummary($translatedSummary);
+        // Set the primary display language (first display language, or English)
+        $primaryLang = $this->parsedDisplayLanguages[0] ?? 'en';
+        if ($primaryLang !== $sourceLanguage && isset($translations[$primaryLang])) {
+            $article->setTitle($translations[$primaryLang]['title']);
+            if ($translations[$primaryLang]['summary'] !== null) {
+                $article->setSummary($translations[$primaryLang]['summary']);
+            }
         }
     }
 

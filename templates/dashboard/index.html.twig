@@ -30,9 +30,17 @@
             <input type="hidden" name="_token" value="{{ csrf_token('mark_all_read') }}">
             <button type="submit" class="btn btn-sm btn-ghost">Mark All Read</button>
         </form>
-        <button id="lang-toggle" class="btn btn-sm btn-outline gap-1" title="Switch between translated and original article text">
-            <span id="lang-toggle-label">Translated</span>
-        </button>
+        <div class="dropdown">
+            <div tabindex="0" role="button" class="btn btn-sm btn-outline gap-1" id="lang-selector-btn">
+                <span id="lang-selector-label">EN</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+            </div>
+            <ul tabindex="0" class="dropdown-content menu p-1 shadow bg-base-100 rounded-box w-24 z-10">
+                <li><a data-lang="en" class="lang-option">EN</a></li>
+                <li><a data-lang="de" class="lang-option">DE</a></li>
+                <li><a data-lang="fr" class="lang-option">FR</a></li>
+            </ul>
+        </div>
         <input id="article-filter" type="text" placeholder="Filter articles..." class="input input-bordered input-sm flex-1" />
     </div>
 
