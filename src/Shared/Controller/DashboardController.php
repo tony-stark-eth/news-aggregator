@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Shared\Controller;
 
 use App\Article\Entity\Article;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
-use App\User\Entity\UserArticleRead;
-use Doctrine\ORM\EntityManagerInterface;
+use App\User\Repository\UserArticleReadRepositoryInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,7 +19,8 @@ final class DashboardController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly ArticleRepositoryInterface $articleRepository,
+        private readonly UserArticleReadRepositoryInterface $userArticleReadRepository,
         private readonly SourceRepositoryInterface $sourceRepository,
         private readonly ClockInterface $clock,
     ) {
@@ -39,52 +40,19 @@ final class DashboardController
         $page = max(1, $page);
         $limit = 20;
 
-        $qb = $this->entityManager
-            ->getRepository(Article::class)
-            ->createQueryBuilder('a')
-            ->leftJoin('a.category', 'c')
-            ->leftJoin('a.source', 's')
-            ->orderBy('CASE WHEN a.publishedAt IS NOT NULL THEN a.publishedAt ELSE a.fetchedAt END', 'DESC')
-            ->addOrderBy('a.score', 'DESC')
-            ->setFirstResult(($page - 1) * $limit)
-            ->setMaxResults($limit);
+        $user = $this->controller->getUser();
 
-        if ($category !== null && $category !== '') {
-            $qb->andWhere('c.slug = :cat')->setParameter('cat', $category);
-        }
-
-        if ($unreadOnly) {
-            $currentUser = $this->controller->getUser();
-            if ($currentUser instanceof User) {
-                $qb->andWhere(
-                    $qb->expr()->not(
-                        $qb->expr()->exists(
-                            $this->entityManager
-                                ->getRepository(UserArticleRead::class)
-                                ->createQueryBuilder('r2')
-                                ->select('1')
-                                ->where('r2.article = a')
-                                ->andWhere('r2.user = :currentUser')
-                                ->getDQL(),
-                        ),
-                    ),
-                )->setParameter('currentUser', $currentUser);
-            }
-        }
-
-        /** @var list<Article> $articles */
-        $articles = $qb->getQuery()->getResult();
+        $articles = $this->articleRepository->findPaginated(
+            $category,
+            $unreadOnly && $user instanceof User ? $user : null,
+            $page,
+            $limit,
+        );
 
         // Stats
         $now = $this->clock->now();
         $todayStart = $now->setTime(0, 0);
-        $articlesToday = $this->entityManager->getRepository(Article::class)
-            ->createQueryBuilder('a')
-            ->select('COUNT(a.id)')
-            ->where('a.fetchedAt >= :today')
-            ->setParameter('today', $todayStart)
-            ->getQuery()
-            ->getSingleScalarResult();
+        $articlesToday = $this->articleRepository->countSince($todayStart);
 
         $activeSources = $this->sourceRepository->countEnabled();
 
@@ -127,22 +95,6 @@ final class DashboardController
             $articles,
         );
 
-        /** @var list<UserArticleRead> $readRecords */
-        $readRecords = $this->entityManager
-            ->getRepository(UserArticleRead::class)
-            ->createQueryBuilder('r')
-            ->where('r.user = :user')
-            ->andWhere('r.article IN (:ids)')
-            ->setParameter('user', $user)
-            ->setParameter('ids', $articleIds)
-            ->getQuery()
-            ->getResult();
-
-        $readIds = [];
-        foreach ($readRecords as $record) {
-            $readIds[(int) $record->getArticle()->getId()] = true;
-        }
-
-        return $readIds;
+        return $this->userArticleReadRepository->findReadArticleIdsForUser($user, $articleIds);
     }
 }

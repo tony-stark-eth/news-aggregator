@@ -37,6 +37,34 @@ final class UserArticleReadRepository extends ServiceEntityRepository implements
         }
     }
 
+    /**
+     * @param list<int> $articleIds
+     *
+     * @return array<int, true>
+     */
+    public function findReadArticleIdsForUser(User $user, array $articleIds): array
+    {
+        if ($articleIds === []) {
+            return [];
+        }
+
+        /** @var list<UserArticleRead> $readRecords */
+        $readRecords = $this->createQueryBuilder('r')
+            ->where('r.user = :user')
+            ->andWhere('r.article IN (:ids)')
+            ->setParameter('user', $user)
+            ->setParameter('ids', $articleIds)
+            ->getQuery()
+            ->getResult();
+
+        $readIds = [];
+        foreach ($readRecords as $record) {
+            $readIds[(int) $record->getArticle()->getId()] = true;
+        }
+
+        return $readIds;
+    }
+
     public function flush(): void
     {
         $this->getEntityManager()->flush();

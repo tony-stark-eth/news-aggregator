@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Article\Repository;
 
 use App\Article\Entity\Article;
+use App\User\Entity\User;
 
 interface ArticleRepositoryInterface
 {
@@ -37,6 +38,18 @@ interface ArticleRepositoryInterface
      * @return list<Article>
      */
     public function findByIds(array $ids): array;
+
+    /**
+     * @return list<Article>
+     */
+    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit): array;
+
+    public function countSince(\DateTimeImmutable $since): int;
+
+    /**
+     * @return list<Article>
+     */
+    public function findUnreadForUser(User $user): array;
 
     public function save(Article $article, bool $flush = false): void;
 

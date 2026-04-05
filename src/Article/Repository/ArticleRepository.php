@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Article\Repository;
 
 use App\Article\Entity\Article;
+use App\User\Entity\User;
+use App\User\Entity\UserArticleRead;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -107,6 +109,70 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             ->where('a.id IN (:ids)')
             ->setParameter('ids', $ids)
             ->orderBy('a.score', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @return list<Article>
+     */
+    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit): array
+    {
+        $qb = $this->createQueryBuilder('a')
+            ->leftJoin('a.category', 'c')
+            ->leftJoin('a.source', 's')
+            ->orderBy('CASE WHEN a.publishedAt IS NOT NULL THEN a.publishedAt ELSE a.fetchedAt END', 'DESC')
+            ->addOrderBy('a.score', 'DESC')
+            ->setFirstResult(($page - 1) * $limit)
+            ->setMaxResults($limit);
+
+        if ($categorySlug !== null && $categorySlug !== '') {
+            $qb->andWhere('c.slug = :cat')->setParameter('cat', $categorySlug);
+        }
+
+        if ($unreadForUser instanceof User) {
+            $sub = $this->getEntityManager()
+                ->getRepository(UserArticleRead::class)
+                ->createQueryBuilder('r2')
+                ->select('1')
+                ->where('r2.article = a')
+                ->andWhere('r2.user = :currentUser')
+                ->getDQL();
+
+            $qb->andWhere($qb->expr()->not($qb->expr()->exists($sub)))
+                ->setParameter('currentUser', $unreadForUser);
+        }
+
+        /** @var list<Article> */
+        return $qb->getQuery()->getResult();
+    }
+
+    public function countSince(\DateTimeImmutable $since): int
+    {
+        return (int) $this->createQueryBuilder('a')
+            ->select('COUNT(a.id)')
+            ->where('a.fetchedAt >= :since')
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * @return list<Article>
+     */
+    public function findUnreadForUser(User $user): array
+    {
+        $subDql = $this->getEntityManager()
+            ->getRepository(UserArticleRead::class)
+            ->createQueryBuilder('r')
+            ->select('IDENTITY(r.article)')
+            ->where('r.user = :user')
+            ->getDQL();
+
+        /** @var list<Article> */
+        return $this->createQueryBuilder('a')
+            ->where("a.id NOT IN ({$subDql})")
+            ->setParameter('user', $user)
             ->getQuery()
             ->getResult();
     }

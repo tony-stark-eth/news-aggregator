@@ -12,6 +12,13 @@ interface UserArticleReadRepositoryInterface
 {
     public function findByUserAndArticle(User $user, Article $article): ?UserArticleRead;
 
+    /**
+     * @param list<int> $articleIds
+     *
+     * @return array<int, true>
+     */
+    public function findReadArticleIdsForUser(User $user, array $articleIds): array;
+
     public function save(UserArticleRead $read, bool $flush = false): void;
 
     public function flush(): void;
