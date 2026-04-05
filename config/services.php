@@ -18,6 +18,7 @@ use App\Shared\Command\CleanupCommand;
 use App\Shared\Controller\SettingsController;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use App\Shared\Search\Service\SealArticleSearchService;
+use App\Source\Command\SeedDataCommand;
 use App\Source\Scheduler\FetchScheduleProvider;
 use Symfony\AI\Platform\Bridge\Generic\CompletionsModel;
 use Symfony\AI\Platform\Bridge\OpenRouter\ModelCatalog;
@@ -105,6 +106,13 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(AiSmokeTestCommand::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    // Wire admin credentials for SeedDataCommand
+    $services->set(SeedDataCommand::class)
+        ->arg('$adminEmail', '%env(ADMIN_EMAIL)%')
+        ->arg('$adminPassword', '%env(default:seed_password:ADMIN_PASSWORD)%');
+
+    $container->parameters()->set('seed_password', 'demo');
 
     // Wire OPENROUTER_BLOCKED_MODELS env var for ModelDiscoveryService
     $services->set(ModelDiscoveryService::class)
