@@ -10,6 +10,7 @@ use App\Enrichment\Service\AiCategorizationService;
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
+use App\Notification\Command\LoadAlertRulesCommand;
 use App\Notification\Service\AiAlertEvaluationService;
 use App\Shared\AI\Command\AiSmokeTestCommand;
 use App\Shared\AI\Platform\ModelFailoverPlatform;
@@ -106,6 +107,10 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(AiSmokeTestCommand::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    // Wire admin email for LoadAlertRulesCommand
+    $services->set(LoadAlertRulesCommand::class)
+        ->arg('$adminEmail', '%env(ADMIN_EMAIL)%');
 
     // Wire admin credentials for SeedDataCommand
     $services->set(SeedDataCommand::class)

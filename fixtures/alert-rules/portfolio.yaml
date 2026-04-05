@@ -1,0 +1,378 @@
+# Portfolio Alert Rules — Seed Data
+# Load with: bin/console app:load-alert-rules fixtures/alert-rules/portfolio.yaml
+
+# --- Hormuz / Energy Crisis ---
+
+- name: "Hormuz De-escalation"
+  type: ai
+  keywords:
+    - "hormuz ceasefire"
+    - "hormuz reopen"
+    - "strait reopen"
+    - "iran diplomacy"
+    - "iran negotiations"
+    - "iran peace deal"
+    - "iran ceasefire"
+    - "hormuz shipping resume"
+    - "hormuz escort"
+    - "tanker convoy"
+    - "iran nuclear deal"
+  context_prompt: >
+    I hold CF Industries (nitrogen fertilizer) and K+S (potash) stocks that profit
+    directly from the Hormuz blockade. Any credible signal toward reopening the strait
+    or de-escalation with Iran would mean these positions lose their scarcity premium
+    rapidly — potentially -20 to -30% within days. Rate severity HIGH for concrete
+    diplomatic breakthroughs, peace talks with deadlines, or confirmed escort operations.
+    Rate LOW for vague diplomatic language without actionable outcomes.
+  urgency: high
+  severity_threshold: 6
+  cooldown_minutes: 30
+  categories: ["politics", "business"]
+  enabled: true
+
+- name: "Hormuz Escalation"
+  type: keyword
+  keywords:
+    - "hormuz attack"
+    - "hormuz mine"
+    - "tanker struck"
+    - "tanker attacked"
+    - "iran navy"
+    - "hormuz blockade"
+    - "oil $150"
+    - "oil $200"
+    - "oil record"
+    - "iran power plant strike"
+    - "iran infrastructure strike"
+    - "gulf war"
+  context_prompt: ~
+  urgency: medium
+  severity_threshold: 5
+  cooldown_minutes: 60
+  categories: ["politics", "business"]
+  enabled: true
+
+- name: "Fertilizer Supply Crisis"
+  type: keyword
+  keywords:
+    - "fertilizer shortage"
+    - "urea price"
+    - "ammonia price"
+    - "sulfur shortage"
+    - "fertilizer crisis"
+    - "planting season"
+    - "crop yield decline"
+    - "CF Industries"
+    - "Nutrien"
+    - "food security"
+    - "fertilizer export ban"
+  context_prompt: ~
+  urgency: medium
+  severity_threshold: 5
+  cooldown_minutes: 120
+  categories: ["business"]
+  enabled: true
+
+# --- European Defence ---
+
+- name: "EU Defence Budget & Contracts"
+  type: keyword
+  keywords:
+    - "Rheinmetall contract"
+    - "Rheinmetall order"
+    - "Hensoldt contract"
+    - "Hensoldt order"
+    - "Hensoldt radar"
+    - "Renk contract"
+    - "TKMS contract"
+    - "TKMS submarine"
+    - "european defence budget"
+    - "european defense budget"
+    - "nato spending"
+    - "bundeswehr order"
+    - "eu defence fund"
+    - "european rearmament"
+    - "defence procurement europe"
+    - "Sondervermögen"
+  context_prompt: ~
+  urgency: low
+  severity_threshold: 5
+  cooldown_minutes: 180
+  categories: ["politics", "business"]
+  enabled: true
+
+- name: "Defence Threat — Peace or Budget Cuts"
+  type: ai
+  keywords:
+    - "ukraine ceasefire"
+    - "ukraine peace"
+    - "russia peace deal"
+    - "russia ceasefire"
+    - "minsk agreement"
+    - "nato dissolve"
+    - "defence budget cut"
+    - "defense budget cut"
+    - "peace dividend"
+    - "european defence cut"
+    - "nato withdrawal"
+    - "us troops withdraw europe"
+  context_prompt: >
+    I hold a concentrated European defence portfolio: Rheinmetall, Hensoldt, Renk,
+    TKMS, and a NATO Defence ETF — together ~35% of my total portfolio. A credible
+    peace deal in Ukraine or significant NATO budget cuts would trigger a sharp
+    correction in these positions (-15 to -25%). Rate severity HIGH for signed
+    agreements, formal ceasefire announcements, or confirmed budget reduction votes.
+    Rate LOW for diplomatic rhetoric without concrete outcomes. Note: a frozen conflict
+    (no peace, no escalation) is actually neutral-to-positive for defence stocks.
+  urgency: high
+  severity_threshold: 5
+  cooldown_minutes: 30
+  categories: ["politics"]
+  enabled: true
+
+- name: "Drone & Autonomous Warfare"
+  type: keyword
+  keywords:
+    - "drone warfare"
+    - "autonomous weapons"
+    - "drone swarm"
+    - "FPV drone"
+    - "loitering munition"
+    - "Switchblade"
+    - "drone production"
+    - "counter-drone"
+    - "electronic warfare"
+    - "drone regulation"
+    - "drone ban"
+    - "Swarmer"
+    - "AeroVironment"
+  context_prompt: ~
+  urgency: low
+  severity_threshold: 5
+  cooldown_minutes: 180
+  categories: ["politics", "tech"]
+  enabled: true
+
+# --- China EV / BYD ---
+
+- name: "BYD & China EV"
+  type: ai
+  keywords:
+    - "BYD"
+    - "BYD europe"
+    - "BYD sales"
+    - "BYD recall"
+    - "BYD battery"
+    - "china ev tariff"
+    - "eu china electric"
+    - "china ev ban"
+    - "china ev export"
+    - "CATL"
+    - "china battery"
+    - "ev price war"
+  context_prompt: >
+    I hold BYD stock as ~8% of my portfolio, betting on China's dominance in EV
+    and battery tech. Positive catalysts: sales records, new battery breakthroughs,
+    EU market share gains, new factory openings. Negative catalysts: EU tariff
+    escalation beyond current minimum price agreement, major recalls, Taiwan
+    crisis affecting sentiment, China export restrictions. Rate severity based on
+    direct financial impact to BYD's revenue or market access.
+  urgency: medium
+  severity_threshold: 5
+  cooldown_minutes: 120
+  categories: ["business", "tech"]
+  enabled: true
+
+- name: "China Geopolitical Risk"
+  type: ai
+  keywords:
+    - "taiwan crisis"
+    - "taiwan invasion"
+    - "china sanctions"
+    - "china trade war"
+    - "china decoupling"
+    - "china military"
+    - "south china sea"
+    - "china embargo"
+    - "xi jinping"
+  context_prompt: >
+    I hold BYD stock and a China EV position. A serious China-West confrontation
+    (Taiwan, trade war escalation, sanctions) would devastate Chinese stocks
+    regardless of fundamentals. Rate severity HIGH only for military action, formal
+    sanctions packages, or investment bans. Rate LOW for diplomatic tensions and
+    rhetoric. The EU-China minimum price agreement on EVs (Jan 2026) is the current
+    baseline — any reversal to full tariffs would be medium severity.
+  urgency: high
+  severity_threshold: 7
+  cooldown_minutes: 30
+  categories: ["politics"]
+  enabled: true
+
+# --- Gold & Macro ---
+
+- name: "Gold Significant Move"
+  type: keyword
+  keywords:
+    - "gold crash"
+    - "gold surge"
+    - "gold record"
+    - "gold all-time"
+    - "central bank gold"
+    - "gold reserve"
+    - "fed rate hike"
+    - "fed rate cut"
+    - "ecb rate"
+    - "gold $5000"
+    - "gold $4000"
+    - "gold $3000"
+    - "de-dollarization"
+  context_prompt: ~
+  urgency: medium
+  severity_threshold: 5
+  cooldown_minutes: 120
+  categories: ["business"]
+  enabled: true
+
+- name: "European Recession Signal"
+  type: ai
+  keywords:
+    - "europe recession"
+    - "eurozone recession"
+    - "ecb emergency"
+    - "european gdp contract"
+    - "eurozone downturn"
+    - "european stagflation"
+    - "germany recession"
+    - "eu industrial output"
+    - "european unemployment"
+    - "energy rationing europe"
+  context_prompt: >
+    I hold 15% in MSCI Europe ETF and ~35% in European defence stocks. A European
+    recession would hurt the MSCI Europe position directly, but defence stocks are
+    partially immune because budgets are politically fixed. However, a severe recession
+    could eventually force budget cuts even in defence. Rate severity based on whether
+    this is a data point (quarterly GDP miss = medium) or a structural shift
+    (energy rationing, industrial collapse = high).
+  urgency: medium
+  severity_threshold: 6
+  cooldown_minutes: 120
+  categories: ["business", "politics"]
+  enabled: true
+
+# --- Portfolio-Specific Positions ---
+
+- name: "K+S Specific Risk"
+  type: ai
+  keywords:
+    - "K+S"
+    - "K+S AG"
+    - "potash price"
+    - "belarus potash"
+    - "belarus sanctions"
+    - "belarus fertilizer"
+    - "Uralkali"
+    - "Belaruskali"
+  context_prompt: >
+    I hold K+S AG (3% of portfolio). The biggest risk is lifting of Belarus potash
+    sanctions — Belarus is one of the world's largest potash exporters, and their
+    return to the market would flood supply and crush K+S margins. Rate severity
+    HIGH for confirmed sanction relief or waivers. Also rate HIGH for any major
+    potash price collapse (>15% in a week). Rate LOW for diplomatic noise about
+    Belarus without concrete action.
+  urgency: high
+  severity_threshold: 5
+  cooldown_minutes: 60
+  categories: ["business", "politics"]
+  enabled: true
+
+- name: "CF Industries Risk"
+  type: ai
+  keywords:
+    - "CF Industries"
+    - "CF earnings"
+    - "nitrogen price crash"
+    - "ammonia price drop"
+    - "DOJ fertilizer"
+    - "fertilizer antitrust"
+    - "fertilizer price fixing"
+  context_prompt: >
+    I hold CF Industries (6% of portfolio). Key risks: DOJ antitrust investigation
+    into fertilizer price-fixing (ongoing), sudden Hormuz reopening collapsing
+    the scarcity premium, or a major earnings miss. Rate severity HIGH for DOJ
+    charges filed, settlement announcements, or Hormuz reopening confirmation.
+    Rate LOW for routine analyst downgrades or minor price fluctuations.
+  urgency: high
+  severity_threshold: 6
+  cooldown_minutes: 60
+  categories: ["business"]
+  enabled: true
+
+- name: "Rheinmetall Earnings & Guidance"
+  type: keyword
+  keywords:
+    - "Rheinmetall earnings"
+    - "Rheinmetall guidance"
+    - "Rheinmetall revenue"
+    - "Rheinmetall profit"
+    - "Rheinmetall forecast"
+    - "Rheinmetall downgrade"
+    - "Rheinmetall upgrade"
+    - "Rheinmetall acquisition"
+    - "Rheinmetall backlog"
+  context_prompt: ~
+  urgency: medium
+  severity_threshold: 5
+  cooldown_minutes: 60
+  categories: ["business"]
+  enabled: true
+
+# --- Meta / Systemic ---
+
+- name: "Trump Policy Shift"
+  type: ai
+  keywords:
+    - "trump nato"
+    - "trump europe"
+    - "trump tariff europe"
+    - "trump iran"
+    - "trump hormuz"
+    - "trump defence"
+    - "trump defense"
+    - "trump ceasefire"
+    - "trump executive order"
+    - "trump sanctions"
+  context_prompt: >
+    My entire portfolio is built on geopolitical theses that are sensitive to US
+    policy shifts. Trump's actions (not words) are the primary signal. Rate severity
+    based on ACTIONS: executive orders, troop movements, signed deals, confirmed
+    policy changes. Rate LOW for tweets, press conferences, or rhetoric without
+    follow-through. Key scenarios: Trump withdrawing from Iran = Hormuz stays closed
+    (positive for my portfolio). Trump forcing NATO allies to pay = Europe rearms
+    faster (positive). Trump making a deal with Russia on Ukraine = defence stocks
+    at risk (negative).
+  urgency: high
+  severity_threshold: 6
+  cooldown_minutes: 60
+  categories: ["politics"]
+  enabled: true
+
+- name: "Black Swan / Market Crash"
+  type: keyword
+  keywords:
+    - "market crash"
+    - "stock market crash"
+    - "circuit breaker"
+    - "trading halt"
+    - "flash crash"
+    - "lehman moment"
+    - "systemic risk"
+    - "banking crisis"
+    - "sovereign default"
+    - "nuclear"
+    - "world war"
+  context_prompt: ~
+  urgency: high
+  severity_threshold: 5
+  cooldown_minutes: 15
+  categories: []
+  enabled: true
