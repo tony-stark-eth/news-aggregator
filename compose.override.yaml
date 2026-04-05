@@ -34,6 +34,7 @@ services:
 
   ember:
     image: ghcr.io/hosmelq/ember:1.0.1
+    profiles: [monitoring]
     depends_on:
       - php
     environment:

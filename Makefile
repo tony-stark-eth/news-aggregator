@@ -36,6 +36,7 @@ worker-logs: ## Follow Messenger worker logs
 	$(DOCKER_COMP) logs -f worker
 
 ember: ## Open Ember monitoring dashboard
+	$(DOCKER_COMP) --profile monitoring up -d ember
 	$(DOCKER_COMP) exec ember ember
 
 ## —— Composer 🧙 ——————————————————————————————————
