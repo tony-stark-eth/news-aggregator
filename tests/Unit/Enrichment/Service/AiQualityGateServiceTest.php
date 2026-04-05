@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Enrichment\Service;
 
 use App\Enrichment\Service\AiQualityGateService;
+use App\Shared\Entity\Category;
+use App\Shared\Repository\CategoryRepositoryInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -15,7 +17,15 @@ final class AiQualityGateServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->gate = new AiQualityGateService();
+        $categoryRepo = $this->createStub(CategoryRepositoryInterface::class);
+        $categoryRepo->method('findBySlug')->willReturnCallback(
+            static fn (string $slug): ?Category => match ($slug) {
+                'politics', 'business', 'tech', 'science', 'sports' => new Category($slug, $slug, 10, '#000'),
+                default => null,
+            },
+        );
+
+        $this->gate = new AiQualityGateService($categoryRepo);
     }
 
     public function testValidSummaryPasses(): void

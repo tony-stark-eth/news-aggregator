@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Enrichment\Service;
 
-use App\Enrichment\Service\AiQualityGateService;
+use App\Enrichment\Service\AiQualityGateServiceInterface;
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\RuleBasedSummarizationService;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
@@ -31,7 +31,7 @@ final class AiSummarizationServiceTest extends TestCase
         $service = new AiSummarizationService(
             $platform,
             new RuleBasedSummarizationService(),
-            new AiQualityGateService(),
+            $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
@@ -51,7 +51,7 @@ final class AiSummarizationServiceTest extends TestCase
         $service = new AiSummarizationService(
             $platform,
             new RuleBasedSummarizationService(),
-            new AiQualityGateService(),
+            $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
@@ -71,7 +71,7 @@ final class AiSummarizationServiceTest extends TestCase
         $service = new AiSummarizationService(
             $platform,
             new RuleBasedSummarizationService(),
-            new AiQualityGateService(),
+            $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
@@ -92,7 +92,7 @@ final class AiSummarizationServiceTest extends TestCase
         $service = new AiSummarizationService(
             $platform,
             new RuleBasedSummarizationService(),
-            new AiQualityGateService(),
+            $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
@@ -102,6 +102,24 @@ final class AiSummarizationServiceTest extends TestCase
 
         // Summary that's just the title repeated should be rejected by quality gate
         self::assertSame(EnrichmentMethod::RuleBased, $result->method);
+    }
+
+    private function createQualityGateStub(): AiQualityGateServiceInterface
+    {
+        $stub = $this->createStub(AiQualityGateServiceInterface::class);
+        $stub->method('validateSummary')->willReturnCallback(
+            static function (string $summary, string $title): bool {
+                $length = mb_strlen($summary);
+                if ($length < 20 || $length > 500) {
+                    return false;
+                }
+                similar_text(mb_strtolower($summary), mb_strtolower($title), $percent);
+
+                return $percent < 90.0;
+            },
+        );
+
+        return $stub;
     }
 
     private function makeDeferredResult(string $text): DeferredResult

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Enrichment\Service;
 
 use App\Enrichment\Service\AiCategorizationService;
-use App\Enrichment\Service\AiQualityGateService;
+use App\Enrichment\Service\AiQualityGateServiceInterface;
 use App\Enrichment\Service\RuleBasedCategorizationService;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
@@ -29,7 +29,7 @@ final class AiCategorizationServiceTest extends TestCase
         $service = new AiCategorizationService(
             $platform,
             new RuleBasedCategorizationService(),
-            new AiQualityGateService(),
+            $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
@@ -49,7 +49,7 @@ final class AiCategorizationServiceTest extends TestCase
         $service = new AiCategorizationService(
             $platform,
             new RuleBasedCategorizationService(),
-            new AiQualityGateService(),
+            $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
@@ -72,7 +72,7 @@ final class AiCategorizationServiceTest extends TestCase
         $service = new AiCategorizationService(
             $platform,
             new RuleBasedCategorizationService(),
-            new AiQualityGateService(),
+            $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
@@ -85,6 +85,17 @@ final class AiCategorizationServiceTest extends TestCase
 
         self::assertSame('science', $result->value);
         self::assertSame(EnrichmentMethod::RuleBased, $result->method);
+    }
+
+    private function createQualityGateStub(): AiQualityGateServiceInterface
+    {
+        $stub = $this->createStub(AiQualityGateServiceInterface::class);
+        $stub->method('validateCategorization')->willReturnCallback(
+            static fn (string $slug): bool => in_array($slug, ['politics', 'business', 'tech', 'science', 'sports'], true),
+        );
+        $stub->method('validateSummary')->willReturn(true);
+
+        return $stub;
     }
 
     private function makeDeferredResult(string $text): DeferredResult

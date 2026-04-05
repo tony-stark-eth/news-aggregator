@@ -4,8 +4,16 @@ declare(strict_types=1);
 
 namespace App\Enrichment\Service;
 
+use App\Shared\Entity\Category;
+use App\Shared\Repository\CategoryRepositoryInterface;
+
 final readonly class AiQualityGateService implements AiQualityGateServiceInterface
 {
+    public function __construct(
+        private CategoryRepositoryInterface $categoryRepository,
+    ) {
+    }
+
     public function validateSummary(string $summary, string $title): bool
     {
         $length = mb_strlen($summary);
@@ -22,8 +30,6 @@ final readonly class AiQualityGateService implements AiQualityGateServiceInterfa
 
     public function validateCategorization(string $categorySlug): bool
     {
-        $validSlugs = ['politics', 'business', 'tech', 'science', 'sports'];
-
-        return in_array($categorySlug, $validSlugs, true);
+        return $this->categoryRepository->findBySlug($categorySlug) instanceof Category;
     }
 }
