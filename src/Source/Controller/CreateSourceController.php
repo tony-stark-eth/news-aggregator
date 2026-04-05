@@ -50,6 +50,7 @@ final class CreateSourceController
         $feedUrl = trim((string) $request->request->get('feed_url'));
         $siteUrl = trim((string) $request->request->get('site_url'));
         $categoryId = (int) $request->request->get('category_id');
+        $language = trim((string) $request->request->get('language'));
         $enabled = $request->request->getBoolean('enabled');
 
         if ($name === '' || $feedUrl === '') {
@@ -70,6 +71,10 @@ final class CreateSourceController
 
         if ($siteUrl !== '') {
             $source->setSiteUrl($siteUrl);
+        }
+
+        if ($language !== '') {
+            $source->setLanguage($language);
         }
 
         $this->entityManager->persist($source);

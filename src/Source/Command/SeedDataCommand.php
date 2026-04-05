@@ -130,86 +130,103 @@ final class SeedDataCommand extends Command
                 'name' => 'Tagesschau',
                 'url' => 'https://www.tagesschau.de/xml/rss2',
                 'category' => 'politics',
+                'language' => 'de',
             ],
             [
                 'name' => 'ZDF heute',
                 'url' => 'https://www.zdf.de/rss/zdf/nachrichten',
                 'category' => 'politics',
+                'language' => 'de',
             ],
             [
                 'name' => 'BBC News',
                 'url' => 'https://feeds.bbci.co.uk/news/rss.xml',
                 'category' => 'politics',
+                'language' => 'en',
             ],
             [
                 'name' => 'Der Spiegel',
                 'url' => 'https://www.spiegel.de/schlagzeilen/tops/index.rss',
                 'category' => 'politics',
+                'language' => 'de',
             ],
             [
                 'name' => 'Handelsblatt',
                 'url' => 'https://www.handelsblatt.com/contentexport/feed/top',
                 'category' => 'business',
+                'language' => 'de',
             ],
             [
                 'name' => 'MarketWatch',
                 'url' => 'https://feeds.content.dowjones.io/public/rss/mw_topstories',
                 'category' => 'business',
+                'language' => 'en',
             ],
             [
                 'name' => 'CNBC',
                 'url' => 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114',
                 'category' => 'business',
+                'language' => 'en',
             ],
             [
                 'name' => 'Reuters Business',
                 'url' => 'https://www.reutersagency.com/feed/?best-topics=business-finance',
                 'category' => 'business',
+                'language' => 'en',
             ],
             [
                 'name' => 'Heise',
                 'url' => 'https://www.heise.de/rss/heise-atom.xml',
                 'category' => 'tech',
+                'language' => 'de',
             ],
             [
                 'name' => 'Ars Technica',
                 'url' => 'https://feeds.arstechnica.com/arstechnica/index',
                 'category' => 'tech',
+                'language' => 'en',
             ],
             [
                 'name' => 'The Verge',
                 'url' => 'https://www.theverge.com/rss/index.xml',
                 'category' => 'tech',
+                'language' => 'en',
             ],
             [
                 'name' => 'Hacker News',
                 'url' => 'https://hnrss.org/frontpage',
                 'category' => 'tech',
+                'language' => 'en',
             ],
             [
                 'name' => 'PHP Reads',
                 'url' => 'https://phpreads.com/feed',
                 'category' => 'tech',
+                'language' => 'en',
             ],
             [
                 'name' => 'Nature News',
                 'url' => 'https://www.nature.com/nature.rss',
                 'category' => 'science',
+                'language' => 'en',
             ],
             [
                 'name' => 'Ars Technica Science',
                 'url' => 'https://feeds.arstechnica.com/arstechnica/science',
                 'category' => 'science',
+                'language' => 'en',
             ],
             [
                 'name' => 'Kicker',
                 'url' => 'https://rss.kicker.de/news/aktuell',
                 'category' => 'sports',
+                'language' => 'de',
             ],
             [
                 'name' => 'ESPN',
                 'url' => 'https://www.espn.com/espn/rss/news',
                 'category' => 'sports',
+                'language' => 'en',
             ],
         ];
 
@@ -234,6 +251,7 @@ final class SeedDataCommand extends Command
             }
 
             $source = new Source($def['name'], $def['url'], $category, $now);
+            $source->setLanguage($def['language']);
             $this->entityManager->persist($source);
             $io->info(sprintf('Created source: %s', $def['name']));
         }

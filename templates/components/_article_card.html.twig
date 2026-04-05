@@ -7,9 +7,17 @@
                     <a href="{{ article.url }}" target="_blank" rel="noopener" class="link link-hover article-link" data-article-id="{{ article.id }}">
                         {{ article.title }}
                     </a>
+                    {% if article.titleOriginal is not null and article.titleOriginal != article.title %}
+                        <span class="tooltip tooltip-bottom cursor-help text-base-content/40" data-tip="{{ article.titleOriginal }}">&#127760;</span>
+                    {% endif %}
                 </h3>
                 {% if article.summary %}
-                    <p class="text-sm text-base-content/70 mt-1">{{ article.summary }}</p>
+                    <p class="text-sm text-base-content/70 mt-1">
+                        {{ article.summary }}
+                        {% if article.summaryOriginal is not null and article.summaryOriginal != article.summary %}
+                            <span class="tooltip tooltip-bottom cursor-help text-base-content/40" data-tip="{{ article.summaryOriginal }}">&#127760;</span>
+                        {% endif %}
+                    </p>
                 {% endif %}
             </div>
             {% if article.score %}

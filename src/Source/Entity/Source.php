@@ -46,6 +46,9 @@ class Source
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $lastFetchedAt = null;
 
+    #[ORM\Column(length: 5, nullable: true)]
+    private ?string $language = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -119,6 +122,16 @@ class Source
     public function getLastFetchedAt(): ?\DateTimeImmutable
     {
         return $this->lastFetchedAt;
+    }
+
+    public function getLanguage(): ?string
+    {
+        return $this->language;
+    }
+
+    public function setLanguage(?string $language): void
+    {
+        $this->language = $language;
     }
 
     public function getCreatedAt(): \DateTimeImmutable
