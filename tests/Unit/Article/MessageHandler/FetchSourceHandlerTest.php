@@ -9,6 +9,7 @@ use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\Service\ScoringServiceInterface;
 use App\Enrichment\Service\CategorizationServiceInterface;
+use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\ValueObject\EnrichmentResult;
 use App\Notification\Service\ArticleMatcherServiceInterface;
@@ -74,6 +75,9 @@ final class FetchSourceHandlerTest extends TestCase
         $summarization = $this->createStub(SummarizationServiceInterface::class);
         $summarization->method('summarize')->willReturn(new EnrichmentResult('A test summary.', EnrichmentMethod::RuleBased));
 
+        $keywordExtraction = $this->createStub(KeywordExtractionServiceInterface::class);
+        $keywordExtraction->method('extract')->willReturn(['Test', 'Keyword']);
+
         /** @var EntityRepository<Article>&MockObject $repository */
         $repository = $this->createMock(EntityRepository::class);
         $repository->method('findOneBy')->willReturn(null);
@@ -87,6 +91,7 @@ final class FetchSourceHandlerTest extends TestCase
             $dedup,
             $categorization,
             $summarization,
+            $keywordExtraction,
             $this->createStub(ScoringServiceInterface::class),
             $this->createStub(ArticleMatcherServiceInterface::class),
             $this->createStub(MessageBusInterface::class),
