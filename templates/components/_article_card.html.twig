@@ -11,6 +11,13 @@
                 {% if article.summary %}
                     <p class="text-sm text-base-content/70 mt-1">{{ article.summary }}</p>
                 {% endif %}
+                {% if article.keywords is not null and article.keywords is not empty %}
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        {% for keyword in article.keywords %}
+                            <span class="badge badge-outline badge-xs">{{ keyword }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             </div>
             {% if article.score %}
                 <div class="badge badge-sm {{ article.score > 0.7 ? 'badge-primary' : (article.score > 0.4 ? 'badge-secondary' : 'badge-ghost') }}">
