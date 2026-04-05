@@ -23,7 +23,7 @@ PROMPT;
 
     public function __construct(
         private PlatformInterface $platform,
-        private RuleBasedTranslationService $ruleBasedFallback,
+        private TranslationServiceInterface $ruleBasedFallback,
         private LoggerInterface $logger,
     ) {
     }

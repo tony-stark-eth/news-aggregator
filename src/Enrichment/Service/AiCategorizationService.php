@@ -26,7 +26,7 @@ PROMPT;
 
     public function __construct(
         private PlatformInterface $platform,
-        private RuleBasedCategorizationService $ruleBasedFallback,
+        private CategorizationServiceInterface $ruleBasedFallback,
         private AiQualityGateServiceInterface $qualityGate,
         private LoggerInterface $logger,
     ) {

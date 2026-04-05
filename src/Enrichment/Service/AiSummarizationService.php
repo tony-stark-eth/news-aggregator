@@ -23,7 +23,7 @@ PROMPT;
 
     public function __construct(
         private PlatformInterface $platform,
-        private RuleBasedSummarizationService $ruleBasedFallback,
+        private SummarizationServiceInterface $ruleBasedFallback,
         private AiQualityGateServiceInterface $qualityGate,
         private LoggerInterface $logger,
     ) {

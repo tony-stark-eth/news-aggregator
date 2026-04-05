@@ -24,7 +24,7 @@ PROMPT;
 
     public function __construct(
         private PlatformInterface $platform,
-        private RuleBasedKeywordExtractionService $ruleBasedFallback,
+        private KeywordExtractionServiceInterface $ruleBasedFallback,
         private LoggerInterface $logger,
     ) {
     }
