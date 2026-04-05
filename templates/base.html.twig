@@ -24,6 +24,11 @@
                     </svg>
                 </div>
                 <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                    <li>
+                        <form action="{{ path('app_search') }}" method="GET" class="p-0">
+                            <input type="text" name="q" placeholder="Search..." class="input input-bordered input-sm w-full" value="{{ nav.searchQuery }}">
+                        </form>
+                    </li>
                     <li><a href="{{ path('app_dashboard') }}">Dashboard</a></li>
                     <li><a href="{{ path('app_sources') }}">Sources</a></li>
                     <li><a href="{{ path('app_alerts') }}">Alerts</a></li>
@@ -33,7 +38,7 @@
             </div>
             <a href="{{ path('app_dashboard') }}" class="btn btn-ghost text-xl">News Aggregator</a>
         </div>
-        <div class="navbar-center hidden lg:flex">
+        <div class="navbar-center hidden md:flex">
             <form action="{{ path('app_search') }}" method="GET" class="form-control">
                 <input type="text" name="q" placeholder="Search articles..." class="input input-bordered w-64" value="{{ nav.searchQuery }}">
             </form>
