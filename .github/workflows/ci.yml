@@ -25,14 +25,11 @@ jobs:
           '
       - name: Install dependencies
         run: docker compose run --rm -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php composer install --no-interaction --no-progress
-      - name: Warm cache (needed for PHPStan Symfony extension)
-        if: matrix.check == 'phpstan'
-        run: docker compose run --rm -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php php bin/console cache:clear
       - name: Run ${{ matrix.check }}
         run: |
           case "${{ matrix.check }}" in
             ecs) docker compose run --rm --no-deps php vendor/bin/ecs check ;;
-            phpstan) docker compose run --rm -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php vendor/bin/phpstan analyse --memory-limit=512M ;;
+            phpstan) docker compose run --rm -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php bash -c "php bin/console cache:clear && vendor/bin/phpstan analyse --memory-limit=512M" ;;
             rector) docker compose run --rm --no-deps php vendor/bin/rector process --dry-run ;;
           esac
 
