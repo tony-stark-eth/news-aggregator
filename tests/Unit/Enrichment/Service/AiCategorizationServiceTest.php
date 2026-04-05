@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Enrichment\Service;
 use App\Enrichment\Service\AiCategorizationService;
 use App\Enrichment\Service\AiQualityGateService;
 use App\Enrichment\Service\RuleBasedCategorizationService;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -29,6 +30,7 @@ final class AiCategorizationServiceTest extends TestCase
             $platform,
             new RuleBasedCategorizationService(),
             new AiQualityGateService(),
+            $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
 
@@ -48,6 +50,7 @@ final class AiCategorizationServiceTest extends TestCase
             $platform,
             new RuleBasedCategorizationService(),
             new AiQualityGateService(),
+            $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
 
@@ -70,6 +73,7 @@ final class AiCategorizationServiceTest extends TestCase
             $platform,
             new RuleBasedCategorizationService(),
             new AiQualityGateService(),
+            $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
 

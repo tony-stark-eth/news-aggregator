@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enrichment\Service;
 
 use App\Enrichment\ValueObject\EnrichmentResult;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Message\Message;
@@ -28,6 +29,7 @@ PROMPT;
         private PlatformInterface $platform,
         private CategorizationServiceInterface $ruleBasedFallback,
         private AiQualityGateServiceInterface $qualityGate,
+        private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
     ) {
     }
@@ -45,9 +47,12 @@ PROMPT;
             $categorySlug = trim(mb_strtolower($this->platform->invoke(self::MODEL, $input)->asText()));
 
             if ($this->qualityGate->validateCategorization($categorySlug)) {
+                $this->qualityTracker->recordAcceptance(self::MODEL);
+
                 return new EnrichmentResult($categorySlug, EnrichmentMethod::Ai, self::MODEL);
             }
 
+            $this->qualityTracker->recordRejection(self::MODEL);
             $this->logger->info('AI categorization rejected by quality gate: {slug}', [
                 'slug' => $categorySlug,
                 'model' => self::MODEL,

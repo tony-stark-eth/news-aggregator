@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Enrichment\Service;
 
 use App\Enrichment\ValueObject\EnrichmentResult;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Message\Message;
@@ -25,6 +26,7 @@ PROMPT;
         private PlatformInterface $platform,
         private SummarizationServiceInterface $ruleBasedFallback,
         private AiQualityGateServiceInterface $qualityGate,
+        private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
     ) {
     }
@@ -38,9 +40,12 @@ PROMPT;
             $summary = trim($this->platform->invoke(self::MODEL, $input)->asText());
 
             if ($this->qualityGate->validateSummary($summary, $title)) {
+                $this->qualityTracker->recordAcceptance(self::MODEL);
+
                 return new EnrichmentResult($summary, EnrichmentMethod::Ai, self::MODEL);
             }
 
+            $this->qualityTracker->recordRejection(self::MODEL);
             $this->logger->info('AI summary rejected by quality gate', [
                 'length' => mb_strlen($summary),
                 'model' => self::MODEL,

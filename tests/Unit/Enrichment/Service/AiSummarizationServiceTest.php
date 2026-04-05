@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Enrichment\Service;
 use App\Enrichment\Service\AiQualityGateService;
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\RuleBasedSummarizationService;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -31,6 +32,7 @@ final class AiSummarizationServiceTest extends TestCase
             $platform,
             new RuleBasedSummarizationService(),
             new AiQualityGateService(),
+            $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
 
@@ -50,6 +52,7 @@ final class AiSummarizationServiceTest extends TestCase
             $platform,
             new RuleBasedSummarizationService(),
             new AiQualityGateService(),
+            $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
 
@@ -69,6 +72,7 @@ final class AiSummarizationServiceTest extends TestCase
             $platform,
             new RuleBasedSummarizationService(),
             new AiQualityGateService(),
+            $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
 
@@ -89,6 +93,7 @@ final class AiSummarizationServiceTest extends TestCase
             $platform,
             new RuleBasedSummarizationService(),
             new AiQualityGateService(),
+            $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
         );
 
