@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Article\Entity;
 
+use App\Article\ValueObject\Url;
 use App\Shared\Entity\Category;
 use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\Entity\Source;
@@ -89,6 +90,7 @@ class Article
         Source $source,
         \DateTimeImmutable $fetchedAt,
     ) {
+        new Url($url); // validate URL format
         $this->title = $title;
         $this->url = $url;
         $this->source = $source;
