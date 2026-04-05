@@ -11,7 +11,7 @@ use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\PlatformInterface;
 
-final readonly class DigestSummaryService
+final readonly class DigestSummaryService implements DigestSummaryServiceInterface
 {
     private const string MODEL = 'openrouter/free';
 

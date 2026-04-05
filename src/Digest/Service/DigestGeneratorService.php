@@ -10,7 +10,7 @@ use App\Digest\Entity\DigestConfig;
 use App\Digest\ValueObject\GroupedArticles;
 use Doctrine\ORM\EntityManagerInterface;
 
-final readonly class DigestGeneratorService
+final readonly class DigestGeneratorService implements DigestGeneratorServiceInterface
 {
     public function __construct(
         private EntityManagerInterface $entityManager,

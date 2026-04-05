@@ -39,12 +39,47 @@ final class LayerDependencyTest
             ->classes(Selector::classname('/.*\\\\Controller\\\\.*/', true));
     }
 
-    public function testSourceDoesNotDependOnArticle(): Rule
+    public function testSourceDoesNotDependOnOtherDomains(): Rule
     {
+        // SeedDataCommand seeds data across all domains (sources + digests).
         return PHPat::rule()
             ->classes(Selector::inNamespace('App\Source'))
+            ->excluding(Selector::classname('App\Source\Command\SeedDataCommand'))
             ->shouldNot()
             ->dependOn()
-            ->classes(Selector::inNamespace('App\Article'));
+            ->classes(
+                Selector::inNamespace('App\Article'),
+                Selector::inNamespace('App\Enrichment'),
+                Selector::inNamespace('App\Notification'),
+                Selector::inNamespace('App\Digest'),
+            );
+    }
+
+    public function testArticleDoesNotDependOnEnrichmentOrNotification(): Rule
+    {
+        // FetchSourceHandler is the orchestration pipeline — it legitimately
+        // coordinates enrichment + notification after persisting an article.
+        return PHPat::rule()
+            ->classes(Selector::inNamespace('App\Article'))
+            ->excluding(Selector::classname('App\Article\MessageHandler\FetchSourceHandler'))
+            ->shouldNot()
+            ->dependOn()
+            ->classes(
+                Selector::inNamespace('App\Enrichment'),
+                Selector::inNamespace('App\Notification'),
+                Selector::inNamespace('App\Digest'),
+            );
+    }
+
+    public function testEnrichmentDoesNotDependOnNotificationOrDigest(): Rule
+    {
+        return PHPat::rule()
+            ->classes(Selector::inNamespace('App\Enrichment'))
+            ->shouldNot()
+            ->dependOn()
+            ->classes(
+                Selector::inNamespace('App\Notification'),
+                Selector::inNamespace('App\Digest'),
+            );
     }
 }

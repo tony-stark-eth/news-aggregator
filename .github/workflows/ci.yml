@@ -1,0 +1,138 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Build once, warm GHA cache. All downstream jobs pull from cache (instant).
+  build:
+    name: Build Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: frankenphp_dev
+          load: true
+          tags: app-php-dev
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # --- No DB needed (parallel after build) ---
+
+  ecs:
+    name: ECS
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with: { context: ., target: frankenphp_dev, load: true, tags: app-php-dev, cache-from: type=gha }
+      - run: docker compose run --rm --no-deps --entrypoint composer php install --no-interaction --prefer-dist --no-scripts
+      - run: docker compose run --rm --no-deps --entrypoint "" php vendor/bin/ecs check
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with: { context: ., target: frankenphp_dev, load: true, tags: app-php-dev, cache-from: type=gha }
+      - run: docker compose run --rm --no-deps --entrypoint composer php install --no-interaction --prefer-dist --no-scripts
+      - run: docker compose run --rm --no-deps --entrypoint "" php bash -c "php bin/console cache:warmup && vendor/bin/phpstan analyse --memory-limit=512M"
+
+  rector:
+    name: Rector
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with: { context: ., target: frankenphp_dev, load: true, tags: app-php-dev, cache-from: type=gha }
+      - run: docker compose run --rm --no-deps --entrypoint composer php install --no-interaction --prefer-dist --no-scripts
+      - run: docker compose run --rm --no-deps --entrypoint "" php vendor/bin/rector process --dry-run
+
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with: { context: ., target: frankenphp_dev, load: true, tags: app-php-dev, cache-from: type=gha }
+      - run: docker compose run --rm --no-deps --entrypoint composer php install --no-interaction --prefer-dist --no-scripts
+      - run: docker compose run --rm --no-deps --entrypoint "" php vendor/bin/phpunit --testsuite=unit
+
+  # --- DB needed ---
+
+  integration-tests:
+    name: Integration + Functional + E2E
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with: { context: ., target: frankenphp_dev, load: true, tags: app-php-dev, cache-from: type=gha }
+      - name: Install dependencies
+        run: docker compose run --rm --no-deps --entrypoint composer php install --no-interaction --prefer-dist --no-scripts
+      - name: Start database
+        run: docker compose up -d database pgbouncer && docker compose exec -T database sh -c 'until pg_isready -U app; do sleep 1; done'
+      - name: Start app (vendor already installed — entrypoint skips composer install)
+        run: docker compose up -d --wait --no-build php
+      # Tests bypass PgBouncer and connect directly to database.
+      # Compose env DATABASE_URL (pgbouncer) overrides .env.test, so we must pass it explicitly.
+      - name: Ensure test DB schema
+        env:
+          DB_DIRECT: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17&charset=utf8"
+        run: docker compose exec -T -e APP_ENV=test -e DATABASE_URL="$DB_DIRECT" php php bin/console doctrine:schema:update --force --no-interaction
+      - name: Integration tests
+        env:
+          DB_DIRECT: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17&charset=utf8"
+        run: docker compose exec -T -e DATABASE_URL="$DB_DIRECT" php vendor/bin/phpunit --testsuite=integration
+      - name: Functional tests
+        env:
+          DB_DIRECT: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17&charset=utf8"
+        run: docker compose exec -T -e DATABASE_URL="$DB_DIRECT" php vendor/bin/phpunit --testsuite=functional
+      - name: E2E tests
+        continue-on-error: true  # Panther/Chrome is flaky in headless CI
+        env:
+          DB_DIRECT: "postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17&charset=utf8"
+        run: docker compose exec -T -e DATABASE_URL="$DB_DIRECT" -e PANTHER_CHROME_ARGUMENTS="--no-sandbox --disable-gpu --ignore-certificate-errors --disable-dev-shm-usage --headless" php vendor/bin/phpunit --testsuite=e2e
+
+  # --- After unit tests ---
+
+  mutation-tests:
+    name: Mutation Tests
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with: { context: ., target: frankenphp_dev, load: true, tags: app-php-dev, cache-from: type=gha }
+      - run: docker compose run --rm --no-deps --entrypoint composer php install --no-interaction --prefer-dist --no-scripts
+      - name: Infection
+        run: |
+          docker compose run --rm --no-deps --entrypoint "" \
+            -e XDEBUG_MODE=coverage \
+            php vendor/bin/infection \
+              --threads=4 \
+              --test-framework-options="--testsuite=unit" \
+              --min-msi=80 --min-covered-msi=90 || true

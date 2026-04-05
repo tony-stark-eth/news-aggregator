@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\Controller;
 
-use App\Shared\AI\Service\ModelDiscoveryService;
-use App\Shared\AI\Service\ModelQualityTracker;
+use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -14,8 +14,8 @@ final class AiStatsController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
-        private readonly ModelQualityTracker $qualityTracker,
-        private readonly ModelDiscoveryService $modelDiscovery,
+        private readonly ModelQualityTrackerInterface $qualityTracker,
+        private readonly ModelDiscoveryServiceInterface $modelDiscovery,
     ) {
     }
 

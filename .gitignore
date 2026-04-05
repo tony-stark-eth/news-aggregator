@@ -39,10 +39,10 @@ infection.log
 # Backup
 /backup/
 
-# Planning files (not shipped)
-task_plan.md
-progress.md
-findings.md
+# Planning files (root-level, for active development)
+/task_plan.md
+/progress.md
+/findings.md
 
 ###> symfony/framework-bundle ###
 /.env.local

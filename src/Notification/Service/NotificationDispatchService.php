@@ -14,7 +14,7 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Component\Notifier\NotifierInterface;
 
-final readonly class NotificationDispatchService
+final readonly class NotificationDispatchService implements NotificationDispatchServiceInterface
 {
     public function __construct(
         private NotifierInterface $notifier,

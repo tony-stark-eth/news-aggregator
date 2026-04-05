@@ -43,10 +43,12 @@ PROMPT;
 
             $this->logger->info('AI summary rejected: {length} chars (expected 20-500)', [
                 'length' => $length,
+                'model' => self::MODEL,
             ]);
         } catch (\Throwable $e) {
             $this->logger->warning('AI summarization failed, using rule-based fallback: {error}', [
                 'error' => $e->getMessage(),
+                'model' => self::MODEL,
             ]);
         }
 

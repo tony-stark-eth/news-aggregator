@@ -19,8 +19,6 @@ return static function (ContainerConfigurator $container): void {
                         'max_delay' => 0,
                     ],
                 ],
-                'scheduler_fetch' => 'symfony://scheduler_fetch',
-                // 'failed' => ['dsn' => 'doctrine://default?queue_name=failed'],
             ],
             'routing' => [
                 'App\Source\Message\FetchSourceMessage' => 'async',
@@ -30,4 +28,7 @@ return static function (ContainerConfigurator $container): void {
             ],
         ],
     ]);
+
+    // The scheduler_fetch transport is auto-registered by #[AsSchedule('fetch')]
+    // on FetchScheduleProvider — no manual config needed.
 };

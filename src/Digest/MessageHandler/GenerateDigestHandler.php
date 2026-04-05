@@ -7,8 +7,8 @@ namespace App\Digest\MessageHandler;
 use App\Digest\Entity\DigestConfig;
 use App\Digest\Entity\DigestLog;
 use App\Digest\Message\GenerateDigestMessage;
-use App\Digest\Service\DigestGeneratorService;
-use App\Digest\Service\DigestSummaryService;
+use App\Digest\Service\DigestGeneratorServiceInterface;
+use App\Digest\Service\DigestSummaryServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
@@ -21,8 +21,8 @@ final readonly class GenerateDigestHandler
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private DigestGeneratorService $generator,
-        private DigestSummaryService $summary,
+        private DigestGeneratorServiceInterface $generator,
+        private DigestSummaryServiceInterface $summary,
         private NotifierInterface $notifier,
         private ClockInterface $clock,
         private LoggerInterface $logger,
@@ -42,6 +42,7 @@ final readonly class GenerateDigestHandler
         if ($groupedArticles->isEmpty()) {
             $this->logger->info('Digest "{name}" skipped: no articles found', [
                 'name' => $config->getName(),
+                'digest_config_id' => $message->digestConfigId,
             ]);
             return;
         }
@@ -62,6 +63,8 @@ final readonly class GenerateDigestHandler
             $success = false;
             $this->logger->warning('Digest delivery failed: {error}', [
                 'error' => $e->getMessage(),
+                'name' => $config->getName(),
+                'digest_config_id' => $message->digestConfigId,
             ]);
         }
 
@@ -74,7 +77,9 @@ final readonly class GenerateDigestHandler
 
         $this->logger->info('Digest "{name}" generated: {count} articles', [
             'name' => $config->getName(),
+            'digest_config_id' => $message->digestConfigId,
             'count' => $totalArticles,
+            'delivery_success' => $success,
         ]);
     }
 }

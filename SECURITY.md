@@ -5,7 +5,7 @@
 If you discover a security vulnerability, please report it responsibly:
 
 1. **Do not** open a public issue
-2. Email the maintainer at [security contact to be added]
+2. Email the maintainer at kevin.mauel2+github@gmail.com
 3. Include a description of the vulnerability and steps to reproduce
 
 We will acknowledge receipt within 48 hours and provide a timeline for a fix.

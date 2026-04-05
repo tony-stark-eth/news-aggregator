@@ -27,7 +27,7 @@ PROMPT;
     public function __construct(
         private PlatformInterface $platform,
         private RuleBasedCategorizationService $ruleBasedFallback,
-        private AiQualityGateService $qualityGate,
+        private AiQualityGateServiceInterface $qualityGate,
         private LoggerInterface $logger,
     ) {
     }
@@ -50,10 +50,12 @@ PROMPT;
 
             $this->logger->info('AI categorization rejected by quality gate: {slug}', [
                 'slug' => $categorySlug,
+                'model' => self::MODEL,
             ]);
         } catch (\Throwable $e) {
             $this->logger->warning('AI categorization failed, using rule-based fallback: {error}', [
                 'error' => $e->getMessage(),
+                'model' => self::MODEL,
             ]);
         }
 

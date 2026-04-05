@@ -1,0 +1,21 @@
+name: Security
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly Monday 6am
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build Docker images
+        run: docker compose build
+      - name: Start services
+        run: docker compose up -d --wait
+      - name: Composer audit
+        run: docker compose exec -T php composer audit
+      - name: Symfony security check
+        run: docker compose exec -T php php bin/console security:check || true

@@ -8,7 +8,7 @@ use App\Shared\AI\ValueObject\ModelQualityStats;
 use App\Shared\AI\ValueObject\ModelQualityStatsMap;
 use Psr\Cache\CacheItemPoolInterface;
 
-final class ModelQualityTracker
+final class ModelQualityTracker implements ModelQualityTrackerInterface
 {
     private const string CACHE_PREFIX = 'model_quality_';
 

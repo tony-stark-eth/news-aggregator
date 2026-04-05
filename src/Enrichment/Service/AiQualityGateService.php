@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enrichment\Service;
 
-final readonly class AiQualityGateService
+final readonly class AiQualityGateService implements AiQualityGateServiceInterface
 {
     public function validateSummary(string $summary, string $title): bool
     {

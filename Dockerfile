@@ -31,6 +31,7 @@ RUN <<-EOF
 		opcache \
 		pdo_pgsql \
 		zip
+	curl -fsSL "https://github.com/alexandre-daubois/ember/releases/download/v1.0.1/ember_1.0.1_linux_$(dpkg --print-architecture).tar.gz" | tar xz -C /usr/local/bin ember
 	rm -rf /var/lib/apt/lists/*
 EOF
 
@@ -174,6 +175,7 @@ COPY --from=frankenphp_prod_builder /etc/frankenphp/Caddyfile /etc/frankenphp/Ca
 COPY --from=frankenphp_prod_builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 COPY --from=frankenphp_prod_builder /usr/bin/file /usr/bin/file
 COPY --from=frankenphp_prod_builder /usr/lib/file/magic.mgc /usr/lib/file/magic.mgc
+COPY --from=frankenphp_prod_builder /usr/local/bin/ember /usr/local/bin/ember
 
 ENV XDG_CONFIG_HOME=/config XDG_DATA_HOME=/data
 

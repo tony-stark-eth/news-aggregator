@@ -5,9 +5,8 @@ declare(strict_types=1);
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 return static function (ContainerConfigurator $container): void {
-    // Deprecations are logged in the dedicated "deprecation" channel when it exists
     $container->extension('monolog', [
-        'channels' => ['deprecation'],
+        'channels' => ['deprecation', 'app'],
     ]);
 
     if ($container->env() === 'dev') {
@@ -15,10 +14,28 @@ return static function (ContainerConfigurator $container): void {
             'handlers' => [
                 'main' => [
                     'type' => 'stream',
-                    'path' => '%kernel.logs_dir%/%kernel.environment%.log',
+                    'path' => 'php://stderr',
                     'level' => 'debug',
                     'channels' => [
                         'elements' => ['!event'],
+                    ],
+                ],
+                'rotating' => [
+                    'type' => 'rotating_file',
+                    'path' => '%kernel.logs_dir%/%kernel.environment%.log',
+                    'level' => 'debug',
+                    'max_files' => 7,
+                    'channels' => [
+                        'elements' => ['!event'],
+                    ],
+                ],
+                'app' => [
+                    'type' => 'rotating_file',
+                    'path' => '%kernel.logs_dir%/app.log',
+                    'level' => 'info',
+                    'max_files' => 30,
+                    'channels' => [
+                        'elements' => ['app'],
                     ],
                 ],
                 'console' => [
@@ -71,6 +88,16 @@ return static function (ContainerConfigurator $container): void {
                     'path' => 'php://stderr',
                     'level' => 'debug',
                     'formatter' => 'monolog.formatter.json',
+                ],
+                'app' => [
+                    'type' => 'rotating_file',
+                    'path' => '%kernel.logs_dir%/app.log',
+                    'level' => 'info',
+                    'max_files' => 30,
+                    'formatter' => 'monolog.formatter.json',
+                    'channels' => [
+                        'elements' => ['app'],
+                    ],
                 ],
                 'console' => [
                     'type' => 'console',

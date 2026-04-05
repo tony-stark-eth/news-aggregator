@@ -590,9 +590,9 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
   - Tag with semver + `latest`
   - Users can `docker pull` and run without building from source
 - [x] 13.5 Verify all quality tools pass in CI — all 4 jobs green (ECS, PHPStan, Rector, Tests)
-- [ ] 13.6 Run acc skills to validate: `audit architecture`, `php-code-review`
+- [x] 13.6 Run acc skills to validate: `audit architecture`, `php-code-review`
 - [x] 13.7 Update CLAUDE.md (created in Phase 1.13) with final architecture, all commands, domain overview
-- [ ] 13.8 Add entry to parent Projects/CLAUDE.md services table
+- [x] 13.8 Add entry to parent Projects/CLAUDE.md services table
 - [ ] 13.9 Add to Homarr dashboard
 - [x] 13.10 Document in README:
   - Quickstart: `docker pull` + `docker compose up` + configure env vars
@@ -677,3 +677,5 @@ All PRs target `main`. Each PR should pass all quality checks (`make quality`) b
 | E7 | 2026-04-04 | 11 | `ModelDiscoveryService::$blockedModels must be type string, null given` | `%env(default::OPENROUTER_BLOCKED_MODELS)%` returns null for empty env var. | Changed to `%env(string:OPENROUTER_BLOCKED_MODELS)%` which guarantees string type. |
 | E8 | 2026-04-04 | 11 | Feed URLs returning 404: Handelsblatt, Reuters Business, Kicker DNS | External feeds went offline. | Feeds auto-degrade via Source health tracking. Should update seed data with verified URLs. |
 | E9 | 2026-04-04 | 6,11 | `openrouter/auto` consumed Vertex AI credits via BYOK | `openrouter/auto` selects the "best" model (paid) and prioritizes BYOK keys. With user's Vertex AI BYOK, it routed to Gemini and consumed Vertex credits. Plan D24 specified `openrouter/free` but implementation used `openrouter/auto`. | Changed to `openrouter/free`. Added `ModelFailoverPlatform` (PlatformInterface decorator) with chain: free → minimax → glm → gpt-oss → qwen → nemotron. Registered openrouter/free in catalog via additionalModels. |
+| E10 | 2026-04-05 | 13 | CI integration tests: `FATAL: no such database: app_test` | Compose env `DATABASE_URL` points to PgBouncer, overriding `.env.test`. PgBouncer only routes `app`, not `app_test` (Doctrine `dbname_suffix`). | Pass `DATABASE_URL` pointing directly to `database` host for all CI test steps, bypassing PgBouncer. |
+| E11 | 2026-04-05 | 13 | CI: `No transport supports Messenger DSN "symfony://scheduler_fetch"` | Manual `scheduler_fetch` transport in `messenger.php` used wrong DSN format (`symfony://` instead of `schedule://`). `doctrine:schema:update` triggers `MessengerTransportDoctrineSchemaListener` which instantiates all transports. | Removed manual transport — `#[AsSchedule('fetch')]` attribute auto-registers the transport correctly with `schedule://fetch` DSN. |

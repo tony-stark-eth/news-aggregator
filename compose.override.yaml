@@ -32,6 +32,7 @@ services:
     depends_on:
       - php
 
+
 ###> doctrine/doctrine-bundle ###
   database:
     ports:

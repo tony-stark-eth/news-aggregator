@@ -10,7 +10,7 @@ use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-final class ModelDiscoveryService
+final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 {
     private const string CACHE_KEY = 'openrouter_free_models';
 

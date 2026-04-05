@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\AI\Command;
 
-use App\Shared\AI\Service\ModelDiscoveryService;
-use App\Shared\AI\Service\ModelQualityTracker;
+use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -20,8 +20,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class AiModelStatsCommand extends Command
 {
     public function __construct(
-        private readonly ModelQualityTracker $qualityTracker,
-        private readonly ModelDiscoveryService $modelDiscovery,
+        private readonly ModelQualityTrackerInterface $qualityTracker,
+        private readonly ModelDiscoveryServiceInterface $modelDiscovery,
     ) {
         parent::__construct();
     }

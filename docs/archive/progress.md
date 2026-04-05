@@ -1,5 +1,33 @@
 # News Aggregator — Progress Log
 
+## Session 15 — 2026-04-05
+
+### Completed
+
+#### Phase 13: CI/CD, Security & Final Polish
+
+- [x] 13.5: CI fix — bypass PgBouncer for test DB (compose env DATABASE_URL overrides .env.test; pass direct database URL for all test steps)
+- [x] 13.5: CI fix — remove manual `scheduler_fetch` transport from messenger.php (wrong DSN format `symfony://` → should be `schedule://`; `#[AsSchedule('fetch')]` auto-registers correctly)
+- [x] 13.6: Architecture audit — created 7 missing service interfaces (ModelDiscoveryService, ModelQualityTracker, AiQualityGateService, DigestGeneratorService, DigestSummaryService, NotificationDispatchService, AiAlertEvaluationService)
+- [x] 13.6: Architecture audit — updated all consumers to type-hint interfaces instead of concrete classes
+- [x] 13.6: Architecture audit — added 3 PHPat rules (Article→Enrichment/Notification/Digest, Enrichment→Notification/Digest, Source→all-domains), with exclusions for FetchSourceHandler (orchestration) and SeedDataCommand (cross-domain seeder)
+- [x] 13.6: DI/config audit — all clean: services.php aliases, Messenger routing, Doctrine mappings, security, Monolog, routes, env vars all correct
+
+### Audit Findings (non-actionable / accepted trade-offs)
+
+- FetchSourceHandler (Article/) imports Enrichment + Notification — accepted as orchestration pipeline. Excluded from PHPat rule.
+- SeedDataCommand (Source/) seeds DigestConfig — accepted as cross-domain seeder. Excluded from PHPat rule.
+- Digest → Article dependency — legitimate upstream/downstream relationship. Digests summarize articles.
+- Value objects already `final readonly class` — properties implicitly readonly (PHP 8.2+).
+- 9 PHPUnit notices pre-existing — not related to audit changes.
+
+### Quality
+
+- ECS: OK
+- PHPStan: 0 errors (160 files, including 7 new interfaces)
+- Rector: clean
+- PHPUnit: 120 tests, 311 assertions, all pass
+
 ## Session 14 — 2026-04-04
 
 ### Completed

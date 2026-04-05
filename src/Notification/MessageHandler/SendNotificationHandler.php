@@ -7,8 +7,8 @@ namespace App\Notification\MessageHandler;
 use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Message\SendNotificationMessage;
-use App\Notification\Service\AiAlertEvaluationService;
-use App\Notification\Service\NotificationDispatchService;
+use App\Notification\Service\AiAlertEvaluationServiceInterface;
+use App\Notification\Service\NotificationDispatchServiceInterface;
 use App\Notification\ValueObject\EvaluationResult;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -19,8 +19,8 @@ final readonly class SendNotificationHandler
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
-        private NotificationDispatchService $dispatchService,
-        private AiAlertEvaluationService $aiEvaluationService,
+        private NotificationDispatchServiceInterface $dispatchService,
+        private AiAlertEvaluationServiceInterface $aiEvaluationService,
         private LoggerInterface $logger,
     ) {
     }
@@ -42,6 +42,8 @@ final readonly class SendNotificationHandler
             if ($evaluation instanceof EvaluationResult && $evaluation->severity < $rule->getSeverityThreshold()) {
                 $this->logger->info('Alert "{rule}" skipped: AI severity {severity} < threshold {threshold}', [
                     'rule' => $rule->getName(),
+                    'rule_id' => $rule->getId(),
+                    'article_id' => $article->getId(),
                     'severity' => $evaluation->severity,
                     'threshold' => $rule->getSeverityThreshold(),
                 ]);
@@ -54,7 +56,9 @@ final readonly class SendNotificationHandler
 
         $this->logger->info('Notification sent for alert "{rule}" on article "{article}"', [
             'rule' => $rule->getName(),
+            'rule_id' => $rule->getId(),
             'article' => $article->getTitle(),
+            'article_id' => $article->getId(),
         ]);
     }
 }

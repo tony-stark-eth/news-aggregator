@@ -12,7 +12,7 @@ use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\PlatformInterface;
 
-final readonly class AiAlertEvaluationService
+final readonly class AiAlertEvaluationService implements AiAlertEvaluationServiceInterface
 {
     private const string MODEL = 'openrouter/free';
 
@@ -56,7 +56,12 @@ PROMPT;
 
             return $this->parseResponse($content);
         } catch (\Throwable $e) {
-            $this->logger->warning('AI alert evaluation failed: {error}', [
+            $this->logger->warning('AI alert evaluation failed for rule "{rule}" on article "{article}": {error}', [
+                'rule' => $rule->getName(),
+                'rule_id' => $rule->getId(),
+                'article' => $article->getTitle(),
+                'article_id' => $article->getId(),
+                'model' => self::MODEL,
                 'error' => $e->getMessage(),
             ]);
 

@@ -1,0 +1,33 @@
+name: Publish Docker Image
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  publish:
+    name: Build and Push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build production image
+        run: docker build --target frankenphp_prod -t ghcr.io/tony-stark-eth/news-aggregator:${{ github.ref_name }} .
+
+      - name: Tag latest
+        run: docker tag ghcr.io/tony-stark-eth/news-aggregator:${{ github.ref_name }} ghcr.io/tony-stark-eth/news-aggregator:latest
+
+      - name: Push
+        run: |
+          docker push ghcr.io/tony-stark-eth/news-aggregator:${{ github.ref_name }}
+          docker push ghcr.io/tony-stark-eth/news-aggregator:latest
