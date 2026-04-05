@@ -136,7 +136,7 @@ NOTIFIER_CHATTER_DSN=pushover://USER_KEY@TOKEN
 
 ## Alert Rules
 
-Alert rules watch incoming articles and send notifications when matched.
+Alert rules watch incoming articles and send notifications when matched. All alert matches are logged to the notification log regardless of whether a notification transport is configured. The log shows delivery status: **sent** (green), **skipped** (gray, no transport), or **failed** (red).
 
 ### Loading from fixtures
 

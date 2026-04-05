@@ -51,6 +51,26 @@ final class CleanupCommand extends Command
         );
         $io->info(sprintf('Deleted %d old articles.', (int) $articleDeleted));
 
+        $logCutoff = $this->clock->now()->modify(sprintf('-%d days', $this->retentionLogDays));
+
+        // Delete old notification logs
+        $notificationLogDeleted = $this->connection->executeStatement(
+            'DELETE FROM notification_log WHERE sent_at < :cutoff',
+            [
+                'cutoff' => $logCutoff->format('Y-m-d H:i:s'),
+            ],
+        );
+        $io->info(sprintf('Deleted %d old notification logs.', (int) $notificationLogDeleted));
+
+        // Delete old digest logs
+        $digestLogDeleted = $this->connection->executeStatement(
+            'DELETE FROM digest_log WHERE generated_at < :cutoff',
+            [
+                'cutoff' => $logCutoff->format('Y-m-d H:i:s'),
+            ],
+        );
+        $io->info(sprintf('Deleted %d old digest logs.', (int) $digestLogDeleted));
+
         $io->success(sprintf(
             'Cleanup complete. Retention: %d days articles, %d days logs.',
             $this->retentionArticleDays,

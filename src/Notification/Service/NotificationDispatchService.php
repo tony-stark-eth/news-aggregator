@@ -8,6 +8,7 @@ use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Entity\NotificationLog;
 use App\Notification\ValueObject\AlertUrgency;
+use App\Notification\ValueObject\DeliveryStatus;
 use App\Notification\ValueObject\EvaluationResult;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
@@ -20,6 +21,7 @@ final readonly class NotificationDispatchService implements NotificationDispatch
         private NotifierInterface $notifier,
         private EntityManagerInterface $entityManager,
         private ClockInterface $clock,
+        private string $notifierDsn = '',
     ) {
     }
 
@@ -32,6 +34,39 @@ final readonly class NotificationDispatchService implements NotificationDispatch
         array $matchedKeywords,
         ?EvaluationResult $evaluation = null,
     ): void {
+        $deliveryStatus = $this->sendNotification($rule, $article, $matchedKeywords, $evaluation);
+
+        $matchType = $evaluation instanceof EvaluationResult ? 'ai' : 'keyword';
+        $log = new NotificationLog($rule, $article, $matchType, $deliveryStatus === DeliveryStatus::Sent, $this->clock->now());
+        $log->setDeliveryStatus($deliveryStatus);
+        if ($evaluation instanceof EvaluationResult) {
+            $log->setAiSeverity($evaluation->severity);
+            $log->setAiExplanation($evaluation->explanation);
+            $log->setAiModelUsed($evaluation->modelUsed);
+        }
+
+        $this->entityManager->persist($log);
+        $this->entityManager->flush();
+    }
+
+    public function hasTransport(): bool
+    {
+        return $this->notifierDsn !== '' && $this->notifierDsn !== 'null://null';
+    }
+
+    /**
+     * @param list<string> $matchedKeywords
+     */
+    private function sendNotification(
+        AlertRule $rule,
+        Article $article,
+        array $matchedKeywords,
+        ?EvaluationResult $evaluation,
+    ): DeliveryStatus {
+        if (! $this->hasTransport()) {
+            return DeliveryStatus::Skipped;
+        }
+
         $subject = sprintf('[%s] %s', strtoupper($rule->getUrgency()->value), $article->getTitle());
         $content = $this->buildContent($rule, $article, $matchedKeywords, $evaluation);
 
@@ -45,23 +80,13 @@ final readonly class NotificationDispatchService implements NotificationDispatch
         $notification->content($content);
         $notification->importance($importance);
 
-        $success = true;
         try {
             $this->notifier->send($notification);
+
+            return DeliveryStatus::Sent;
         } catch (\Throwable) {
-            $success = false;
+            return DeliveryStatus::Failed;
         }
-
-        $matchType = $evaluation instanceof EvaluationResult ? 'ai' : 'keyword';
-        $log = new NotificationLog($rule, $article, $matchType, $success, $this->clock->now());
-        if ($evaluation instanceof EvaluationResult) {
-            $log->setAiSeverity($evaluation->severity);
-            $log->setAiExplanation($evaluation->explanation);
-            $log->setAiModelUsed($evaluation->modelUsed);
-        }
-
-        $this->entityManager->persist($log);
-        $this->entityManager->flush();
     }
 
     /**
