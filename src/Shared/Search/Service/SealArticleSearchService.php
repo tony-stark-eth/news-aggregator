@@ -24,14 +24,27 @@ final readonly class SealArticleSearchService implements ArticleSearchServiceInt
             return;
         }
 
+        // Collect all translated text for multi-language search
+        $allTitles = [$article->getTitle()];
+        $allSummaries = [$article->getSummary() ?? ''];
+        $allKeywords = $article->getKeywords() ?? [];
+
+        $translations = $article->getTranslations();
+        if ($translations !== null) {
+            foreach ($translations as $translation) {
+                $allTitles[] = $translation['title'];
+                $allSummaries[] = $translation['summary'] ?? '';
+            }
+        }
+
         $document = [
             'id' => (string) $id,
-            'title' => $article->getTitle(),
+            'title' => implode(' | ', array_unique(array_filter($allTitles, static fn (string $s): bool => $s !== ''))),
             'contentText' => $article->getContentText() ?? '',
-            'summary' => $article->getSummary() ?? '',
+            'summary' => implode(' | ', array_unique(array_filter($allSummaries, static fn (string $s): bool => $s !== ''))),
             'sourceName' => $article->getSource()->getName(),
             'categorySlug' => $article->getCategory()?->getSlug() ?? '',
-            'keywords' => implode(', ', $article->getKeywords() ?? []),
+            'keywords' => implode(', ', array_unique(array_filter($allKeywords, static fn (string $s): bool => $s !== ''))),
             'score' => $article->getScore() ?? 0.0,
             'fetchedAt' => $article->getFetchedAt()->format(\DateTimeInterface::ATOM),
         ];
