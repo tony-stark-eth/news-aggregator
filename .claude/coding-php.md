@@ -102,3 +102,18 @@ src/{Domain}/
 ```
 
 Cross-cutting concerns go in `src/Shared/`.
+
+## Scaffolding with MakerBundle
+
+Use `symfony/maker-bundle` (dev dependency) to generate common components:
+
+```bash
+make sf c="make:entity"        # Entity + Repository in one step
+make sf c="make:command"       # Console command
+make sf c="make:controller"    # Controller
+make sf c="make:message"       # Message + Handler
+make sf c="make:form"          # Form type
+make sf c="list make"          # See all available generators
+```
+
+Always prefer `make:entity` over writing entity + repository files manually.
