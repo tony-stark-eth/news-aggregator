@@ -66,6 +66,12 @@ class Article
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $summaryOriginal = null;
 
+    /**
+     * @var list<string>|null
+     */
+    #[ORM\Column(type: 'json', nullable: true)]
+    private ?array $keywords = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $fetchedAt;
 
@@ -214,6 +220,22 @@ class Article
     public function setTitle(string $title): void
     {
         $this->title = $title;
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    public function getKeywords(): ?array
+    {
+        return $this->keywords;
+    }
+
+    /**
+     * @param list<string>|null $keywords
+     */
+    public function setKeywords(?array $keywords): void
+    {
+        $this->keywords = $keywords;
     }
 
     public function getFetchedAt(): \DateTimeImmutable

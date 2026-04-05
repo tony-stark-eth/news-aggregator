@@ -12,6 +12,7 @@ use App\Article\ValueObject\ArticleFingerprint;
 use App\Article\ValueObject\FetchResult;
 use App\Article\ValueObject\PersistItemResult;
 use App\Enrichment\Service\CategorizationServiceInterface;
+use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\Service\TranslationServiceInterface;
 use App\Enrichment\ValueObject\EnrichmentResult;
@@ -43,6 +44,7 @@ final readonly class FetchSourceHandler
         private CategorizationServiceInterface $categorization,
         private SummarizationServiceInterface $summarization,
         private TranslationServiceInterface $translation,
+        private KeywordExtractionServiceInterface $keywordExtraction,
         private ScoringServiceInterface $scoring,
         private ArticleMatcherServiceInterface $articleMatcher,
         private MessageBusInterface $messageBus,
@@ -168,6 +170,11 @@ final readonly class FetchSourceHandler
         if ($item->contentText !== null) {
             $sumResult = $this->summarization->summarize($item->contentText);
             $this->applyEnrichment($article, $catResult, $sumResult);
+        }
+
+        $keywords = $this->keywordExtraction->extract($item->title, $item->contentText);
+        if ($keywords !== []) {
+            $article->setKeywords($keywords);
         }
 
         $this->applyTranslation($article, $source);

@@ -15,6 +15,7 @@ return new Index('articles', [
     'summary' => new TextField('summary', searchable: true),
     'sourceName' => new TextField('sourceName', searchable: true, filterable: true),
     'categorySlug' => new TextField('categorySlug', searchable: false, filterable: true),
+    'keywords' => new TextField('keywords', searchable: true),
     'score' => new FloatField('score', sortable: true),
     'fetchedAt' => new DateTimeField('fetchedAt', sortable: true),
 ]);
