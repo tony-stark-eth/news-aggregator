@@ -32,14 +32,6 @@ services:
     depends_on:
       - php
 
-  ember:
-    image: ghcr.io/hosmelq/ember:1.0.1
-    profiles: [monitoring]
-    depends_on:
-      - php
-    environment:
-      EMBER_CADDY_ADMIN_URL: http://php:2019
-    tty: true
 
 ###> doctrine/doctrine-bundle ###
   database:

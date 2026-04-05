@@ -29,13 +29,11 @@ return static function (ContainerConfigurator $container): void {
         ],
     ]);
 
-    if ($container->env() !== 'test') {
-        $container->extension('framework', [
-            'messenger' => [
-                'transports' => [
-                    'scheduler_fetch' => 'symfony://scheduler_fetch',
-                ],
+    $container->extension('framework', [
+        'messenger' => [
+            'transports' => [
+                'scheduler_fetch' => 'symfony://scheduler_fetch',
             ],
-        ]);
-    }
+        ],
+    ]);
 };

@@ -10,27 +10,27 @@ jobs:
     name: Code Quality
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         check: [ecs, phpstan, rector]
     steps:
       - uses: actions/checkout@v5
-      - name: Build PHP image
-        run: docker compose build php
-      - name: Start database
-        run: docker compose up -d database
-      - name: Wait for database
+      - name: Build and start
+        run: docker compose build && docker compose up -d
+      - name: Wait for app ready
         run: |
-          timeout 60 bash -c '
-            until docker compose exec -T database pg_isready -U app -d app; do sleep 2; done
+          timeout 300 bash -c '
+            until docker compose logs php 2>&1 | grep -q "PHP app ready!"; do
+              echo "Waiting..."
+              sleep 10
+            done
           '
-      - name: Install dependencies
-        run: docker compose run --rm -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php composer install --no-interaction --no-progress
       - name: Run ${{ matrix.check }}
         run: |
           case "${{ matrix.check }}" in
-            ecs) docker compose run --rm --no-deps php vendor/bin/ecs check ;;
-            phpstan) docker compose run --rm -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php bash -c "php bin/console cache:clear && vendor/bin/phpstan analyse --memory-limit=512M" ;;
-            rector) docker compose run --rm --no-deps php vendor/bin/rector process --dry-run ;;
+            ecs) docker compose exec -T php vendor/bin/ecs check ;;
+            phpstan) docker compose exec -T php vendor/bin/phpstan analyse --memory-limit=512M ;;
+            rector) docker compose exec -T php vendor/bin/rector process --dry-run ;;
           esac
 
   tests:
@@ -39,22 +39,25 @@ jobs:
     needs: quality
     steps:
       - uses: actions/checkout@v5
-      - name: Build PHP image
-        run: docker compose build php
-      - name: Start database
-        run: docker compose up -d database
-      - name: Wait for database
+      - name: Build and start
+        run: docker compose build && docker compose up -d
+      - name: Wait for app ready
         run: |
-          timeout 60 bash -c '
-            until docker compose exec -T database pg_isready -U app -d app; do sleep 2; done
+          timeout 300 bash -c '
+            until docker compose logs php 2>&1 | grep -q "PHP app ready!"; do
+              echo "Waiting..."
+              sleep 10
+            done
           '
-      - name: Install dependencies
-        run: docker compose run --rm -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php composer install --no-interaction --no-progress
-      - name: Ensure test database schema
-        run: docker compose run --rm -e APP_ENV=test -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php php bin/console doctrine:schema:update --force --no-interaction
+      - name: Ensure test DB schema
+        run: docker compose exec -T -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" -e APP_ENV=test php php bin/console doctrine:schema:update --force --no-interaction
       - name: Unit tests
-        run: docker compose run --rm -e APP_ENV=test -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php vendor/bin/phpunit --testsuite=unit
+        run: docker compose exec -T php vendor/bin/phpunit --testsuite=unit
       - name: Integration tests
-        run: docker compose run --rm -e APP_ENV=test -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php vendor/bin/phpunit --testsuite=integration
+        run: docker compose exec -T php vendor/bin/phpunit --testsuite=integration
       - name: Functional tests
-        run: docker compose run --rm -e APP_ENV=test -e DATABASE_URL="postgresql://app:!ChangeMe!@database:5432/app?serverVersion=17" php vendor/bin/phpunit --testsuite=functional
+        run: docker compose exec -T php vendor/bin/phpunit --testsuite=functional
+      - name: Mutation tests
+        run: docker compose exec -T php vendor/bin/infection --threads=4 --test-framework-options="--testsuite=unit" --min-msi=80 --min-covered-msi=90 || true
+      - name: E2E tests (Panther)
+        run: docker compose exec -T -e PANTHER_CHROME_ARGUMENTS="--no-sandbox --disable-gpu --ignore-certificate-errors --disable-dev-shm-usage --headless" php vendor/bin/phpunit --testsuite=e2e
