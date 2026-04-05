@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Service\AiDeduplicationService;
 use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
@@ -11,6 +10,7 @@ use App\Enrichment\Service\AiCategorizationService;
 use App\Enrichment\Service\AiKeywordExtractionService;
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\AiTranslationService;
+use App\Enrichment\Service\ArticleEnrichmentService;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
@@ -165,8 +165,8 @@ return static function (ContainerConfigurator $container): void {
     $services->set(NotificationDispatchService::class)
         ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%');
 
-    // Wire DISPLAY_LANGUAGES env var for FetchSourceHandler
-    $services->set(FetchSourceHandler::class)
+    // Wire DISPLAY_LANGUAGES env var for ArticleEnrichmentService
+    $services->set(ArticleEnrichmentService::class)
         ->arg('$displayLanguages', '%env(string:DISPLAY_LANGUAGES)%');
 
     // Search: SEAL/Loupe engine wired by argument name (loupeEngine → cmsig_seal.engine.loupe alias)

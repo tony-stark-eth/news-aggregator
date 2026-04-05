@@ -8,16 +8,9 @@ use App\Article\Entity\Article;
 use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
-use App\Article\Service\ScoringServiceInterface;
-use App\Enrichment\Service\CategorizationServiceInterface;
-use App\Enrichment\Service\KeywordExtractionServiceInterface;
-use App\Enrichment\Service\SummarizationServiceInterface;
-use App\Enrichment\Service\TranslationServiceInterface;
-use App\Enrichment\ValueObject\EnrichmentResult;
-use App\Notification\Service\ArticleMatcherServiceInterface;
+use App\Enrichment\Service\ArticleEnrichmentServiceInterface;
+use App\Notification\Service\AlertDispatchServiceInterface;
 use App\Shared\Entity\Category;
-use App\Shared\Repository\CategoryRepositoryInterface;
-use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
@@ -33,7 +26,6 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
-use Symfony\Component\Messenger\MessageBusInterface;
 
 #[CoversClass(FetchSourceHandler::class)]
 final class FetchSourceHandlerTest extends TestCase
@@ -80,39 +72,20 @@ final class FetchSourceHandlerTest extends TestCase
         $dedup = $this->createStub(DeduplicationServiceInterface::class);
         $dedup->method('isDuplicate')->willReturn(false);
 
-        $categorization = $this->createStub(CategorizationServiceInterface::class);
-        $categorization->method('categorize')->willReturn(new EnrichmentResult(null, EnrichmentMethod::RuleBased));
-
-        $summarization = $this->createStub(SummarizationServiceInterface::class);
-        $summarization->method('summarize')->willReturn(new EnrichmentResult('A test summary.', EnrichmentMethod::RuleBased));
-
-        $keywordExtraction = $this->createStub(KeywordExtractionServiceInterface::class);
-        $keywordExtraction->method('extract')->willReturn(['Test', 'Keyword']);
-
-        $translation = $this->createStub(TranslationServiceInterface::class);
-        $translation->method('translate')->willReturnArgument(0);
-
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('isOpen')->willReturn(true);
 
         $this->handler = new FetchSourceHandler(
             $this->articleRepository,
             $this->sourceRepository,
-            $this->createStub(CategoryRepositoryInterface::class),
             $em,
             $this->fetcher,
             $this->parser,
             $dedup,
-            $categorization,
-            $summarization,
-            $translation,
-            $keywordExtraction,
-            $this->createStub(ScoringServiceInterface::class),
-            $this->createStub(ArticleMatcherServiceInterface::class),
-            $this->createStub(MessageBusInterface::class),
+            $this->createStub(ArticleEnrichmentServiceInterface::class),
+            $this->createStub(AlertDispatchServiceInterface::class),
             $this->clock,
             new NullLogger(),
-            'en',
         );
     }
 
@@ -134,9 +107,6 @@ final class FetchSourceHandlerTest extends TestCase
         self::assertCount(2, $saved);
         self::assertSame('Article 1', $saved[0]->getTitle());
         self::assertSame(SourceHealth::Healthy, $this->source->getHealthStatus());
-        // First article has content, so it gets rule-based enrichment
-        self::assertSame(EnrichmentMethod::RuleBased, $saved[0]->getEnrichmentMethod());
-        self::assertSame('A test summary.', $saved[0]->getSummary());
     }
 
     public function testRecordsFailureOnFetchError(): void
