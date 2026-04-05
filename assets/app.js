@@ -9,3 +9,4 @@ import './js/theme-toggle.js';
 import './js/timeago.js';
 import './js/mark-as-read.js';
 import './js/infinite-scroll.js';
+import './js/article-filter.js';
