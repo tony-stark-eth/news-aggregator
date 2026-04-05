@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Source\Entity;
 
 use App\Shared\Entity\Category;
+use App\Source\ValueObject\FeedUrl;
 use App\Source\ValueObject\SourceHealth;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -58,6 +59,7 @@ class Source
         Category $category,
         \DateTimeImmutable $createdAt,
     ) {
+        new FeedUrl($feedUrl); // validate feed URL format
         $this->name = $name;
         $this->feedUrl = $feedUrl;
         $this->category = $category;
