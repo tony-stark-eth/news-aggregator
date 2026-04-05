@@ -69,9 +69,9 @@ function applyLanguage(lang: string): void {
       }
     }
 
-    // Swap keywords
+    // Swap keywords (only if translation has non-empty keywords)
     const keywordsEl = card.querySelector<HTMLElement>("[data-lang-keywords]");
-    if (keywordsEl && translation?.keywords) {
+    if (keywordsEl && translation?.keywords && translation.keywords.length > 0) {
       keywordsEl.innerHTML = translation.keywords
         .map((kw: string) => `<span class="badge badge-outline badge-xs">${kw}</span>`)
         .join("");
