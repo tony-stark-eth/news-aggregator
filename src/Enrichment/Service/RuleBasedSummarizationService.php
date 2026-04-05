@@ -13,7 +13,7 @@ final readonly class RuleBasedSummarizationService implements SummarizationServi
 
     private const int MAX_SUMMARY_LENGTH = 500;
 
-    public function summarize(string $contentText): EnrichmentResult
+    public function summarize(string $contentText, string $title = ''): EnrichmentResult
     {
         $text = trim($contentText);
 
