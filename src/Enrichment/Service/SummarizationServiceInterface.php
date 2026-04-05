@@ -12,5 +12,5 @@ interface SummarizationServiceInterface
      * Generate a summary for article content.
      * Returns EnrichmentResult with summary value, method used, and optional model name.
      */
-    public function summarize(string $contentText): EnrichmentResult;
+    public function summarize(string $contentText, string $title = ''): EnrichmentResult;
 }

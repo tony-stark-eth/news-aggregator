@@ -24,11 +24,12 @@ PROMPT;
     public function __construct(
         private PlatformInterface $platform,
         private RuleBasedSummarizationService $ruleBasedFallback,
+        private AiQualityGateServiceInterface $qualityGate,
         private LoggerInterface $logger,
     ) {
     }
 
-    public function summarize(string $contentText): EnrichmentResult
+    public function summarize(string $contentText, string $title = ''): EnrichmentResult
     {
         try {
             $prompt = sprintf(self::PROMPT_TEMPLATE, mb_substr($contentText, 0, 2000));
@@ -36,13 +37,12 @@ PROMPT;
             $input = new MessageBag(Message::ofUser($prompt));
             $summary = trim($this->platform->invoke(self::MODEL, $input)->asText());
 
-            $length = mb_strlen($summary);
-            if ($length >= 20 && $length <= 500) {
+            if ($this->qualityGate->validateSummary($summary, $title)) {
                 return new EnrichmentResult($summary, EnrichmentMethod::Ai, self::MODEL);
             }
 
-            $this->logger->info('AI summary rejected: {length} chars (expected 20-500)', [
-                'length' => $length,
+            $this->logger->info('AI summary rejected by quality gate', [
+                'length' => mb_strlen($summary),
                 'model' => self::MODEL,
             ]);
         } catch (\Throwable $e) {
@@ -52,6 +52,6 @@ PROMPT;
             ]);
         }
 
-        return $this->ruleBasedFallback->summarize($contentText);
+        return $this->ruleBasedFallback->summarize($contentText, $title);
     }
 }

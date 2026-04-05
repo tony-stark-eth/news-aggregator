@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Enrichment\Service;
 
+use App\Enrichment\Service\AiQualityGateService;
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\RuleBasedSummarizationService;
 use App\Shared\ValueObject\EnrichmentMethod;
@@ -29,10 +30,11 @@ final class AiSummarizationServiceTest extends TestCase
         $service = new AiSummarizationService(
             $platform,
             new RuleBasedSummarizationService(),
+            new AiQualityGateService(),
             new NullLogger(),
         );
 
-        $result = $service->summarize('Long article content about government economic measures and inflation...');
+        $result = $service->summarize('Long article content about government economic measures and inflation...', 'Economy News');
 
         self::assertSame($aiSummary, $result->value);
         self::assertSame(EnrichmentMethod::Ai, $result->method);
@@ -47,13 +49,13 @@ final class AiSummarizationServiceTest extends TestCase
         $service = new AiSummarizationService(
             $platform,
             new RuleBasedSummarizationService(),
+            new AiQualityGateService(),
             new NullLogger(),
         );
 
         $content = 'This is the first sentence of a long article. This is the second sentence with more detail. And a third one.';
-        $result = $service->summarize($content);
+        $result = $service->summarize($content, 'Test Title');
 
-        // Should get rule-based: first 2 sentences
         self::assertStringContainsString('first sentence', $result->value ?? '');
         self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
@@ -66,14 +68,34 @@ final class AiSummarizationServiceTest extends TestCase
         $service = new AiSummarizationService(
             $platform,
             new RuleBasedSummarizationService(),
+            new AiQualityGateService(),
             new NullLogger(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. It should trigger the rule-based fallback.';
-        $result = $service->summarize($content);
+        $result = $service->summarize($content, 'Test Title');
 
-        // AI response too short, should fall back
         self::assertNotSame('Short.', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
+    }
+
+    public function testRejectsSummaryThatMatchesTitle(): void
+    {
+        $title = 'Breaking News: Major Economic Policy Change';
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')->willReturn($this->makeDeferredResult($title));
+
+        $service = new AiSummarizationService(
+            $platform,
+            new RuleBasedSummarizationService(),
+            new AiQualityGateService(),
+            new NullLogger(),
+        );
+
+        $content = 'This is a sufficiently long article content for testing purposes. It should trigger the rule-based fallback.';
+        $result = $service->summarize($content, $title);
+
+        // Summary that's just the title repeated should be rejected by quality gate
         self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
 

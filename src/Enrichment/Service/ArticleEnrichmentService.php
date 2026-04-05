@@ -43,7 +43,7 @@ final readonly class ArticleEnrichmentService implements ArticleEnrichmentServic
         $this->applyCategory($article, $catResult, $source);
 
         if ($item->contentText !== null) {
-            $sumResult = $this->summarization->summarize($item->contentText);
+            $sumResult = $this->summarization->summarize($item->contentText, $item->title);
             $this->applyEnrichment($article, $catResult, $sumResult);
         }
 
