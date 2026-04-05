@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Article\Service;
 
+use App\Article\Entity\Article;
 use App\Article\Repository\ArticleRepositoryInterface;
 
 final readonly class DeduplicationService implements DeduplicationServiceInterface
@@ -30,12 +31,12 @@ final readonly class DeduplicationService implements DeduplicationServiceInterfa
 
     private function existsByUrl(string $url): bool
     {
-        return $this->articleRepository->findByUrl($url) !== null;
+        return $this->articleRepository->findByUrl($url) instanceof Article;
     }
 
     private function existsByFingerprint(string $fingerprint): bool
     {
-        return $this->articleRepository->findByFingerprint($fingerprint) !== null;
+        return $this->articleRepository->findByFingerprint($fingerprint) instanceof Article;
     }
 
     private function existsBySimilarTitle(string $title): bool

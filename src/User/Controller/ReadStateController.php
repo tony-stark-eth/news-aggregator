@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\User\Controller;
 
+use App\Article\Entity\Article;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\User\Entity\User;
 use App\User\Entity\UserArticleRead;
@@ -35,7 +36,7 @@ final class ReadStateController
         }
 
         $article = $this->articleRepository->findById($id);
-        if ($article === null) {
+        if (! $article instanceof Article) {
             return new JsonResponse([
                 'error' => 'not found',
             ], Response::HTTP_NOT_FOUND);
@@ -44,7 +45,7 @@ final class ReadStateController
         // Check if already read
         $existing = $this->userArticleReadRepository->findByUserAndArticle($user, $article);
 
-        if ($existing === null) {
+        if (! $existing instanceof UserArticleRead) {
             $read = new UserArticleRead($user, $article, $this->clock->now());
             $this->userArticleReadRepository->save($read, flush: true);
         }

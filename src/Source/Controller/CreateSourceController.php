@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Source\Controller;
 
+use App\Shared\Entity\Category;
 use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Entity\Source;
 use App\Source\Repository\SourceRepositoryInterface;
@@ -61,7 +62,7 @@ final class CreateSourceController
         }
 
         $category = $this->categoryRepository->findById($categoryId);
-        if ($category === null) {
+        if (! $category instanceof Category) {
             $this->controller->addFlash('error', 'Invalid category.');
 
             return new RedirectResponse($this->urlGenerator->generate('app_sources_new'));

@@ -64,7 +64,7 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             ->orderBy('a.score', 'DESC')
             ->setMaxResults($limit);
 
-        if ($since !== null) {
+        if ($since instanceof \DateTimeImmutable) {
             $qb->andWhere('a.fetchedAt > :since')
                 ->setParameter('since', $since);
         }

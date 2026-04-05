@@ -74,7 +74,7 @@ final readonly class FetchSourceHandler
     public function __invoke(FetchSourceMessage $message): void
     {
         $source = $this->sourceRepository->findById($message->sourceId);
-        if ($source === null || ! $source->isEnabled()) {
+        if (! $source instanceof Source || ! $source->isEnabled()) {
             return;
         }
 
@@ -165,7 +165,7 @@ final readonly class FetchSourceHandler
             $this->articleRepository->clear();
             $source = $this->sourceRepository->findById($sourceId);
 
-            return $source !== null ? new PersistItemResult(null, $source) : null;
+            return $source instanceof Source ? new PersistItemResult(null, $source) : null;
         }
     }
 
@@ -206,7 +206,7 @@ final readonly class FetchSourceHandler
     {
         if ($catResult->value !== null) {
             $category = $this->categoryRepository->findBySlug($catResult->value);
-            if ($category !== null) {
+            if ($category instanceof Category) {
                 $article->setCategory($category);
             }
         }

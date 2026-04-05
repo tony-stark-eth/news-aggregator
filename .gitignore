@@ -6,6 +6,9 @@
 /public/bundles/
 /config/reference.php
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # IDE
 /.idea/
 /.vscode/

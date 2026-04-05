@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Digest\MessageHandler;
 
+use App\Digest\Entity\DigestConfig;
 use App\Digest\Entity\DigestLog;
 use App\Digest\Message\GenerateDigestMessage;
 use App\Digest\Repository\DigestConfigRepositoryInterface;
@@ -33,7 +34,7 @@ final readonly class GenerateDigestHandler
     public function __invoke(GenerateDigestMessage $message): void
     {
         $config = $this->digestConfigRepository->findById($message->digestConfigId);
-        if ($config === null || ! $config->isEnabled()) {
+        if (! $config instanceof DigestConfig || ! $config->isEnabled()) {
             return;
         }
 

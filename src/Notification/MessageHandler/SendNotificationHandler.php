@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Notification\MessageHandler;
 
+use App\Article\Entity\Article;
 use App\Article\Repository\ArticleRepositoryInterface;
+use App\Notification\Entity\AlertRule;
 use App\Notification\Message\SendNotificationMessage;
 use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\Notification\Service\AiAlertEvaluationServiceInterface;
@@ -30,7 +32,7 @@ final readonly class SendNotificationHandler
         $rule = $this->alertRuleRepository->findById($message->alertRuleId);
         $article = $this->articleRepository->findById($message->articleId);
 
-        if ($rule === null || $article === null || ! $rule->isEnabled()) {
+        if (! $rule instanceof AlertRule || ! $article instanceof Article || ! $rule->isEnabled()) {
             return;
         }
 

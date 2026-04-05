@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Source\Controller;
 
+use App\Source\Entity\Source;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
@@ -38,7 +39,7 @@ final class DeleteSourceController
         }
 
         $source = $this->sourceRepository->findById($id);
-        if ($source === null) {
+        if (! $source instanceof Source) {
             $this->controller->addFlash('error', 'Source not found.');
 
             return new RedirectResponse($this->urlGenerator->generate('app_sources'));

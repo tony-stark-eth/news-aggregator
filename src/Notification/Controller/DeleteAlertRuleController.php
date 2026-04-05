@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notification\Controller;
 
+use App\Notification\Entity\AlertRule;
 use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\User\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
@@ -38,7 +39,7 @@ final class DeleteAlertRuleController
         }
 
         $rule = $this->alertRuleRepository->findById($id);
-        if ($rule === null) {
+        if (! $rule instanceof AlertRule) {
             $this->controller->addFlash('error', 'Alert rule not found.');
 
             return new RedirectResponse($this->urlGenerator->generate('app_alerts'));
