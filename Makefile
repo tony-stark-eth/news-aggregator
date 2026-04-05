@@ -1,7 +1,7 @@
 # News Aggregator — Makefile
 # Usage: make <target>
 
-DOCKER_COMP = docker compose
+DOCKER_COMP = docker compose $(if $(wildcard .env.local),--env-file .env.local)
 PHP_CONT   = $(DOCKER_COMP) exec php
 PHP        = $(PHP_CONT) php
 CONSOLE    = $(PHP) bin/console

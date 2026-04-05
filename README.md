@@ -6,6 +6,12 @@
 
 Self-hosted, AI-enhanced RSS/Atom news aggregator built with Symfony 8 + FrankenPHP.
 
+![Dashboard](docs/screenshots/dashboard.png)
+
+| ![Alerts](docs/screenshots/alerts.png) | ![Mobile](docs/screenshots/dashboard-mobile.png) |
+|---|---|
+| Alert rules with portfolio monitoring | Mobile-responsive layout |
+
 ## Features
 
 - **RSS/Atom feed aggregation** from configurable sources
