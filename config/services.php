@@ -13,6 +13,10 @@ use App\Enrichment\Service\AiTranslationService;
 use App\Enrichment\Service\ArticleEnrichmentService;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
+use App\Enrichment\Service\RuleBasedCategorizationService;
+use App\Enrichment\Service\RuleBasedKeywordExtractionService;
+use App\Enrichment\Service\RuleBasedSummarizationService;
+use App\Enrichment\Service\RuleBasedTranslationService;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\Service\TranslationServiceInterface;
 use App\Notification\Command\LoadAlertRulesCommand;
@@ -106,15 +110,19 @@ return static function (ContainerConfigurator $container): void {
 
     // All AI services use the failover-wrapped platform
     $services->set(AiCategorizationService::class)
+        ->arg('$ruleBasedFallback', service(RuleBasedCategorizationService::class))
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(AiSummarizationService::class)
+        ->arg('$ruleBasedFallback', service(RuleBasedSummarizationService::class))
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(AiTranslationService::class)
+        ->arg('$ruleBasedFallback', service(RuleBasedTranslationService::class))
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(AiKeywordExtractionService::class)
+        ->arg('$ruleBasedFallback', service(RuleBasedKeywordExtractionService::class))
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(AiDeduplicationService::class)
