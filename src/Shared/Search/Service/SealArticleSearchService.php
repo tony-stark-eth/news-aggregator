@@ -31,6 +31,7 @@ final readonly class SealArticleSearchService implements ArticleSearchServiceInt
             'summary' => $article->getSummary() ?? '',
             'sourceName' => $article->getSource()->getName(),
             'categorySlug' => $article->getCategory()?->getSlug() ?? '',
+            'keywords' => implode(', ', $article->getKeywords() ?? []),
             'score' => $article->getScore() ?? 0.0,
             'fetchedAt' => $article->getFetchedAt()->format(\DateTimeInterface::ATOM),
         ];

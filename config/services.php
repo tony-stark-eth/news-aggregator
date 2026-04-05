@@ -7,8 +7,10 @@ use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Digest\Service\DigestSummaryService;
 use App\Enrichment\Service\AiCategorizationService;
+use App\Enrichment\Service\AiKeywordExtractionService;
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\CategorizationServiceInterface;
+use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Notification\Service\AiAlertEvaluationService;
 use App\Shared\AI\Command\AiSmokeTestCommand;
@@ -62,6 +64,11 @@ return static function (ContainerConfigurator $container): void {
         AiDeduplicationService::class,
     );
 
+    $services->alias(
+        KeywordExtractionServiceInterface::class,
+        AiKeywordExtractionService::class,
+    );
+
     // Register openrouter/free router in the model catalog (not included by default)
     $services->set('ai.platform.model_catalog.openrouter', ModelCatalog::class)
         ->arg('$additionalModels', [
@@ -92,6 +99,9 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(AiSummarizationService::class)
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    $services->set(AiKeywordExtractionService::class)
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(AiDeduplicationService::class)
