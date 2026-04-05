@@ -11,6 +11,7 @@ services:
       - ./frankenphp/Caddyfile:/etc/frankenphp/Caddyfile:ro
       - ./frankenphp/conf.d/20-app.dev.ini:/usr/local/etc/php/app.conf.d/20-app.dev.ini:ro
     environment:
+      CADDY_SERVER_EXTRA_DIRECTIVES: "${CADDY_SERVER_EXTRA_DIRECTIVES:-}"
       FRANKENPHP_WORKER_CONFIG: watch
       FRANKENPHP_SITE_CONFIG: hot_reload
       MERCURE_EXTRA_DIRECTIVES: demo
