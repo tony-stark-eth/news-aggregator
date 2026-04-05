@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\Search\Command;
 
-use App\Article\Entity\Article;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -19,7 +18,7 @@ final class SearchReindexCommand extends Command
     private const int BATCH_SIZE = 100;
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly ArticleRepositoryInterface $articleRepository,
         private readonly ArticleSearchServiceInterface $searchService,
     ) {
         parent::__construct();
@@ -32,21 +31,14 @@ final class SearchReindexCommand extends Command
         $count = 0;
 
         do {
-            /** @var list<Article> $articles */
-            $articles = $this->entityManager
-                ->getRepository(Article::class)
-                ->createQueryBuilder('a')
-                ->setFirstResult($offset)
-                ->setMaxResults(self::BATCH_SIZE)
-                ->getQuery()
-                ->getResult();
+            $articles = $this->articleRepository->findBatched(self::BATCH_SIZE, $offset);
 
             foreach ($articles as $article) {
                 $this->searchService->index($article);
                 $count++;
             }
 
-            $this->entityManager->clear();
+            $this->articleRepository->clear();
             $offset += self::BATCH_SIZE;
         } while (\count($articles) === self::BATCH_SIZE);
 

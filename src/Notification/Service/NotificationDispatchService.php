@@ -7,10 +7,10 @@ namespace App\Notification\Service;
 use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Entity\NotificationLog;
+use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Notification\ValueObject\AlertUrgency;
 use App\Notification\ValueObject\DeliveryStatus;
 use App\Notification\ValueObject\EvaluationResult;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Component\Notifier\NotifierInterface;
@@ -19,7 +19,7 @@ final readonly class NotificationDispatchService implements NotificationDispatch
 {
     public function __construct(
         private NotifierInterface $notifier,
-        private EntityManagerInterface $entityManager,
+        private NotificationLogRepositoryInterface $notificationLogRepository,
         private ClockInterface $clock,
         private string $notifierDsn = '',
     ) {
@@ -45,8 +45,7 @@ final readonly class NotificationDispatchService implements NotificationDispatch
             $log->setAiModelUsed($evaluation->modelUsed);
         }
 
-        $this->entityManager->persist($log);
-        $this->entityManager->flush();
+        $this->notificationLogRepository->save($log, flush: true);
     }
 
     public function hasTransport(): bool

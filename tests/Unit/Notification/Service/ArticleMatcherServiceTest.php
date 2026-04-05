@@ -6,17 +6,14 @@ namespace App\Tests\Unit\Notification\Service;
 
 use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
+use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Notification\Service\ArticleMatcherService;
 use App\Notification\ValueObject\AlertRuleType;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
-use Doctrine\ORM\Query;
-use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 
@@ -86,29 +83,13 @@ final class ArticleMatcherServiceTest extends TestCase
 
     private function createMatcher(AlertRule $rule): ArticleMatcherService
     {
-        $ruleRepo = $this->createStub(EntityRepository::class);
-        $ruleRepo->method('findBy')->willReturn([$rule]);
+        $alertRuleRepo = $this->createStub(AlertRuleRepositoryInterface::class);
+        $alertRuleRepo->method('findEnabled')->willReturn([$rule]);
 
-        // Cooldown query returns null (not in cooldown)
-        $query = $this->createMock(Query::class);
-        $query->method('getOneOrNullResult')->willReturn(null);
+        $logRepo = $this->createStub(NotificationLogRepositoryInterface::class);
+        $logRepo->method('existsRecentForRule')->willReturn(false);
 
-        $qb = $this->createStub(QueryBuilder::class);
-        $qb->method('where')->willReturnSelf();
-        $qb->method('andWhere')->willReturnSelf();
-        $qb->method('setParameter')->willReturnSelf();
-        $qb->method('setMaxResults')->willReturnSelf();
-        $qb->method('getQuery')->willReturn($query);
-
-        $logRepo = $this->createStub(EntityRepository::class);
-        $logRepo->method('createQueryBuilder')->willReturn($qb);
-
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('getRepository')->willReturnCallback(
-            static fn (string $class): Stub => $class === AlertRule::class ? $ruleRepo : $logRepo,
-        );
-
-        return new ArticleMatcherService($em, new MockClock('2026-04-04 12:00:00'));
+        return new ArticleMatcherService($alertRuleRepo, $logRepo, new MockClock('2026-04-04 12:00:00'));
     }
 
     private function createArticle(string $title = 'Test Article', ?string $content = null): Article

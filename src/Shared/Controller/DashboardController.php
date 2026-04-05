@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Shared\Controller;
 
 use App\Article\Entity\Article;
-use App\Source\Entity\Source;
+use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
 use App\User\Entity\UserArticleRead;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,6 +20,7 @@ final class DashboardController
     public function __construct(
         private readonly ControllerHelper $controller,
         private readonly EntityManagerInterface $entityManager,
+        private readonly SourceRepositoryInterface $sourceRepository,
         private readonly ClockInterface $clock,
     ) {
     }
@@ -85,10 +86,7 @@ final class DashboardController
             ->getQuery()
             ->getSingleScalarResult();
 
-        $activeSources = $this->entityManager->getRepository(Source::class)
-            ->count([
-                'enabled' => true,
-            ]);
+        $activeSources = $this->sourceRepository->countEnabled();
 
         // Build read-state set for the current user
         $readArticleIds = $this->getReadArticleIds($articles);

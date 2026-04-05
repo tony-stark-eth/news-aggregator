@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace App\Source\Controller;
 
 use App\Shared\Entity\Category;
+use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Entity\Source;
+use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -21,7 +22,8 @@ final class CreateSourceController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly SourceRepositoryInterface $sourceRepository,
+        private readonly CategoryRepositoryInterface $categoryRepository,
         private readonly ClockInterface $clock,
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly RequestStack $requestStack,
@@ -59,8 +61,8 @@ final class CreateSourceController
             return new RedirectResponse($this->urlGenerator->generate('app_sources_new'));
         }
 
-        $category = $this->entityManager->find(Category::class, $categoryId);
-        if ($category === null) {
+        $category = $this->categoryRepository->findById($categoryId);
+        if (! $category instanceof Category) {
             $this->controller->addFlash('error', 'Invalid category.');
 
             return new RedirectResponse($this->urlGenerator->generate('app_sources_new'));
@@ -77,8 +79,7 @@ final class CreateSourceController
             $source->setLanguage($language);
         }
 
-        $this->entityManager->persist($source);
-        $this->entityManager->flush();
+        $this->sourceRepository->save($source, flush: true);
 
         $this->controller->addFlash('success', 'Source created.');
 
@@ -87,8 +88,7 @@ final class CreateSourceController
 
     private function renderForm(): Response
     {
-        /** @var list<Category> $categories */
-        $categories = $this->entityManager->getRepository(Category::class)->findAll();
+        $categories = $this->categoryRepository->findAll();
 
         return $this->controller->render('source/new.html.twig', [
             'categories' => $categories,

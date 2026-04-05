@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Notification\Controller;
 
 use App\Notification\Entity\AlertRule;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\Notification\ValueObject\AlertRuleType;
 use App\Notification\ValueObject\AlertUrgency;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -22,7 +22,7 @@ final class CreateAlertRuleController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly AlertRuleRepositoryInterface $alertRuleRepository,
         private readonly ClockInterface $clock,
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly RequestStack $requestStack,
@@ -83,8 +83,7 @@ final class CreateAlertRuleController
             $rule->setContextPrompt($contextPrompt);
         }
 
-        $this->entityManager->persist($rule);
-        $this->entityManager->flush();
+        $this->alertRuleRepository->save($rule, flush: true);
 
         $this->controller->addFlash('success', 'Alert rule created.');
 

@@ -7,16 +7,15 @@ namespace App\Tests\Unit\Notification\Command;
 use App\Notification\Command\LoadAlertRulesCommand;
 use App\Notification\Dto\AlertRuleFixture;
 use App\Notification\Entity\AlertRule;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\Notification\Service\AlertRuleFixtureLoaderInterface;
 use App\Notification\ValueObject\AlertRuleType;
 use App\Notification\ValueObject\AlertUrgency;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
+use App\User\Repository\UserRepositoryInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -26,7 +25,9 @@ use Symfony\Component\Console\Tester\CommandTester;
 #[UsesClass(AlertRule::class)]
 final class LoadAlertRulesCommandTest extends TestCase
 {
-    private MockObject&EntityManagerInterface $em;
+    private MockObject&UserRepositoryInterface $userRepository;
+
+    private MockObject&AlertRuleRepositoryInterface $alertRuleRepository;
 
     private MockObject&AlertRuleFixtureLoaderInterface $loader;
 
@@ -34,11 +35,13 @@ final class LoadAlertRulesCommandTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->em = $this->createMock(EntityManagerInterface::class);
+        $this->userRepository = $this->createMock(UserRepositoryInterface::class);
+        $this->alertRuleRepository = $this->createMock(AlertRuleRepositoryInterface::class);
         $this->loader = $this->createMock(AlertRuleFixtureLoaderInterface::class);
 
         $command = new LoadAlertRulesCommand(
-            $this->em,
+            $this->userRepository,
+            $this->alertRuleRepository,
             new MockClock('2026-04-05 10:00:00'),
             $this->loader,
             'admin@test.com',
@@ -49,11 +52,13 @@ final class LoadAlertRulesCommandTest extends TestCase
 
     public function testCreatesNewRules(): void
     {
-        $this->stubNoExistingRules();
+        $this->userRepository->method('findByEmail')->willReturn(new User('admin@test.com', 'hashed'));
+        $this->alertRuleRepository->method('findByNameAndUser')->willReturn(null);
+        $this->alertRuleRepository->method('findByUser')->willReturn([]);
         $this->loader->method('loadFromPath')->willReturn([$this->fixture('Rule A')]);
 
-        $this->em->expects(self::once())->method('persist');
-        $this->em->expects(self::once())->method('flush');
+        $this->alertRuleRepository->expects(self::once())->method('save');
+        $this->alertRuleRepository->expects(self::once())->method('flush');
 
         $this->tester->execute([
             'path' => '/fixtures',
@@ -69,11 +74,13 @@ final class LoadAlertRulesCommandTest extends TestCase
         $user = new User('admin@test.com', 'hashed');
         $existingRule = new AlertRule('Rule A', AlertRuleType::Keyword, $user, new \DateTimeImmutable());
 
-        $this->stubExistingRules($existingRule, $user);
+        $this->userRepository->method('findByEmail')->willReturn($user);
+        $this->alertRuleRepository->method('findByNameAndUser')->willReturn($existingRule);
+        $this->alertRuleRepository->method('findByUser')->willReturn([$existingRule]);
         $this->loader->method('loadFromPath')->willReturn([$this->fixture('Rule A')]);
 
-        $this->em->expects(self::never())->method('persist');
-        $this->em->expects(self::once())->method('flush');
+        $this->alertRuleRepository->expects(self::never())->method('save');
+        $this->alertRuleRepository->expects(self::once())->method('flush');
 
         $this->tester->execute([
             'path' => '/fixtures',
@@ -86,10 +93,12 @@ final class LoadAlertRulesCommandTest extends TestCase
 
     public function testDryRunDoesNotFlush(): void
     {
-        $this->stubNoExistingRules();
+        $this->userRepository->method('findByEmail')->willReturn(new User('admin@test.com', 'hashed'));
+        $this->alertRuleRepository->method('findByNameAndUser')->willReturn(null);
+        $this->alertRuleRepository->method('findByUser')->willReturn([]);
         $this->loader->method('loadFromPath')->willReturn([$this->fixture('Rule A')]);
 
-        $this->em->expects(self::never())->method('flush');
+        $this->alertRuleRepository->expects(self::never())->method('flush');
 
         $this->tester->execute([
             'path' => '/fixtures',
@@ -105,10 +114,12 @@ final class LoadAlertRulesCommandTest extends TestCase
         $user = new User('admin@test.com', 'hashed');
         $orphanRule = new AlertRule('Orphan', AlertRuleType::Keyword, $user, new \DateTimeImmutable());
 
-        $this->stubExistingRulesForPurge($orphanRule, $user);
+        $this->userRepository->method('findByEmail')->willReturn($user);
+        $this->alertRuleRepository->method('findByNameAndUser')->willReturn(null);
+        $this->alertRuleRepository->method('findByUser')->willReturn([$orphanRule]);
         $this->loader->method('loadFromPath')->willReturn([$this->fixture('Rule A')]);
 
-        $this->em->expects(self::once())->method('remove')->with($orphanRule);
+        $this->alertRuleRepository->expects(self::once())->method('remove')->with($orphanRule);
 
         $this->tester->execute([
             'path' => '/fixtures',
@@ -121,10 +132,7 @@ final class LoadAlertRulesCommandTest extends TestCase
 
     public function testFailsWhenAdminNotFound(): void
     {
-        $repo = $this->createStub(EntityRepository::class);
-        $repo->method('findOneBy')->willReturn(null);
-        $this->em->method('getRepository')->willReturn($repo);
-
+        $this->userRepository->method('findByEmail')->willReturn(null);
         $this->loader->method('loadFromPath')->willReturn([]);
 
         $this->tester->execute([
@@ -147,48 +155,6 @@ final class LoadAlertRulesCommandTest extends TestCase
             cooldownMinutes: 60,
             categories: [],
             enabled: true,
-        );
-    }
-
-    private function stubNoExistingRules(): void
-    {
-        $ruleRepo = $this->createStub(EntityRepository::class);
-        $ruleRepo->method('findOneBy')->willReturn(null);
-        $ruleRepo->method('findBy')->willReturn([]);
-
-        $userRepo = $this->createStub(EntityRepository::class);
-        $userRepo->method('findOneBy')->willReturn(new User('admin@test.com', 'hashed'));
-
-        $this->em->method('getRepository')->willReturnCallback(
-            static fn (string $class): Stub => $class === User::class ? $userRepo : $ruleRepo,
-        );
-    }
-
-    private function stubExistingRules(AlertRule $rule, User $user): void
-    {
-        $ruleRepo = $this->createStub(EntityRepository::class);
-        $ruleRepo->method('findOneBy')->willReturn($rule);
-        $ruleRepo->method('findBy')->willReturn([$rule]);
-
-        $userRepo = $this->createStub(EntityRepository::class);
-        $userRepo->method('findOneBy')->willReturn($user);
-
-        $this->em->method('getRepository')->willReturnCallback(
-            static fn (string $class): Stub => $class === User::class ? $userRepo : $ruleRepo,
-        );
-    }
-
-    private function stubExistingRulesForPurge(AlertRule $orphanRule, User $user): void
-    {
-        $ruleRepo = $this->createStub(EntityRepository::class);
-        $ruleRepo->method('findOneBy')->willReturn(null);
-        $ruleRepo->method('findBy')->willReturn([$orphanRule]);
-
-        $userRepo = $this->createStub(EntityRepository::class);
-        $userRepo->method('findOneBy')->willReturn($user);
-
-        $this->em->method('getRepository')->willReturnCallback(
-            static fn (string $class): Stub => $class === User::class ? $userRepo : $ruleRepo,
         );
     }
 }

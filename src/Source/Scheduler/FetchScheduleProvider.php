@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Source\Scheduler;
 
-use App\Source\Entity\Source;
 use App\Source\Message\FetchSourceMessage;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Source\Repository\SourceRepositoryInterface;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
 use Symfony\Component\Scheduler\RecurringMessage;
 use Symfony\Component\Scheduler\Schedule;
@@ -16,7 +15,7 @@ use Symfony\Component\Scheduler\ScheduleProviderInterface;
 final class FetchScheduleProvider implements ScheduleProviderInterface
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly SourceRepositoryInterface $sourceRepository,
         private readonly int $defaultIntervalMinutes = 15,
     ) {
     }
@@ -25,12 +24,7 @@ final class FetchScheduleProvider implements ScheduleProviderInterface
     {
         $schedule = new Schedule();
 
-        /** @var list<Source> $sources */
-        $sources = $this->entityManager
-            ->getRepository(Source::class)
-            ->findBy([
-                'enabled' => true,
-            ]);
+        $sources = $this->sourceRepository->findEnabled();
 
         foreach ($sources as $source) {
             $id = $source->getId();

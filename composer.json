@@ -108,6 +108,7 @@
         "shipmonk/phpstan-rules": "^4.3",
         "symfony/browser-kit": "8.0.*",
         "symfony/css-selector": "8.0.*",
+        "symfony/maker-bundle": "^1.67",
         "symfony/panther": "^2.4",
         "symplify/easy-coding-standard": "^13.0",
         "tomasvotruba/cognitive-complexity": "^1.1",

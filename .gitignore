@@ -6,6 +6,9 @@
 /public/bundles/
 /config/reference.php
 
+# Claude Code worktrees
+.claude/worktrees/
+
 # IDE
 /.idea/
 /.vscode/
@@ -27,6 +30,9 @@ docker-compose.override.yml
 # Node/Bun
 /node_modules/
 bun.lockb
+
+# Code review graph
+/.code-review-graph/
 
 # Coverage & testing
 /coverage/

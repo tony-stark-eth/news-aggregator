@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace App\Notification\MessageHandler;
 
 use App\Article\Entity\Article;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Message\SendNotificationMessage;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\Notification\Service\AiAlertEvaluationServiceInterface;
 use App\Notification\Service\NotificationDispatchServiceInterface;
 use App\Notification\ValueObject\EvaluationResult;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 
@@ -18,7 +19,8 @@ use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 final readonly class SendNotificationHandler
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private AlertRuleRepositoryInterface $alertRuleRepository,
+        private ArticleRepositoryInterface $articleRepository,
         private NotificationDispatchServiceInterface $dispatchService,
         private AiAlertEvaluationServiceInterface $aiEvaluationService,
         private LoggerInterface $logger,
@@ -27,10 +29,10 @@ final readonly class SendNotificationHandler
 
     public function __invoke(SendNotificationMessage $message): void
     {
-        $rule = $this->entityManager->find(AlertRule::class, $message->alertRuleId);
-        $article = $this->entityManager->find(Article::class, $message->articleId);
+        $rule = $this->alertRuleRepository->findById($message->alertRuleId);
+        $article = $this->articleRepository->findById($message->articleId);
 
-        if ($rule === null || $article === null || ! $rule->isEnabled()) {
+        if (! $rule instanceof AlertRule || ! $article instanceof Article || ! $rule->isEnabled()) {
             return;
         }
 

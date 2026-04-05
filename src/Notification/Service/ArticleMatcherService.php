@@ -6,16 +6,17 @@ namespace App\Notification\Service;
 
 use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
-use App\Notification\Entity\NotificationLog;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
+use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Notification\ValueObject\MatchResult;
 use App\Notification\ValueObject\MatchResultCollection;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 
 final readonly class ArticleMatcherService implements ArticleMatcherServiceInterface
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private AlertRuleRepositoryInterface $alertRuleRepository,
+        private NotificationLogRepositoryInterface $notificationLogRepository,
         private ClockInterface $clock,
     ) {
     }
@@ -23,11 +24,7 @@ final readonly class ArticleMatcherService implements ArticleMatcherServiceInter
     public function match(Article $article): MatchResultCollection
     {
         /** @var list<AlertRule> $rules */
-        $rules = $this->entityManager
-            ->getRepository(AlertRule::class)
-            ->findBy([
-                'enabled' => true,
-            ]);
+        $rules = $this->alertRuleRepository->findEnabled();
 
         $results = [];
         $articleCategory = $article->getCategory()?->getSlug();
@@ -72,19 +69,7 @@ final readonly class ArticleMatcherService implements ArticleMatcherServiceInter
 
         $cooldownCutoff = $this->clock->now()->modify(sprintf('-%d minutes', $rule->getCooldownMinutes()));
 
-        $lastLog = $this->entityManager
-            ->getRepository(NotificationLog::class)
-            ->createQueryBuilder('l')
-            ->where('l.alertRule = :rule')
-            ->andWhere('l.sentAt > :cutoff')
-            ->andWhere('l.success = true')
-            ->setParameter('rule', $ruleId)
-            ->setParameter('cutoff', $cooldownCutoff)
-            ->setMaxResults(1)
-            ->getQuery()
-            ->getOneOrNullResult();
-
-        return $lastLog !== null;
+        return $this->notificationLogRepository->existsRecentForRule($ruleId, $cooldownCutoff);
     }
 
     /**

@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Article\MessageHandler;
 
 use App\Article\Entity\Article;
 use App\Article\MessageHandler\FetchSourceHandler;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\Service\ScoringServiceInterface;
 use App\Enrichment\Service\CategorizationServiceInterface;
@@ -15,17 +16,18 @@ use App\Enrichment\Service\TranslationServiceInterface;
 use App\Enrichment\ValueObject\EnrichmentResult;
 use App\Notification\Service\ArticleMatcherServiceInterface;
 use App\Shared\Entity\Category;
+use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
+use App\Source\Repository\SourceRepositoryInterface;
 use App\Source\Service\FeedFetcherServiceInterface;
 use App\Source\Service\FeedItem;
 use App\Source\Service\FeedItemCollection;
 use App\Source\Service\FeedParserServiceInterface;
 use App\Source\ValueObject\SourceHealth;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -37,9 +39,14 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final class FetchSourceHandlerTest extends TestCase
 {
     /**
-     * @var EntityManagerInterface&MockObject
+     * @var ArticleRepositoryInterface&MockObject
      */
-    private MockObject $em;
+    private MockObject $articleRepository;
+
+    /**
+     * @var SourceRepositoryInterface&MockObject
+     */
+    private MockObject $sourceRepository;
 
     /**
      * @var FeedFetcherServiceInterface&MockObject
@@ -62,7 +69,10 @@ final class FetchSourceHandlerTest extends TestCase
         $category = new Category('Tech', 'tech', 10, '#3B82F6');
         $this->source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
 
-        $this->em = $this->createMock(EntityManagerInterface::class);
+        $this->articleRepository = $this->createMock(ArticleRepositoryInterface::class);
+        $this->sourceRepository = $this->createMock(SourceRepositoryInterface::class);
+        $this->sourceRepository->method('findById')->willReturn($this->source);
+
         $this->fetcher = $this->createMock(FeedFetcherServiceInterface::class);
         $this->parser = $this->createMock(FeedParserServiceInterface::class);
         $this->clock = new MockClock('2026-04-04 12:00:00');
@@ -79,17 +89,17 @@ final class FetchSourceHandlerTest extends TestCase
         $keywordExtraction = $this->createStub(KeywordExtractionServiceInterface::class);
         $keywordExtraction->method('extract')->willReturn(['Test', 'Keyword']);
 
-        /** @var EntityRepository<Article>&MockObject $repository */
-        $repository = $this->createMock(EntityRepository::class);
-        $repository->method('findOneBy')->willReturn(null);
-        $this->em->method('getRepository')->willReturn($repository);
-        $this->em->method('find')->willReturn($this->source);
-
         $translation = $this->createStub(TranslationServiceInterface::class);
         $translation->method('translate')->willReturnArgument(0);
 
+        $em = $this->createStub(EntityManagerInterface::class);
+        $em->method('isOpen')->willReturn(true);
+
         $this->handler = new FetchSourceHandler(
-            $this->em,
+            $this->articleRepository,
+            $this->sourceRepository,
+            $this->createStub(CategoryRepositoryInterface::class),
+            $em,
             $this->fetcher,
             $this->parser,
             $dedup,
@@ -114,20 +124,19 @@ final class FetchSourceHandlerTest extends TestCase
             new FeedItem('Article 2', 'https://example.com/2', null, null, null),
         ]));
 
-        $persisted = [];
-        $this->em->method('persist')->willReturnCallback(function (object $entity) use (&$persisted): void {
-            $persisted[] = $entity;
+        $saved = [];
+        $this->articleRepository->method('save')->willReturnCallback(function (Article $article) use (&$saved): void {
+            $saved[] = $article;
         });
 
         ($this->handler)(new FetchSourceMessage(1));
 
-        self::assertCount(2, $persisted);
-        self::assertInstanceOf(Article::class, $persisted[0]);
-        self::assertSame('Article 1', $persisted[0]->getTitle());
+        self::assertCount(2, $saved);
+        self::assertSame('Article 1', $saved[0]->getTitle());
         self::assertSame(SourceHealth::Healthy, $this->source->getHealthStatus());
         // First article has content, so it gets rule-based enrichment
-        self::assertSame(EnrichmentMethod::RuleBased, $persisted[0]->getEnrichmentMethod());
-        self::assertSame('A test summary.', $persisted[0]->getSummary());
+        self::assertSame(EnrichmentMethod::RuleBased, $saved[0]->getEnrichmentMethod());
+        self::assertSame('A test summary.', $saved[0]->getSummary());
     }
 
     public function testRecordsFailureOnFetchError(): void

@@ -6,7 +6,7 @@ namespace App\Digest\Command;
 
 use App\Digest\Entity\DigestConfig;
 use App\Digest\Message\GenerateDigestMessage;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Digest\Repository\DigestConfigRepositoryInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -23,7 +23,7 @@ use Symfony\Component\Scheduler\Trigger\CronExpressionTrigger;
 final class ProcessDigestsCommand extends Command
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly DigestConfigRepositoryInterface $digestConfigRepository,
         private readonly MessageBusInterface $messageBus,
         private readonly ClockInterface $clock,
     ) {
@@ -34,12 +34,7 @@ final class ProcessDigestsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        /** @var list<DigestConfig> $configs */
-        $configs = $this->entityManager
-            ->getRepository(DigestConfig::class)
-            ->findBy([
-                'enabled' => true,
-            ]);
+        $configs = $this->digestConfigRepository->findEnabled();
 
         $dispatched = 0;
         $now = $this->clock->now();

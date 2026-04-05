@@ -1,0 +1,132 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Article\Repository;
+
+use App\Article\Entity\Article;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\Persistence\ManagerRegistry;
+
+/**
+ * @extends ServiceEntityRepository<Article>
+ */
+final class ArticleRepository extends ServiceEntityRepository implements ArticleRepositoryInterface
+{
+    public function __construct(ManagerRegistry $registry)
+    {
+        parent::__construct($registry, Article::class);
+    }
+
+    public function findById(int $id): ?Article
+    {
+        return $this->find($id);
+    }
+
+    public function findByUrl(string $url): ?Article
+    {
+        return $this->findOneBy([
+            'url' => $url,
+        ]);
+    }
+
+    public function findByFingerprint(string $fingerprint): ?Article
+    {
+        return $this->findOneBy([
+            'fingerprint' => $fingerprint,
+        ]);
+    }
+
+    /**
+     * @return list<array{title: string}>
+     */
+    public function findRecentTitles(int $limit): array
+    {
+        /** @var list<array{title: string}> */
+        return $this->createQueryBuilder('a')
+            ->select('a.title')
+            ->orderBy('a.fetchedAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getArrayResult();
+    }
+
+    /**
+     * @param list<string> $categorySlugs
+     *
+     * @return list<Article>
+     */
+    public function findForDigest(?\DateTimeImmutable $since, array $categorySlugs, int $limit): array
+    {
+        $qb = $this->createQueryBuilder('a')
+            ->join('a.source', 's')
+            ->leftJoin('a.category', 'c')
+            ->orderBy('a.score', 'DESC')
+            ->setMaxResults($limit);
+
+        if ($since instanceof \DateTimeImmutable) {
+            $qb->andWhere('a.fetchedAt > :since')
+                ->setParameter('since', $since);
+        }
+
+        if ($categorySlugs !== []) {
+            $qb->andWhere('c.slug IN (:cats)')
+                ->setParameter('cats', $categorySlugs);
+        }
+
+        /** @var list<Article> */
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * @return list<Article>
+     */
+    public function findBatched(int $limit, int $offset): array
+    {
+        /** @var list<Article> */
+        return $this->createQueryBuilder('a')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * @param list<int> $ids
+     *
+     * @return list<Article>
+     */
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var list<Article> */
+        return $this->createQueryBuilder('a')
+            ->where('a.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('a.score', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function save(Article $article, bool $flush = false): void
+    {
+        $this->getEntityManager()->persist($article);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
+    public function flush(): void
+    {
+        $this->getEntityManager()->flush();
+    }
+
+    public function clear(): void
+    {
+        $this->getEntityManager()->clear();
+    }
+}

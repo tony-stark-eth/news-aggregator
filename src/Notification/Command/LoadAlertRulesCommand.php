@@ -6,9 +6,10 @@ namespace App\Notification\Command;
 
 use App\Notification\Dto\AlertRuleFixture;
 use App\Notification\Entity\AlertRule;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\Notification\Service\AlertRuleFixtureLoaderInterface;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
+use App\User\Repository\UserRepositoryInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -25,7 +26,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class LoadAlertRulesCommand extends Command
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly AlertRuleRepositoryInterface $alertRuleRepository,
         private readonly ClockInterface $clock,
         private readonly AlertRuleFixtureLoaderInterface $fixtureLoader,
         private readonly string $adminEmail,
@@ -68,10 +70,7 @@ final class LoadAlertRulesCommand extends Command
 
     private function findAdminUser(SymfonyStyle $io): ?User
     {
-        /** @var User|null $user */
-        $user = $this->entityManager->getRepository(User::class)->findOneBy([
-            'email' => $this->adminEmail,
-        ]);
+        $user = $this->userRepository->findByEmail($this->adminEmail);
 
         if (! $user instanceof User) {
             $io->error(sprintf('Admin user "%s" not found.', $this->adminEmail));
@@ -92,14 +91,8 @@ final class LoadAlertRulesCommand extends Command
             'updated' => 0,
             'purged' => 0,
         ];
-        $repository = $this->entityManager->getRepository(AlertRule::class);
-
         foreach ($fixtures as $fixture) {
-            /** @var AlertRule|null $existing */
-            $existing = $repository->findOneBy([
-                'name' => $fixture->name,
-                'user' => $user,
-            ]);
+            $existing = $this->alertRuleRepository->findByNameAndUser($fixture->name, $user);
 
             if ($existing instanceof AlertRule) {
                 $this->updateRule($existing, $fixture);
@@ -137,7 +130,7 @@ final class LoadAlertRulesCommand extends Command
         $rule->setCooldownMinutes($fixture->cooldownMinutes);
         $rule->setCategories($fixture->categories);
         $rule->setEnabled($fixture->enabled);
-        $this->entityManager->persist($rule);
+        $this->alertRuleRepository->save($rule);
     }
 
     /**
@@ -146,16 +139,13 @@ final class LoadAlertRulesCommand extends Command
     private function purgeAbsentRules(SymfonyStyle $io, array $fixtures, User $user): int
     {
         $fixtureNames = array_map(static fn (AlertRuleFixture $f): string => $f->name, $fixtures);
-        /** @var list<AlertRule> $existingRules */
-        $existingRules = $this->entityManager->getRepository(AlertRule::class)->findBy([
-            'user' => $user,
-        ]);
+        $existingRules = $this->alertRuleRepository->findByUser($user);
         $purged = 0;
 
         foreach ($existingRules as $rule) {
             if (! in_array($rule->getName(), $fixtureNames, true)) {
                 $io->text(sprintf('  Purged: %s', $rule->getName()));
-                $this->entityManager->remove($rule);
+                $this->alertRuleRepository->remove($rule);
                 ++$purged;
             }
         }
@@ -179,7 +169,7 @@ final class LoadAlertRulesCommand extends Command
             return;
         }
 
-        $this->entityManager->flush();
+        $this->alertRuleRepository->flush();
         $io->success(sprintf(
             'Done: %d created, %d updated, %d purged.',
             $stats['created'],

@@ -84,15 +84,21 @@ make hooks       # Install git hooks
 ```
 src/
 ├── Article/         # Core: articles, scoring, deduplication, content fingerprinting
+│   └── Repository/  # ArticleRepositoryInterface + Doctrine implementation
 ├── Enrichment/      # Rule-based + AI categorization/summarization/keywords/translation (decorator pattern)
 ├── Source/          # Feed management, fetching (laminas-feed), health tracking
+│   └── Repository/  # SourceRepositoryInterface + Doctrine implementation
 ├── Notification/    # Unified alert rules (keyword/AI/both) + Notifier dispatch
+│   └── Repository/  # AlertRuleRepositoryInterface, NotificationLogRepositoryInterface
 ├── Digest/          # Periodic AI-generated editorial summaries
+│   └── Repository/  # DigestConfigRepositoryInterface, DigestLogRepositoryInterface
 ├── User/            # Auth (symfony/security-bundle), per-user read state (UserArticleRead)
+│   └── Repository/  # UserRepositoryInterface, UserArticleReadRepositoryInterface
 └── Shared/
     ├── AI/          # ModelFailoverPlatform, ModelDiscoveryService, ModelQualityTracker
     ├── Search/      # SEAL + Loupe full-text search (zero infrastructure)
     ├── Entity/      # Category (shared lookup)
+    ├── Repository/  # CategoryRepositoryInterface + Doctrine implementation
     ├── ValueObject/ # EnrichmentMethod (cross-domain)
     ├── Scheduler/   # MaintenanceScheduleProvider (daily reindex + cleanup)
     ├── Command/     # app:cleanup, app:search-reindex, app:check-sources, app:process-digests
@@ -145,5 +151,6 @@ src/
 - No `ignoreErrors` in phpstan.neon
 - No YAML for Symfony config — PHP format only
 - No `time()` / `date()` / `strtotime()` — use `ClockInterface`
-- Interface-first: all service boundaries defined by interface
+- Interface-first: all service and repository boundaries defined by interface
+- No direct `EntityManagerInterface` in services/handlers — use repository interfaces
 - Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`

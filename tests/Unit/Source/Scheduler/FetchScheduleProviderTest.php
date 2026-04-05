@@ -6,9 +6,8 @@ namespace App\Tests\Unit\Source\Scheduler;
 
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
+use App\Source\Repository\SourceRepositoryInterface;
 use App\Source\Scheduler\FetchScheduleProvider;
-use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\EntityRepository;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -24,13 +23,10 @@ final class FetchScheduleProviderTest extends TestCase
         $ref = new \ReflectionProperty(Source::class, 'id');
         $ref->setValue($source, 1);
 
-        $repo = $this->createStub(EntityRepository::class);
-        $repo->method('findBy')->willReturn([$source]);
+        $repo = $this->createStub(SourceRepositoryInterface::class);
+        $repo->method('findEnabled')->willReturn([$source]);
 
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('getRepository')->willReturn($repo);
-
-        $provider = new FetchScheduleProvider($em);
+        $provider = new FetchScheduleProvider($repo);
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();
@@ -39,13 +35,10 @@ final class FetchScheduleProviderTest extends TestCase
 
     public function testEmptyScheduleWhenNoSources(): void
     {
-        $repo = $this->createStub(EntityRepository::class);
-        $repo->method('findBy')->willReturn([]);
+        $repo = $this->createStub(SourceRepositoryInterface::class);
+        $repo->method('findEnabled')->willReturn([]);
 
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('getRepository')->willReturn($repo);
-
-        $provider = new FetchScheduleProvider($em);
+        $provider = new FetchScheduleProvider($repo);
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();

@@ -7,9 +7,10 @@ namespace App\Digest\MessageHandler;
 use App\Digest\Entity\DigestConfig;
 use App\Digest\Entity\DigestLog;
 use App\Digest\Message\GenerateDigestMessage;
+use App\Digest\Repository\DigestConfigRepositoryInterface;
+use App\Digest\Repository\DigestLogRepositoryInterface;
 use App\Digest\Service\DigestGeneratorServiceInterface;
 use App\Digest\Service\DigestSummaryServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -20,7 +21,8 @@ use Symfony\Component\Notifier\NotifierInterface;
 final readonly class GenerateDigestHandler
 {
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private DigestConfigRepositoryInterface $digestConfigRepository,
+        private DigestLogRepositoryInterface $digestLogRepository,
         private DigestGeneratorServiceInterface $generator,
         private DigestSummaryServiceInterface $summary,
         private NotifierInterface $notifier,
@@ -31,8 +33,8 @@ final readonly class GenerateDigestHandler
 
     public function __invoke(GenerateDigestMessage $message): void
     {
-        $config = $this->entityManager->find(DigestConfig::class, $message->digestConfigId);
-        if ($config === null || ! $config->isEnabled()) {
+        $config = $this->digestConfigRepository->findById($message->digestConfigId);
+        if (! $config instanceof DigestConfig || ! $config->isEnabled()) {
             return;
         }
 
@@ -70,10 +72,10 @@ final readonly class GenerateDigestHandler
 
         // Log
         $log = new DigestLog($config, $now, $totalArticles, $content, $success);
-        $this->entityManager->persist($log);
+        $this->digestLogRepository->save($log);
 
         $config->setLastRunAt($now);
-        $this->entityManager->flush();
+        $this->digestConfigRepository->flush();
 
         $this->logger->info('Digest "{name}" generated: {count} articles', [
             'name' => $config->getName(),

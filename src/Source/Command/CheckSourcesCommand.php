@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Source\Command;
 
-use App\Source\Entity\Source;
+use App\Source\Repository\SourceRepositoryInterface;
 use App\Source\ValueObject\SourceHealth;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,7 +19,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 final class CheckSourcesCommand extends Command
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly SourceRepositoryInterface $sourceRepository,
     ) {
         parent::__construct();
     }
@@ -29,10 +28,7 @@ final class CheckSourcesCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        /** @var list<Source> $sources */
-        $sources = $this->entityManager
-            ->getRepository(Source::class)
-            ->findAll();
+        $sources = $this->sourceRepository->findAll();
 
         if ($sources === []) {
             $io->warning('No sources configured. Run app:seed-data first.');
