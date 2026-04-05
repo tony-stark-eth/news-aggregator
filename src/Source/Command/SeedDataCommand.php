@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Source\Command;
 
 use App\Digest\Entity\DigestConfig;
+use App\Digest\Repository\DigestConfigRepositoryInterface;
 use App\Shared\Entity\Category;
+use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Entity\Source;
+use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
+use App\User\Repository\UserRepositoryInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -28,7 +31,10 @@ final class SeedDataCommand extends Command
      * @param non-empty-string $adminPassword
      */
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly CategoryRepositoryInterface $categoryRepository,
+        private readonly SourceRepositoryInterface $sourceRepository,
+        private readonly UserRepositoryInterface $userRepository,
+        private readonly DigestConfigRepositoryInterface $digestConfigRepository,
         private readonly ClockInterface $clock,
         private readonly UserPasswordHasherInterface $passwordHasher,
         private readonly string $adminEmail = 'demo@localhost',
@@ -46,7 +52,7 @@ final class SeedDataCommand extends Command
         $user = $this->seedDemoUser($io);
         $this->seedDigestConfigs($io, $user);
 
-        $this->entityManager->flush();
+        $this->categoryRepository->flush();
 
         $io->success('Seed data loaded successfully.');
 
@@ -97,12 +103,9 @@ final class SeedDataCommand extends Command
         ];
 
         $categories = [];
-        $repository = $this->entityManager->getRepository(Category::class);
 
         foreach ($definitions as $def) {
-            $existing = $repository->findOneBy([
-                'slug' => $def['slug'],
-            ]);
+            $existing = $this->categoryRepository->findBySlug($def['slug']);
             if ($existing instanceof Category) {
                 $io->note(sprintf('Category "%s" already exists, skipping.', $def['name']));
                 $categories[$def['slug']] = $existing;
@@ -112,7 +115,7 @@ final class SeedDataCommand extends Command
 
             $category = new Category($def['name'], $def['slug'], $def['weight'], $def['color']);
             $category->setFetchIntervalMinutes($def['fetchInterval']);
-            $this->entityManager->persist($category);
+            $this->categoryRepository->save($category);
             $categories[$def['slug']] = $category;
             $io->info(sprintf('Created category: %s (fetch every %d min)', $def['name'], $def['fetchInterval']));
         }
@@ -236,13 +239,10 @@ final class SeedDataCommand extends Command
             ],
         ];
 
-        $repository = $this->entityManager->getRepository(Source::class);
         $now = $this->clock->now();
 
         foreach ($definitions as $def) {
-            $existing = $repository->findOneBy([
-                'feedUrl' => $def['url'],
-            ]);
+            $existing = $this->sourceRepository->findByFeedUrl($def['url']);
             if ($existing instanceof Source) {
                 $io->note(sprintf('Source "%s" already exists, skipping.', $def['name']));
 
@@ -258,17 +258,14 @@ final class SeedDataCommand extends Command
 
             $source = new Source($def['name'], $def['url'], $category, $now);
             $source->setLanguage($def['language']);
-            $this->entityManager->persist($source);
+            $this->sourceRepository->save($source);
             $io->info(sprintf('Created source: %s', $def['name']));
         }
     }
 
     private function seedDemoUser(SymfonyStyle $io): User
     {
-        $repository = $this->entityManager->getRepository(User::class);
-
-        /** @var User|null $existing */
-        $existing = $repository->findOneBy([]);
+        $existing = $this->userRepository->findFirst();
         if ($existing instanceof User) {
             $io->note('Demo user already exists, skipping.');
 
@@ -279,7 +276,7 @@ final class SeedDataCommand extends Command
         $hashedPassword = $this->passwordHasher->hashPassword($user, $this->adminPassword);
         $user->setPassword($hashedPassword);
         $user->setRoles(['ROLE_ADMIN']);
-        $this->entityManager->persist($user);
+        $this->userRepository->save($user);
         $io->info(sprintf('Created admin user: %s', $this->adminEmail));
 
         return $user;
@@ -287,7 +284,6 @@ final class SeedDataCommand extends Command
 
     private function seedDigestConfigs(SymfonyStyle $io, User $user): void
     {
-        $repository = $this->entityManager->getRepository(DigestConfig::class);
         $now = $this->clock->now();
 
         $definitions = [
@@ -306,11 +302,7 @@ final class SeedDataCommand extends Command
         ];
 
         foreach ($definitions as $def) {
-            /** @var DigestConfig|null $existing */
-            $existing = $repository->findOneBy([
-                'name' => $def['name'],
-                'user' => $user,
-            ]);
+            $existing = $this->digestConfigRepository->findByNameAndUser($def['name'], $user);
 
             if ($existing instanceof DigestConfig) {
                 $io->note(sprintf('Digest config "%s" already exists, skipping.', $def['name']));
@@ -321,7 +313,7 @@ final class SeedDataCommand extends Command
             $config = new DigestConfig($def['name'], $def['schedule'], $user, $now);
             $config->setCategories($def['categories']);
             $config->setArticleLimit($def['limit']);
-            $this->entityManager->persist($config);
+            $this->digestConfigRepository->save($config);
             $io->info(sprintf('Created digest config: %s (%s)', $def['name'], $def['schedule']));
         }
     }

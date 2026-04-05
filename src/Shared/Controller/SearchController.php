@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Shared\Controller;
 
-use App\Article\Entity\Article;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
@@ -16,7 +15,7 @@ final class SearchController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly ArticleRepositoryInterface $articleRepository,
         private readonly ArticleSearchServiceInterface $searchService,
     ) {
     }
@@ -36,15 +35,7 @@ final class SearchController
             $ids = $this->searchService->search($query, $categorySlug);
 
             if ($ids !== []) {
-                /** @var list<Article> $results */
-                $results = $this->entityManager
-                    ->getRepository(Article::class)
-                    ->createQueryBuilder('a')
-                    ->where('a.id IN (:ids)')
-                    ->setParameter('ids', $ids)
-                    ->orderBy('a.score', 'DESC')
-                    ->getQuery()
-                    ->getResult();
+                $results = $this->articleRepository->findByIds($ids);
             }
         }
 

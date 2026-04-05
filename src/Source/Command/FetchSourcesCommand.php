@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Source\Command;
 
-use App\Source\Entity\Source;
 use App\Source\Message\FetchSourceMessage;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Source\Repository\SourceRepositoryInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -21,7 +20,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 final class FetchSourcesCommand extends Command
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private readonly SourceRepositoryInterface $sourceRepository,
         private readonly MessageBusInterface $messageBus,
     ) {
         parent::__construct();
@@ -31,12 +30,7 @@ final class FetchSourcesCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        /** @var list<Source> $sources */
-        $sources = $this->entityManager
-            ->getRepository(Source::class)
-            ->findBy([
-                'enabled' => true,
-            ]);
+        $sources = $this->sourceRepository->findEnabled();
 
         $dispatched = 0;
         foreach ($sources as $source) {

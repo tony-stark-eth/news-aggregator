@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Article\Service;
 
-use App\Article\Entity\Article;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Article\Repository\ArticleRepositoryInterface;
 
 final readonly class DeduplicationService implements DeduplicationServiceInterface
 {
     private const float TITLE_SIMILARITY_THRESHOLD = 0.85;
 
     public function __construct(
-        private EntityManagerInterface $entityManager,
+        private ArticleRepositoryInterface $articleRepository,
     ) {
     }
 
@@ -31,20 +30,12 @@ final readonly class DeduplicationService implements DeduplicationServiceInterfa
 
     private function existsByUrl(string $url): bool
     {
-        return $this->entityManager
-            ->getRepository(Article::class)
-            ->findOneBy([
-                'url' => $url,
-            ]) !== null;
+        return $this->articleRepository->findByUrl($url) !== null;
     }
 
     private function existsByFingerprint(string $fingerprint): bool
     {
-        return $this->entityManager
-            ->getRepository(Article::class)
-            ->findOneBy([
-                'fingerprint' => $fingerprint,
-            ]) !== null;
+        return $this->articleRepository->findByFingerprint($fingerprint) !== null;
     }
 
     private function existsBySimilarTitle(string $title): bool
@@ -55,17 +46,9 @@ final readonly class DeduplicationService implements DeduplicationServiceInterfa
         }
 
         // Check recent articles (last 1000) for title similarity
-        $recentArticles = $this->entityManager
-            ->getRepository(Article::class)
-            ->createQueryBuilder('a')
-            ->select('a.title')
-            ->orderBy('a.fetchedAt', 'DESC')
-            ->setMaxResults(1000)
-            ->getQuery()
-            ->getArrayResult();
+        $recentTitles = $this->articleRepository->findRecentTitles(1000);
 
-        /** @var list<array{title: string}> $recentArticles */
-        foreach ($recentArticles as $row) {
+        foreach ($recentTitles as $row) {
             $existingNormalized = mb_strtolower(trim($row['title']));
 
             similar_text($normalized, $existingNormalized, $percent);

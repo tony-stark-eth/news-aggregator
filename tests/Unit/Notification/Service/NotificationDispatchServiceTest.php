@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Notification\Service;
 use App\Article\Entity\Article;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Entity\NotificationLog;
+use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Notification\Service\NotificationDispatchService;
 use App\Notification\ValueObject\AlertRuleType;
 use App\Notification\ValueObject\DeliveryStatus;
@@ -14,7 +15,6 @@ use App\Notification\ValueObject\EvaluationResult;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -33,9 +33,9 @@ final class NotificationDispatchServiceTest extends TestCase
     private MockObject $notifier;
 
     /**
-     * @var EntityManagerInterface&MockObject
+     * @var NotificationLogRepositoryInterface&MockObject
      */
-    private MockObject $em;
+    private MockObject $logRepository;
 
     private MockClock $clock;
 
@@ -46,7 +46,7 @@ final class NotificationDispatchServiceTest extends TestCase
     protected function setUp(): void
     {
         $this->notifier = $this->createMock(NotifierInterface::class);
-        $this->em = $this->createMock(EntityManagerInterface::class);
+        $this->logRepository = $this->createMock(NotificationLogRepositoryInterface::class);
         $this->clock = new MockClock(new \DateTimeImmutable('2026-04-05 12:00:00'));
 
         $user = new User('admin@example.com', 'hashed');
@@ -60,89 +60,87 @@ final class NotificationDispatchServiceTest extends TestCase
     {
         $service = new NotificationDispatchService(
             $this->notifier,
-            $this->em,
+            $this->logRepository,
             $this->clock,
             'pushover://USER@TOKEN',
         );
 
         $this->notifier->expects(self::once())->method('send');
 
-        $persistedLog = null;
-        $this->em->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (NotificationLog $log) use (&$persistedLog): bool {
-                $persistedLog = $log;
+        $savedLog = null;
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (NotificationLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
 
                 return true;
-            }));
-        $this->em->expects(self::once())->method('flush');
+            }), true);
 
         $service->dispatch($this->rule, $this->article, ['bitcoin']);
 
-        self::assertInstanceOf(NotificationLog::class, $persistedLog);
-        self::assertSame(DeliveryStatus::Sent, $persistedLog->getDeliveryStatus());
-        self::assertTrue($persistedLog->isSuccess());
+        self::assertInstanceOf(NotificationLog::class, $savedLog);
+        self::assertSame(DeliveryStatus::Sent, $savedLog->getDeliveryStatus());
+        self::assertTrue($savedLog->isSuccess());
     }
 
     public function testDispatchWithoutTransportLogsSkipped(): void
     {
         $service = new NotificationDispatchService(
             $this->notifier,
-            $this->em,
+            $this->logRepository,
             $this->clock,
             'null://null',
         );
 
         $this->notifier->expects(self::never())->method('send');
 
-        $persistedLog = null;
-        $this->em->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (NotificationLog $log) use (&$persistedLog): bool {
-                $persistedLog = $log;
+        $savedLog = null;
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (NotificationLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
 
                 return true;
-            }));
-        $this->em->expects(self::once())->method('flush');
+            }), true);
 
         $service->dispatch($this->rule, $this->article, ['bitcoin']);
 
-        self::assertInstanceOf(NotificationLog::class, $persistedLog);
-        self::assertSame(DeliveryStatus::Skipped, $persistedLog->getDeliveryStatus());
-        self::assertFalse($persistedLog->isSuccess());
+        self::assertInstanceOf(NotificationLog::class, $savedLog);
+        self::assertSame(DeliveryStatus::Skipped, $savedLog->getDeliveryStatus());
+        self::assertFalse($savedLog->isSuccess());
     }
 
     public function testDispatchWithEmptyDsnLogsSkipped(): void
     {
         $service = new NotificationDispatchService(
             $this->notifier,
-            $this->em,
+            $this->logRepository,
             $this->clock,
             '',
         );
 
         $this->notifier->expects(self::never())->method('send');
 
-        $persistedLog = null;
-        $this->em->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (NotificationLog $log) use (&$persistedLog): bool {
-                $persistedLog = $log;
+        $savedLog = null;
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (NotificationLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
 
                 return true;
-            }));
+            }), true);
 
         $service->dispatch($this->rule, $this->article, ['bitcoin']);
 
-        self::assertInstanceOf(NotificationLog::class, $persistedLog);
-        self::assertSame(DeliveryStatus::Skipped, $persistedLog->getDeliveryStatus());
+        self::assertInstanceOf(NotificationLog::class, $savedLog);
+        self::assertSame(DeliveryStatus::Skipped, $savedLog->getDeliveryStatus());
     }
 
     public function testDispatchWithTransportFailureLogsFailed(): void
     {
         $service = new NotificationDispatchService(
             $this->notifier,
-            $this->em,
+            $this->logRepository,
             $this->clock,
             'pushover://USER@TOKEN',
         );
@@ -151,56 +149,56 @@ final class NotificationDispatchServiceTest extends TestCase
             ->method('send')
             ->willThrowException(new \RuntimeException('Transport error'));
 
-        $persistedLog = null;
-        $this->em->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (NotificationLog $log) use (&$persistedLog): bool {
-                $persistedLog = $log;
+        $savedLog = null;
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (NotificationLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
 
                 return true;
-            }));
+            }), true);
 
         $service->dispatch($this->rule, $this->article, ['bitcoin']);
 
-        self::assertInstanceOf(NotificationLog::class, $persistedLog);
-        self::assertSame(DeliveryStatus::Failed, $persistedLog->getDeliveryStatus());
-        self::assertFalse($persistedLog->isSuccess());
+        self::assertInstanceOf(NotificationLog::class, $savedLog);
+        self::assertSame(DeliveryStatus::Failed, $savedLog->getDeliveryStatus());
+        self::assertFalse($savedLog->isSuccess());
     }
 
     public function testDispatchWithAiEvaluationSetsFields(): void
     {
         $service = new NotificationDispatchService(
             $this->notifier,
-            $this->em,
+            $this->logRepository,
             $this->clock,
             'pushover://USER@TOKEN',
         );
 
         $evaluation = new EvaluationResult(8, 'Critical supply chain disruption', 'openrouter/auto');
 
-        $persistedLog = null;
-        $this->em->expects(self::once())
-            ->method('persist')
-            ->with(self::callback(static function (NotificationLog $log) use (&$persistedLog): bool {
-                $persistedLog = $log;
+        $savedLog = null;
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (NotificationLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
 
                 return true;
-            }));
+            }), true);
 
         $service->dispatch($this->rule, $this->article, ['bitcoin'], $evaluation);
 
-        self::assertInstanceOf(NotificationLog::class, $persistedLog);
-        self::assertSame(8, $persistedLog->getAiSeverity());
-        self::assertSame('Critical supply chain disruption', $persistedLog->getAiExplanation());
-        self::assertSame('openrouter/auto', $persistedLog->getAiModelUsed());
-        self::assertSame('ai', $persistedLog->getMatchType());
+        self::assertInstanceOf(NotificationLog::class, $savedLog);
+        self::assertSame(8, $savedLog->getAiSeverity());
+        self::assertSame('Critical supply chain disruption', $savedLog->getAiExplanation());
+        self::assertSame('openrouter/auto', $savedLog->getAiModelUsed());
+        self::assertSame('ai', $savedLog->getMatchType());
     }
 
     public function testHasTransportReturnsFalseForNullDsn(): void
     {
         $service = new NotificationDispatchService(
             $this->notifier,
-            $this->em,
+            $this->logRepository,
             $this->clock,
             'null://null',
         );
@@ -212,7 +210,7 @@ final class NotificationDispatchServiceTest extends TestCase
     {
         $service = new NotificationDispatchService(
             $this->notifier,
-            $this->em,
+            $this->logRepository,
             $this->clock,
             'pushover://USER@TOKEN',
         );

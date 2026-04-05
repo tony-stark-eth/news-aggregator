@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Notification\MessageHandler;
 
 use App\Article\Entity\Article;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\Notification\Entity\AlertRule;
 use App\Notification\Message\SendNotificationMessage;
 use App\Notification\MessageHandler\SendNotificationHandler;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\Notification\Service\AiAlertEvaluationServiceInterface;
 use App\Notification\Service\NotificationDispatchServiceInterface;
 use App\Notification\ValueObject\AlertRuleType;
@@ -15,7 +17,6 @@ use App\Notification\ValueObject\EvaluationResult;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -25,9 +26,14 @@ use Psr\Log\NullLogger;
 final class SendNotificationHandlerTest extends TestCase
 {
     /**
-     * @var EntityManagerInterface&MockObject
+     * @var AlertRuleRepositoryInterface&MockObject
      */
-    private MockObject $em;
+    private MockObject $alertRuleRepository;
+
+    /**
+     * @var ArticleRepositoryInterface&MockObject
+     */
+    private MockObject $articleRepository;
 
     /**
      * @var NotificationDispatchServiceInterface&MockObject
@@ -47,12 +53,14 @@ final class SendNotificationHandlerTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->em = $this->createMock(EntityManagerInterface::class);
+        $this->alertRuleRepository = $this->createMock(AlertRuleRepositoryInterface::class);
+        $this->articleRepository = $this->createMock(ArticleRepositoryInterface::class);
         $this->dispatchService = $this->createMock(NotificationDispatchServiceInterface::class);
         $this->aiEvaluationService = $this->createMock(AiAlertEvaluationServiceInterface::class);
 
         $this->handler = new SendNotificationHandler(
-            $this->em,
+            $this->alertRuleRepository,
+            $this->articleRepository,
             $this->dispatchService,
             $this->aiEvaluationService,
             new NullLogger(),
@@ -69,12 +77,8 @@ final class SendNotificationHandlerTest extends TestCase
     {
         $message = new SendNotificationMessage(1, 1, ['bitcoin']);
 
-        $this->em->method('find')
-            ->willReturnCallback(fn (string $class): AlertRule|\App\Article\Entity\Article|null => match ($class) {
-                AlertRule::class => $this->rule,
-                Article::class => $this->article,
-                default => null,
-            });
+        $this->alertRuleRepository->method('findById')->willReturn($this->rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
 
         $this->dispatchService->expects(self::once())
             ->method('dispatch')
@@ -87,8 +91,8 @@ final class SendNotificationHandlerTest extends TestCase
     {
         $message = new SendNotificationMessage(999, 1, ['bitcoin']);
 
-        $this->em->method('find')
-            ->willReturn(null);
+        $this->alertRuleRepository->method('findById')->willReturn(null);
+        $this->articleRepository->method('findById')->willReturn(null);
 
         $this->dispatchService->expects(self::never())
             ->method('dispatch');
@@ -101,12 +105,8 @@ final class SendNotificationHandlerTest extends TestCase
         $this->rule->setEnabled(false);
         $message = new SendNotificationMessage(1, 1, ['bitcoin']);
 
-        $this->em->method('find')
-            ->willReturnCallback(fn (string $class): AlertRule|\App\Article\Entity\Article|null => match ($class) {
-                AlertRule::class => $this->rule,
-                Article::class => $this->article,
-                default => null,
-            });
+        $this->alertRuleRepository->method('findById')->willReturn($this->rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
 
         $this->dispatchService->expects(self::never())
             ->method('dispatch');
@@ -122,12 +122,8 @@ final class SendNotificationHandlerTest extends TestCase
 
         $message = new SendNotificationMessage(1, 1, ['bitcoin']);
 
-        $this->em->method('find')
-            ->willReturnCallback(fn (string $class): AlertRule|\App\Article\Entity\Article|null => match ($class) {
-                AlertRule::class => $rule,
-                Article::class => $this->article,
-                default => null,
-            });
+        $this->alertRuleRepository->method('findById')->willReturn($rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
 
         $this->aiEvaluationService->method('evaluate')
             ->willReturn($evaluation);
@@ -148,12 +144,8 @@ final class SendNotificationHandlerTest extends TestCase
 
         $message = new SendNotificationMessage(1, 1, ['bitcoin']);
 
-        $this->em->method('find')
-            ->willReturnCallback(fn (string $class): AlertRule|\App\Article\Entity\Article|null => match ($class) {
-                AlertRule::class => $rule,
-                Article::class => $this->article,
-                default => null,
-            });
+        $this->alertRuleRepository->method('findById')->willReturn($rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
 
         $this->aiEvaluationService->method('evaluate')
             ->willReturn($evaluation);

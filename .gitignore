@@ -28,6 +28,9 @@ docker-compose.override.yml
 /node_modules/
 bun.lockb
 
+# Code review graph
+/.code-review-graph/
+
 # Coverage & testing
 /coverage/
 .phpunit.result.cache

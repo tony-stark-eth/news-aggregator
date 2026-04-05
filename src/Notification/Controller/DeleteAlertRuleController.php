@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notification\Controller;
 
-use App\Notification\Entity\AlertRule;
+use App\Notification\Repository\AlertRuleRepositoryInterface;
 use App\User\Entity\User;
-use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -17,7 +16,7 @@ final class DeleteAlertRuleController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly AlertRuleRepositoryInterface $alertRuleRepository,
         private readonly UrlGeneratorInterface $urlGenerator,
         private readonly RequestStack $requestStack,
     ) {
@@ -38,15 +37,14 @@ final class DeleteAlertRuleController
             return new RedirectResponse($this->urlGenerator->generate('app_alerts'));
         }
 
-        $rule = $this->entityManager->find(AlertRule::class, $id);
+        $rule = $this->alertRuleRepository->findById($id);
         if ($rule === null) {
             $this->controller->addFlash('error', 'Alert rule not found.');
 
             return new RedirectResponse($this->urlGenerator->generate('app_alerts'));
         }
 
-        $this->entityManager->remove($rule);
-        $this->entityManager->flush();
+        $this->alertRuleRepository->remove($rule, flush: true);
 
         $this->controller->addFlash('success', 'Alert rule deleted.');
 

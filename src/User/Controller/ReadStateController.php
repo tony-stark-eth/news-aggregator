@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\User\Controller;
 
-use App\Article\Entity\Article;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\User\Entity\User;
 use App\User\Entity\UserArticleRead;
-use Doctrine\ORM\EntityManagerInterface;
+use App\User\Repository\UserArticleReadRepositoryInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -18,7 +18,8 @@ final class ReadStateController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly ArticleRepositoryInterface $articleRepository,
+        private readonly UserArticleReadRepositoryInterface $userArticleReadRepository,
         private readonly ClockInterface $clock,
     ) {
     }
@@ -33,7 +34,7 @@ final class ReadStateController
             ], Response::HTTP_UNAUTHORIZED);
         }
 
-        $article = $this->entityManager->find(Article::class, $id);
+        $article = $this->articleRepository->findById($id);
         if ($article === null) {
             return new JsonResponse([
                 'error' => 'not found',
@@ -41,15 +42,11 @@ final class ReadStateController
         }
 
         // Check if already read
-        $existing = $this->entityManager->getRepository(UserArticleRead::class)->findOneBy([
-            'user' => $user,
-            'article' => $article,
-        ]);
+        $existing = $this->userArticleReadRepository->findByUserAndArticle($user, $article);
 
         if ($existing === null) {
             $read = new UserArticleRead($user, $article, $this->clock->now());
-            $this->entityManager->persist($read);
-            $this->entityManager->flush();
+            $this->userArticleReadRepository->save($read, flush: true);
         }
 
         return new JsonResponse([

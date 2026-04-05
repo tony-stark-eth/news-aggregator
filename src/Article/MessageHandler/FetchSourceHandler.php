@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Article\MessageHandler;
 
 use App\Article\Entity\Article;
+use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\Service\ScoringServiceInterface;
 use App\Article\ValueObject\ArticleCollection;
@@ -19,10 +20,12 @@ use App\Enrichment\ValueObject\EnrichmentResult;
 use App\Notification\Message\SendNotificationMessage;
 use App\Notification\Service\ArticleMatcherServiceInterface;
 use App\Shared\Entity\Category;
+use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
+use App\Source\Repository\SourceRepositoryInterface;
 use App\Source\Service\FeedFetcherServiceInterface;
 use App\Source\Service\FeedItem;
 use App\Source\Service\FeedItemCollection;
@@ -42,6 +45,9 @@ final readonly class FetchSourceHandler
     private array $parsedDisplayLanguages;
 
     public function __construct(
+        private ArticleRepositoryInterface $articleRepository,
+        private SourceRepositoryInterface $sourceRepository,
+        private CategoryRepositoryInterface $categoryRepository,
         private EntityManagerInterface $entityManager,
         private FeedFetcherServiceInterface $feedFetcher,
         private FeedParserServiceInterface $feedParser,
@@ -67,7 +73,7 @@ final readonly class FetchSourceHandler
 
     public function __invoke(FetchSourceMessage $message): void
     {
-        $source = $this->entityManager->find(Source::class, $message->sourceId);
+        $source = $this->sourceRepository->findById($message->sourceId);
         if ($source === null || ! $source->isEnabled()) {
             return;
         }
@@ -81,7 +87,7 @@ final readonly class FetchSourceHandler
 
             if ($result->source instanceof Source) {
                 $result->source->recordSuccess($now);
-                $this->entityManager->flush();
+                $this->articleRepository->flush();
                 $this->dispatchAlerts($result->newArticles);
                 $this->logger->info('Fetched {source}: {count} new articles from {total} items', [
                     'source' => $result->source->getName(),
@@ -91,7 +97,7 @@ final readonly class FetchSourceHandler
             }
         } catch (FeedFetchException $e) {
             $source->recordFailure($e->getMessage());
-            $this->entityManager->flush();
+            $this->sourceRepository->flush();
 
             $this->logger->warning('Feed fetch failed for {source}: {error}', [
                 'source' => $source->getName(),
@@ -143,8 +149,7 @@ final readonly class FetchSourceHandler
     ): ?PersistItemResult {
         try {
             $article = $this->buildArticle($item, $source, $now, $fingerprint);
-            $this->entityManager->persist($article);
-            $this->entityManager->flush();
+            $this->articleRepository->save($article, flush: true);
 
             return new PersistItemResult($article, $source);
         } catch (\Throwable $e) {
@@ -157,8 +162,8 @@ final readonly class FetchSourceHandler
                 return null;
             }
 
-            $this->entityManager->clear();
-            $source = $this->entityManager->find(Source::class, $sourceId);
+            $this->articleRepository->clear();
+            $source = $this->sourceRepository->findById($sourceId);
 
             return $source !== null ? new PersistItemResult(null, $source) : null;
         }
@@ -200,11 +205,7 @@ final readonly class FetchSourceHandler
     private function applyCategory(Article $article, EnrichmentResult $catResult, Source $source): void
     {
         if ($catResult->value !== null) {
-            $category = $this->entityManager
-                ->getRepository(Category::class)
-                ->findOneBy([
-                    'slug' => $catResult->value,
-                ]);
+            $category = $this->categoryRepository->findBySlug($catResult->value);
             if ($category !== null) {
                 $article->setCategory($category);
             }
