@@ -1,3 +1,17 @@
 body {
     background-color: skyblue;
 }
+
+/* Article read/unread visual distinction */
+.article-unread {
+    border-left: 4px solid oklch(var(--p));
+}
+
+.article-read {
+    border-left: 4px solid transparent;
+    opacity: 0.7;
+}
+
+.article-read .card-title a {
+    opacity: 0.8;
+}
