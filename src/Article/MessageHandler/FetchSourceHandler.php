@@ -6,13 +6,15 @@ namespace App\Article\MessageHandler;
 
 use App\Article\Entity\Article;
 use App\Article\Event\ArticleCreated;
+use App\Article\Message\EnrichArticleMessage;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\ValueObject\ArticleCollection;
 use App\Article\ValueObject\ArticleFingerprint;
+use App\Article\ValueObject\EnrichmentStatus;
 use App\Article\ValueObject\FetchResult;
 use App\Article\ValueObject\PersistItemResult;
-use App\Enrichment\Service\ArticleEnrichmentServiceInterface;
+use App\Enrichment\Service\RuleBasedEnrichmentServiceInterface;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
 use App\Source\Message\FetchSourceMessage;
@@ -26,6 +28,7 @@ use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[AsMessageHandler]
 final readonly class FetchSourceHandler
@@ -37,8 +40,9 @@ final readonly class FetchSourceHandler
         private FeedFetcherServiceInterface $feedFetcher,
         private FeedParserServiceInterface $feedParser,
         private DeduplicationServiceInterface $deduplication,
-        private ArticleEnrichmentServiceInterface $enrichment,
+        private RuleBasedEnrichmentServiceInterface $enrichment,
         private EventDispatcherInterface $eventDispatcher,
+        private MessageBusInterface $messageBus,
         private ClockInterface $clock,
         private LoggerInterface $logger,
     ) {
@@ -123,7 +127,10 @@ final readonly class FetchSourceHandler
             $article->setFingerprint($fingerprint);
 
             $this->enrichment->enrich($article, $item, $source);
+            $article->setEnrichmentStatus(EnrichmentStatus::Pending);
             $this->articleRepository->save($article, flush: true);
+
+            $this->dispatchEnrichMessage($article);
 
             return new PersistItemResult($article, $source);
         } catch (\Throwable $e) {
@@ -140,6 +147,14 @@ final readonly class FetchSourceHandler
             $source = $this->sourceRepository->findById($sourceId);
 
             return $source instanceof Source ? new PersistItemResult(null, $source) : null;
+        }
+    }
+
+    private function dispatchEnrichMessage(Article $article): void
+    {
+        $articleId = $article->getId();
+        if ($articleId !== null) {
+            $this->messageBus->dispatch(new EnrichArticleMessage($articleId));
         }
     }
 

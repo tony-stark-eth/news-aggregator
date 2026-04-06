@@ -19,12 +19,22 @@ return static function (ContainerConfigurator $container): void {
                         'max_delay' => 0,
                     ],
                 ],
+                'async_enrich' => [
+                    'dsn' => 'doctrine://default?queue_name=enrich',
+                    'retry_strategy' => [
+                        'max_retries' => 2,
+                        'multiplier' => 3,
+                        'delay' => 5000,
+                        'max_delay' => 60000,
+                    ],
+                ],
             ],
             'routing' => [
                 'App\Source\Message\FetchSourceMessage' => 'async',
                 'App\Notification\Message\SendNotificationMessage' => 'async',
                 'App\Digest\Message\GenerateDigestMessage' => 'async',
                 'App\Article\Message\RescoreArticlesMessage' => 'async',
+                'App\Article\Message\EnrichArticleMessage' => 'async_enrich',
             ],
         ],
     ]);

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Article\Entity;
 
+use App\Article\ValueObject\EnrichmentStatus;
 use App\Article\ValueObject\Url;
 use App\Shared\Entity\Category;
 use App\Shared\ValueObject\EnrichmentMethod;
@@ -57,6 +58,9 @@ class Article
 
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $aiModelUsed = null;
+
+    #[ORM\Column(length: 20, nullable: true, enumType: EnrichmentStatus::class)]
+    private ?EnrichmentStatus $enrichmentStatus = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
     private ?\DateTimeImmutable $publishedAt = null;
@@ -195,6 +199,16 @@ class Article
     public function setAiModelUsed(?string $aiModelUsed): void
     {
         $this->aiModelUsed = $aiModelUsed;
+    }
+
+    public function getEnrichmentStatus(): ?EnrichmentStatus
+    {
+        return $this->enrichmentStatus;
+    }
+
+    public function setEnrichmentStatus(?EnrichmentStatus $enrichmentStatus): void
+    {
+        $this->enrichmentStatus = $enrichmentStatus;
     }
 
     public function getPublishedAt(): ?\DateTimeImmutable
