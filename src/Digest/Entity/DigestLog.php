@@ -17,7 +17,7 @@ class DigestLog
     private ?int $id = null;
 
     #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private DigestConfig $digestConfig;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
@@ -34,6 +34,12 @@ class DigestLog
 
     #[ORM\Column(length: 100, nullable: true)]
     private ?string $transport = null;
+
+    /**
+     * @var list<string>|null
+     */
+    #[ORM\Column(type: Types::JSON, nullable: true)]
+    private ?array $articleTitles = null;
 
     public function __construct(
         DigestConfig $digestConfig,
@@ -87,5 +93,21 @@ class DigestLog
     public function setTransport(?string $transport): void
     {
         $this->transport = $transport;
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    public function getArticleTitles(): ?array
+    {
+        return $this->articleTitles;
+    }
+
+    /**
+     * @param list<string>|null $articleTitles
+     */
+    public function setArticleTitles(?array $articleTitles): void
+    {
+        $this->articleTitles = $articleTitles;
     }
 }

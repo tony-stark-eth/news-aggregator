@@ -8,6 +8,8 @@ use App\Digest\Entity\DigestLog;
 
 interface DigestLogRepositoryInterface
 {
+    public function findById(int $id): ?DigestLog;
+
     /**
      * @return list<DigestLog>
      */

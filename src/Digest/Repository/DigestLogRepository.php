@@ -18,6 +18,11 @@ final class DigestLogRepository extends ServiceEntityRepository implements Diges
         parent::__construct($registry, DigestLog::class);
     }
 
+    public function findById(int $id): ?DigestLog
+    {
+        return $this->find($id);
+    }
+
     /**
      * @return list<DigestLog>
      */

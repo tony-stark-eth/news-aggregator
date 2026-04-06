@@ -25,5 +25,7 @@ interface DigestConfigRepositoryInterface
 
     public function save(DigestConfig $config, bool $flush = false): void;
 
+    public function remove(DigestConfig $config, bool $flush = false): void;
+
     public function flush(): void;
 }

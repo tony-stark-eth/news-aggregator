@@ -8,6 +8,7 @@ final readonly class GenerateDigestMessage
 {
     public function __construct(
         public int $digestConfigId,
+        public bool $force = false,
     ) {
     }
 }

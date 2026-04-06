@@ -71,9 +71,19 @@ class DigestConfig
         return $this->name;
     }
 
+    public function setName(string $name): void
+    {
+        $this->name = $name;
+    }
+
     public function getSchedule(): string
     {
         return $this->schedule;
+    }
+
+    public function setSchedule(string $schedule): void
+    {
+        $this->schedule = $schedule;
     }
 
     /**
