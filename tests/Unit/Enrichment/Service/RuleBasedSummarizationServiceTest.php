@@ -154,4 +154,67 @@ final class RuleBasedSummarizationServiceTest extends TestCase
         self::assertNotNull($result->value);
         self::assertSame(EnrichmentMethod::RuleBased, $result->method);
     }
+
+    public function testTrimIsRequiredForMinLengthCheck(): void
+    {
+        $content = str_repeat(' ', 30) . str_repeat('x', 19) . str_repeat(' ', 30);
+
+        $result = $this->service->summarize($content);
+
+        self::assertNull($result->value);
+    }
+
+    public function testExactly50CharsPassesMinLength(): void
+    {
+        $content = 'This is exactly fifty characters long for testing!';
+        self::assertSame(50, mb_strlen($content));
+
+        $result = $this->service->summarize($content);
+
+        self::assertNotNull($result->value);
+    }
+
+    public function testSummaryExactly500CharsNoTruncation(): void
+    {
+        $sentence1 = str_repeat('a', 248) . '.';
+        $sentence2 = str_repeat('b', 249) . '.';
+        $content = $sentence1 . ' ' . $sentence2;
+
+        $result = $this->service->summarize($content);
+
+        self::assertNotNull($result->value);
+        self::assertSame(500, mb_strlen($result->value));
+        self::assertFalse(str_ends_with($result->value, '...'));
+    }
+
+    public function testTruncationStartsAtPositionZero(): void
+    {
+        $longSentence = 'Z' . str_repeat('a', 509) . '.';
+        $content = $longSentence . ' Second sentence with enough words for testing here.';
+
+        $result = $this->service->summarize($content);
+
+        self::assertNotNull($result->value);
+        self::assertStringStartsWith('Z', $result->value);
+    }
+
+    public function testFilterKeepsExactly10CharFragment(): void
+    {
+        $content = '1234567890. This is a second sentence that is definitely valid and long enough.';
+
+        $result = $this->service->summarize($content);
+
+        self::assertNotNull($result->value);
+        self::assertStringContainsString('1234567890', $result->value);
+    }
+
+    public function testFilterRemoves9CharFragment(): void
+    {
+        $content = '12345678. This is the real sentence that should be the whole summary for testing.';
+
+        $result = $this->service->summarize($content);
+
+        self::assertNotNull($result->value);
+        self::assertStringStartsWith('This is the real sentence', $result->value);
+    }
 }

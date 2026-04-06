@@ -165,6 +165,63 @@ final class DeduplicationServiceTest extends TestCase
         $service->isDuplicate('https://example.com/new', 'Title', null);
     }
 
+    public function testTrimOnInputDistinguishable(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([['title' => 'x']]),
+        );
+
+        self::assertTrue($service->isDuplicate('https://example.com/new', '  x  ', null));
+    }
+
+    public function testTrimOnExistingTitleDistinguishable(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([['title' => '  exact match title here  ']]),
+        );
+
+        self::assertTrue($service->isDuplicate('https://example.com/new', 'exact match title here', null));
+    }
+
+    public function testMbStrtolowerOnInputWithUmlauts(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([['title' => 'über die wichtigen nachrichten von heute abend']]),
+        );
+
+        self::assertTrue($service->isDuplicate(
+            'https://example.com/new',
+            'ÜBER DIE WICHTIGEN NACHRICHTEN VON HEUTE ABEND',
+            null,
+        ));
+    }
+
+    public function testMbStrtolowerOnExistingWithUmlauts(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([['title' => 'MÜNCHEN STADTRAT BESCHLIESST NEUE MAßNAHMEN HEUTE']]),
+        );
+
+        self::assertTrue($service->isDuplicate(
+            'https://example.com/new',
+            'münchen stadtrat beschliesst neue maßnahmen heute',
+            null,
+        ));
+    }
+
+    public function testSimilarityAt85PercentBoundary(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([['title' => 'abcdefghijklmnopqrst']]),
+        );
+
+        self::assertTrue($service->isDuplicate(
+            'https://example.com/new',
+            'abcdefghijklmnopqXXX',
+            null,
+        ));
+    }
+
     /**
      * @param list<array{title: string}> $titles
      */

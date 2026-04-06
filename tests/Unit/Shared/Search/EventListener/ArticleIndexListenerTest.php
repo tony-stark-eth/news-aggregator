@@ -92,7 +92,81 @@ final class ArticleIndexListenerTest extends TestCase
             ->willThrowException(new \RuntimeException('Remove failed'));
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('warning');
+        $logger->expects(self::once())->method('warning')
+            ->with(
+                self::stringContains('de-index failed'),
+                self::callback(static function (array $ctx): bool {
+                    return array_key_exists('id', $ctx)
+                        && array_key_exists('error', $ctx)
+                        && $ctx['id'] === 42
+                        && $ctx['error'] === 'Remove failed';
+                }),
+            );
+
+        $listener = new ArticleIndexListener($searchService, $logger);
+        $listener->preRemove($article);
+    }
+
+    public function testPostPersistLogsWarningWithContext(): void
+    {
+        $article = $this->createArticle();
+
+        $searchService = $this->createStub(ArticleSearchServiceInterface::class);
+        $searchService->method('index')
+            ->willThrowException(new \RuntimeException('Index failed'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')
+            ->with(
+                self::stringContains('Search index failed'),
+                self::callback(static function (array $ctx): bool {
+                    return array_key_exists('event', $ctx)
+                        && array_key_exists('title', $ctx)
+                        && array_key_exists('error', $ctx)
+                        && $ctx['title'] === 'Test Article'
+                        && $ctx['error'] === 'Index failed';
+                }),
+            );
+
+        $listener = new ArticleIndexListener($searchService, $logger);
+        $listener->postPersist($article);
+    }
+
+    public function testPostUpdateLogsWarningWithContext(): void
+    {
+        $article = $this->createArticle();
+
+        $searchService = $this->createStub(ArticleSearchServiceInterface::class);
+        $searchService->method('index')
+            ->willThrowException(new \RuntimeException('Update index failed'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')
+            ->with(
+                self::stringContains('Search index failed'),
+                self::callback(static function (array $ctx): bool {
+                    return array_key_exists('event', $ctx)
+                        && array_key_exists('title', $ctx)
+                        && array_key_exists('error', $ctx)
+                        && $ctx['error'] === 'Update index failed';
+                }),
+            );
+
+        $listener = new ArticleIndexListener($searchService, $logger);
+        $listener->postUpdate($article);
+    }
+
+    public function testPreRemoveWithNullIdReturnsEarly(): void
+    {
+        // Kills ReturnRemoval on the null id check
+        $article = $this->createArticle(null);
+
+        $searchService = $this->createMock(ArticleSearchServiceInterface::class);
+        $searchService->expects(self::never())->method('remove');
+        $searchService->expects(self::never())->method('index');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
 
         $listener = new ArticleIndexListener($searchService, $logger);
         $listener->preRemove($article);
