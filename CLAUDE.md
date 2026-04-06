@@ -160,6 +160,7 @@ src/
 | `/quality` | Run full quality pipeline, iteratively fix until green |
 | `/fix-issue <number>` | Fetch GitHub issue, implement, test, PR — end to end |
 | `/review` | Review current branch using QA Specialist agent |
+| `/browse [--screenshot] <path>` | Browse the running UI via Playwright, return page text |
 
 ## Agent Handoff Workflow
 

@@ -6,6 +6,7 @@ tools:
   - Read
   - Glob
   - Grep
+  - Skill
 ---
 
 # Product Owner — Requirements & Prioritization

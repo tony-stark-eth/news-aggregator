@@ -31,6 +31,8 @@ docker-compose.override.yml
 # Node/Bun
 /node_modules/
 bun.lockb
+bun.lock
+package-lock.json
 
 # Code review graph
 /.code-review-graph/
