@@ -74,7 +74,7 @@
                         {% else %}
                             <span class="badge badge-error badge-sm">failed</span>
                         {% endif %}
-                        <a href="{{ path('app_digests_log_view', {id: log.id}) }}" class="btn btn-ghost btn-xs ml-auto">View</a>
+                        <a href="{{ path('app_digests_log_view', {id: log.id}) }}" class="btn btn-ghost btn-xs ml-auto relative z-10">View</a>
                     </div>
                     <div class="collapse-content">
                         <pre class="text-sm whitespace-pre-wrap">{{ log.content }}</pre>
