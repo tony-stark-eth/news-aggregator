@@ -143,6 +143,15 @@ src/
 - `.claude/testing.md` — Testing & code quality
 - `.claude/architecture.md` — Architecture reference
 
+## Specialized Agents
+
+| Agent | File | Purpose |
+|-------|------|---------|
+| Architect | `.claude/agents/architect.md` | Architecture decisions, pattern selection, bounded contexts |
+| Product Owner | `.claude/agents/product-owner.md` | Feature prioritization, requirements, user stories |
+| Senior Developer | `.claude/agents/senior-developer.md` | Implementation, PHP+TypeScript, Symfony expertise |
+| QA Specialist | `.claude/agents/qa-specialist.md` | Testing strategy, bug detection, quality gates |
+
 ## Hard Rules
 
 - No `DateTime` — use `DateTimeImmutable` via `ClockInterface` only
