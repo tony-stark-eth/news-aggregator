@@ -76,9 +76,20 @@ class Source
         return $this->name;
     }
 
+    public function setName(string $name): void
+    {
+        $this->name = $name;
+    }
+
     public function getFeedUrl(): string
     {
         return $this->feedUrl;
+    }
+
+    public function setFeedUrl(string $feedUrl): void
+    {
+        new FeedUrl($feedUrl);
+        $this->feedUrl = $feedUrl;
     }
 
     public function getSiteUrl(): ?string
@@ -94,6 +105,11 @@ class Source
     public function getCategory(): Category
     {
         return $this->category;
+    }
+
+    public function setCategory(Category $category): void
+    {
+        $this->category = $category;
     }
 
     public function isEnabled(): bool

@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+{% block title %}Edit Source{% endblock %}
+{% block body %}
+    <h1 class="text-2xl font-bold mb-6">Edit Source</h1>
+
+    <form method="POST" action="{{ path('app_sources_edit', {id: source.id}) }}" class="max-w-lg flex flex-col gap-4">
+        <input type="hidden" name="_token" value="{{ csrf_token('edit_source') }}">
+
+        <div class="form-control">
+            <label class="label" for="name">
+                <span class="label-text">Name</span>
+            </label>
+            <input type="text" id="name" name="name" class="input input-bordered" required value="{{ source.name }}">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="feed_url">
+                <span class="label-text">Feed URL</span>
+            </label>
+            <input type="url" id="feed_url" name="feed_url" class="input input-bordered" required value="{{ source.feedUrl }}">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="site_url">
+                <span class="label-text">Site URL (optional)</span>
+            </label>
+            <input type="url" id="site_url" name="site_url" class="input input-bordered" value="{{ source.siteUrl }}">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="category_id">
+                <span class="label-text">Category</span>
+            </label>
+            <select id="category_id" name="category_id" class="select select-bordered" required>
+                {% for category in categories %}
+                    <option value="{{ category.id }}" {% if category.id == source.category.id %}selected{% endif %}>{{ category.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="language">
+                <span class="label-text">Language (optional)</span>
+            </label>
+            <select id="language" name="language" class="select select-bordered">
+                <option value="">Auto-detect</option>
+                <option value="en" {% if source.language == 'en' %}selected{% endif %}>English</option>
+                <option value="de" {% if source.language == 'de' %}selected{% endif %}>German</option>
+                <option value="fr" {% if source.language == 'fr' %}selected{% endif %}>French</option>
+                <option value="es" {% if source.language == 'es' %}selected{% endif %}>Spanish</option>
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label cursor-pointer justify-start gap-3">
+                <input type="checkbox" name="enabled" value="1" class="checkbox" {% if source.enabled %}checked{% endif %}>
+                <span class="label-text">Enabled</span>
+            </label>
+        </div>
+
+        <div class="flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary">Update Source</button>
+            <a href="{{ path('app_sources') }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

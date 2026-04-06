@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Edit existing feed sources — fix URLs, rename, change category without deleting (#72)
 - Digest configuration CRUD — create, edit, and delete digest configs from the UI (#93)
 - Manual digest trigger — "Run Now" button dispatches on-demand digest generation (#99)
 - View digest history content — read past digest summaries and included article titles (#100)

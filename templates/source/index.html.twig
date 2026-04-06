@@ -58,7 +58,8 @@
                                     <span class="badge badge-ghost badge-sm">no</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="flex gap-1">
+                                <a href="{{ path('app_sources_edit', {id: source.id}) }}" class="btn btn-ghost btn-xs">Edit</a>
                                 <form method="POST" action="{{ path('app_sources_delete', {id: source.id}) }}" onsubmit="return confirm('Delete this source?')">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete_source') }}">
                                     <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>
