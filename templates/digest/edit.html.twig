@@ -1,0 +1,54 @@
+{% extends 'base.html.twig' %}
+{% block title %}Edit Digest Config{% endblock %}
+{% block body %}
+    <h1 class="text-2xl font-bold mb-6">Edit Digest Config</h1>
+
+    <form method="POST" action="{{ path('app_digests_edit', {id: config.id}) }}" class="max-w-lg flex flex-col gap-4">
+        <div class="form-control">
+            <label class="label" for="name">
+                <span class="label-text">Name</span>
+            </label>
+            <input type="text" id="name" name="name" class="input input-bordered" required value="{{ config.name }}">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="schedule">
+                <span class="label-text">Schedule (cron expression)</span>
+            </label>
+            <input type="text" id="schedule" name="schedule" class="input input-bordered" required value="{{ config.schedule }}">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="categories">
+                <span class="label-text">Categories (optional)</span>
+            </label>
+            <select id="categories" name="categories[]" class="select select-bordered" multiple>
+                {% for category in categories %}
+                    <option value="{{ category.slug }}" {{ category.slug in config.categories ? 'selected' : '' }}>{{ category.name }}</option>
+                {% endfor %}
+            </select>
+            <label class="label">
+                <span class="label-text-alt">Leave empty for all categories</span>
+            </label>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="article_limit">
+                <span class="label-text">Article Limit</span>
+            </label>
+            <input type="number" id="article_limit" name="article_limit" class="input input-bordered" value="{{ config.articleLimit }}" min="1" max="100">
+        </div>
+
+        <div class="form-control">
+            <label class="cursor-pointer label justify-start gap-3">
+                <input type="checkbox" name="enabled" value="1" class="checkbox checkbox-primary" {{ config.enabled ? 'checked' : '' }}>
+                <span class="label-text">Enabled</span>
+            </label>
+        </div>
+
+        <div class="flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary">Update Config</button>
+            <a href="{{ path('app_digests') }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}

@@ -96,10 +96,13 @@ final class DigestPipelineTest extends KernelTestCase
 
         $handler(new GenerateDigestMessage($configId));
 
-        // No log created when no articles
+        // Skipped run log is created when no articles
         $logs = $this->em->getRepository(DigestLog::class)->findBy([
             'digestConfig' => $config,
         ]);
-        self::assertCount(0, $logs);
+        self::assertCount(1, $logs);
+        self::assertSame(0, $logs[0]->getArticleCount());
+        self::assertFalse($logs[0]->isDeliverySuccess());
+        self::assertStringContainsString('Skipped', $logs[0]->getContent());
     }
 }

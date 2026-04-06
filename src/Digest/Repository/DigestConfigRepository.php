@@ -61,6 +61,15 @@ final class DigestConfigRepository extends ServiceEntityRepository implements Di
         }
     }
 
+    public function remove(DigestConfig $config, bool $flush = false): void
+    {
+        $this->getEntityManager()->remove($config);
+
+        if ($flush) {
+            $this->getEntityManager()->flush();
+        }
+    }
+
     public function flush(): void
     {
         $this->getEntityManager()->flush();

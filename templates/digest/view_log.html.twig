@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+{% block title %}Digest Log Detail{% endblock %}
+{% block body %}
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Digest Log Detail</h1>
+        <a href="{{ path('app_digests') }}" class="btn btn-ghost btn-sm">Back to Digests</a>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm mb-6">
+        <div class="card-body">
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <span class="text-sm text-base-content/50">Configuration</span>
+                    <p class="font-bold">{{ log.digestConfig.name }}</p>
+                </div>
+                <div>
+                    <span class="text-sm text-base-content/50">Generated At</span>
+                    <p><time datetime="{{ log.generatedAt|date('c') }}" class="timeago">{{ log.generatedAt|date('Y-m-d H:i:s') }}</time></p>
+                </div>
+                <div>
+                    <span class="text-sm text-base-content/50">Article Count</span>
+                    <p>{{ log.articleCount }}</p>
+                </div>
+                <div>
+                    <span class="text-sm text-base-content/50">Delivery Status</span>
+                    <p>
+                        {% if log.deliverySuccess %}
+                            <span class="badge badge-success">delivered</span>
+                        {% elseif log.articleCount == 0 %}
+                            <span class="badge badge-warning">skipped</span>
+                        {% else %}
+                            <span class="badge badge-error">failed</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {% if log.articleTitles is not null and log.articleTitles is not empty %}
+                <div class="mb-4">
+                    <h3 class="font-bold mb-2">Articles Included</h3>
+                    <ul class="list-disc list-inside text-sm">
+                        {% for title in log.articleTitles %}
+                            <li>{{ title }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <div>
+                <h3 class="font-bold mb-2">Content</h3>
+                <pre class="text-sm whitespace-pre-wrap bg-base-200 p-4 rounded-lg">{{ log.content }}</pre>
+            </div>
+        </div>
+    </div>
+{% endblock %}
