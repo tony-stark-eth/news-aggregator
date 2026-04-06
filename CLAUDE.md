@@ -138,10 +138,11 @@ src/
 
 ## Guidelines
 
-- `.claude/coding-php.md` — PHP coding rules
+- `.claude/coding-php.md` — PHP coding rules (includes scaffolding commands)
 - `.claude/coding-typescript.md` — TypeScript conventions
 - `.claude/testing.md` — Testing & code quality
 - `.claude/architecture.md` — Architecture reference
+- `docs/common-patterns.md` — Common patterns and custom make commands
 
 ## Specialized Agents
 

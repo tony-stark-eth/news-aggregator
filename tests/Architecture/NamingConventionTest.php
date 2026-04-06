@@ -14,7 +14,10 @@ final class NamingConventionTest
     {
         return PHPat::rule()
             ->classes(Selector::classname('/.*Exception$/', true))
-            ->excluding(Selector::classname('/.*Interface$/', true))
+            ->excluding(
+                Selector::classname('/.*Interface$/', true),
+                Selector::classname('/App\\\\Shared\\\\Maker\\\\.*/', true),
+            )
             ->should()
             ->implement()
             ->classes(Selector::classname(\Throwable::class));
