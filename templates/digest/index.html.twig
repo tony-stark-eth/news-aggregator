@@ -22,14 +22,13 @@
                         <th>Categories</th>
                         <th>Limit</th>
                         <th>Last Run</th>
-                        <th>Enabled</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for config in configs %}
                         <tr>
-                            <td class="font-bold">{{ config.name }}</td>
+                            <td class="font-bold">{{ config.name }}{% if not config.enabled %} <span class="badge badge-ghost badge-xs">off</span>{% endif %}</td>
                             <td><code>{{ config.schedule }}</code></td>
                             <td>{{ config.categories|join(', ') ?: 'All' }}</td>
                             <td>{{ config.articleLimit }}</td>
@@ -38,13 +37,6 @@
                                     <time datetime="{{ config.lastRunAt|date('c') }}" class="timeago">{{ config.lastRunAt|date('Y-m-d H:i') }}</time>
                                 {% else %}
                                     <span class="text-base-content/30">never</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if config.enabled %}
-                                    <span class="badge badge-success badge-sm">yes</span>
-                                {% else %}
-                                    <span class="badge badge-ghost badge-sm">no</span>
                                 {% endif %}
                             </td>
                             <td class="flex gap-1">
