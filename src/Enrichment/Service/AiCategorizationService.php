@@ -44,18 +44,21 @@ PROMPT;
             );
 
             $input = new MessageBag(Message::ofUser($prompt));
-            $categorySlug = trim(mb_strtolower($this->platform->invoke(self::MODEL, $input)->asText()));
+            $result = $this->platform->invoke(self::MODEL, $input);
+            $categorySlug = trim(mb_strtolower($result->asText()));
+            /** @var string $actualModel */
+            $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
 
             if ($this->qualityGate->validateCategorization($categorySlug)) {
-                $this->qualityTracker->recordAcceptance(self::MODEL);
+                $this->qualityTracker->recordAcceptance($actualModel);
 
-                return new EnrichmentResult($categorySlug, EnrichmentMethod::Ai, self::MODEL);
+                return new EnrichmentResult($categorySlug, EnrichmentMethod::Ai, $actualModel);
             }
 
-            $this->qualityTracker->recordRejection(self::MODEL);
+            $this->qualityTracker->recordRejection($actualModel);
             $this->logger->info('AI categorization rejected by quality gate: {slug}', [
                 'slug' => $categorySlug,
-                'model' => self::MODEL,
+                'model' => $actualModel,
             ]);
         } catch (\Throwable $e) {
             $this->logger->warning('AI categorization failed, using rule-based fallback: {error}', [

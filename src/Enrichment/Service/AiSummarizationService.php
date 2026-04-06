@@ -37,18 +37,21 @@ PROMPT;
             $prompt = sprintf(self::PROMPT_TEMPLATE, mb_substr($contentText, 0, 2000));
 
             $input = new MessageBag(Message::ofUser($prompt));
-            $summary = trim($this->platform->invoke(self::MODEL, $input)->asText());
+            $result = $this->platform->invoke(self::MODEL, $input);
+            $summary = trim($result->asText());
+            /** @var string $actualModel */
+            $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
 
             if ($this->qualityGate->validateSummary($summary, $title)) {
-                $this->qualityTracker->recordAcceptance(self::MODEL);
+                $this->qualityTracker->recordAcceptance($actualModel);
 
-                return new EnrichmentResult($summary, EnrichmentMethod::Ai, self::MODEL);
+                return new EnrichmentResult($summary, EnrichmentMethod::Ai, $actualModel);
             }
 
-            $this->qualityTracker->recordRejection(self::MODEL);
+            $this->qualityTracker->recordRejection($actualModel);
             $this->logger->info('AI summary rejected by quality gate', [
                 'length' => mb_strlen($summary),
-                'model' => self::MODEL,
+                'model' => $actualModel,
             ]);
         } catch (\Throwable $e) {
             $this->logger->warning('AI summarization failed, using rule-based fallback: {error}', [

@@ -53,8 +53,10 @@ PROMPT;
             $input = new MessageBag(Message::ofUser($prompt));
             $result = $this->platform->invoke(self::MODEL, $input);
             $content = trim($result->asText());
+            /** @var string $actualModel */
+            $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
 
-            return $this->parseResponse($content);
+            return $this->parseResponse($content, $actualModel);
         } catch (\Throwable $e) {
             $this->logger->warning('AI alert evaluation failed for rule "{rule}" on article "{article}": {error}', [
                 'rule' => $rule->getName(),
@@ -69,7 +71,7 @@ PROMPT;
         }
     }
 
-    private function parseResponse(string $content): ?EvaluationResult
+    private function parseResponse(string $content, string $actualModel): ?EvaluationResult
     {
         $hasSeverity = preg_match('/SEVERITY:\s*(\d+)/i', $content, $severityMatch) === 1;
         $hasExplanation = preg_match('/EXPLANATION:\s*(.+)/i', $content, $explanationMatch) === 1;
@@ -78,7 +80,7 @@ PROMPT;
             $explanation = trim($explanationMatch[1]);
 
             if ($severity >= 1 && $severity <= 10 && $explanation !== '') {
-                return new EvaluationResult($severity, $explanation, self::MODEL);
+                return new EvaluationResult($severity, $explanation, $actualModel);
             }
         }
 

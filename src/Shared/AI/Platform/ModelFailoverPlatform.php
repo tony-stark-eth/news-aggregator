@@ -48,6 +48,10 @@ final class ModelFailoverPlatform implements PlatformInterface
                 // Force eager evaluation — DeferredResult throws on asText(), not invoke()
                 $result->asText();
 
+                // Capture the actual model used (OpenRouter resolves openrouter/free to a real model)
+                $actualModel = $result->getRawResult()->getData()['model'] ?? $candidateModel;
+                $result->getMetadata()->add('actual_model', $actualModel);
+
                 return $result;
             } catch (\Throwable $e) {
                 $lastException = $e;
