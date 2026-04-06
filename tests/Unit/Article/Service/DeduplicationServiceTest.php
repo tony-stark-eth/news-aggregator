@@ -189,30 +189,38 @@ final class DeduplicationServiceTest extends TestCase
 
     public function testMbStrtolowerOnInputWithUmlauts(): void
     {
+        // Kills MBString on mb_strtolower(trim($title)) — line 44
+        // All-umlaut strings: strtolower leaves uppercase, mb_strtolower lowercases
+        // With strtolower: 'ÜÖÄÜÖÄÜÖÄ...' vs 'üöäüöä...' → ~50% byte similarity → < 85% → false
+        // With mb_strtolower: 'üöäüöä...' vs 'üöäüöä...' → 100% → ≥ 85% → true
         $service = new DeduplicationService(
             $this->buildRepoWithTitles([[
-                'title' => 'über die wichtigen nachrichten von heute abend',
+                'title' => 'üöäüöäüöäüöäüöäüöäüöä',
             ]]),
         );
 
         self::assertTrue($service->isDuplicate(
             'https://example.com/new',
-            'ÜBER DIE WICHTIGEN NACHRICHTEN VON HEUTE ABEND',
+            'ÜÖÄÜÖÄÜÖÄÜÖÄÜÖÄÜÖÄÜÖÄ',
             null,
         ));
     }
 
     public function testMbStrtolowerOnExistingWithUmlauts(): void
     {
+        // Kills MBString on mb_strtolower(trim($row['title'])) — line 53
+        // Existing title is all uppercase umlauts, input is lowercase
+        // With strtolower on existing: stays uppercase → ~50% byte similarity → < 85% → false
+        // With mb_strtolower on existing: lowercased → 100% → ≥ 85% → true
         $service = new DeduplicationService(
             $this->buildRepoWithTitles([[
-                'title' => 'MÜNCHEN STADTRAT BESCHLIESST NEUE MAßNAHMEN HEUTE',
+                'title' => 'ÖÄÜÖÄÜÖÄÜÖÄÜÖÄÜÖÄÜÖÄÜ',
             ]]),
         );
 
         self::assertTrue($service->isDuplicate(
             'https://example.com/new',
-            'münchen stadtrat beschliesst neue maßnahmen heute',
+            'öäüöäüöäüöäüöäüöäüöäü',
             null,
         ));
     }

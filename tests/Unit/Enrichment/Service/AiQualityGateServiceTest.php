@@ -178,22 +178,12 @@ final class AiQualityGateServiceTest extends TestCase
 
     public function testLessThanAt90PercentExactly(): void
     {
-        // 20 'a's + 10 'b's
-        // common = 20, total chars = 30+30=60, percent = 2*20/60*100 = 66.7% < 90 → passes
-        // Need higher similarity. Let's use:
-        // "aaaaaaaaaaaaaaaaaaaab" (19 a + b, 20 chars) vs "aaaaaaaaaaaaaaaaaaaa" (20 a, 20 chars)
-        // common = 19, percent = 2*19/40*100 = 95% → > 90 → rejected
-        // Both < and <= would give false for 95 → doesn't distinguish.
-        // For < vs <=, need exactly 90%.
-        // 20 chars each, common=18: 2*18/40*100 = 90%
-        // "aaaaaaaaaaaaaaaaaaaabb" (18 a + 2 different) doesn't work simply.
-        // Actually similar_text is more complex. Let me just test clear boundaries.
-        $summary90 = 'aaaaaaaaaa'; // 10 chars
-        $title90 = 'aaaaaaaaab'; // 10 chars, 9 common
-        // 2*9/20*100 = 90.0
-        // < 90.0 → false (rejected)
-        // <= 90.0 → true (accepted)
-        // At 90%, the method should return FALSE (rejected) since percent is NOT < 90
-        self::assertFalse($this->gate->validateSummary($summary90, $title90));
+        // Kills LessThan → LessThanOrEqual mutation on `$percent < 90.0`
+        // Two 20-char strings with 18 common chars: 2*18/40*100 = 90.0%
+        // With `<`: 90.0 < 90.0 = false → rejected
+        // With `<=`: 90.0 <= 90.0 = true → accepted
+        $summary = 'aaaaaaaaaaaaaaaaaabb';
+        $title = 'aaaaaaaaaaaaaaaaaazz';
+        self::assertFalse($this->gate->validateSummary($summary, $title));
     }
 }
