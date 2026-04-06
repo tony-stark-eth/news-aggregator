@@ -1,6 +1,6 @@
 # Common PHP Patterns
 
-Patterns identified across news-aggregator, tcg-scanner, and smart-habit-app.
+Standard patterns used in this project.
 
 ## Scaffolding Commands
 
