@@ -9,6 +9,7 @@ use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Entity\Source;
 use App\Source\Exception\InvalidFeedUrlException;
 use App\Source\Repository\SourceRepositoryInterface;
+use App\Source\ValueObject\FeedUrl;
 use App\User\Entity\User;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\RedirectResponse;
@@ -90,7 +91,7 @@ final class EditSourceController
         }
 
         try {
-            $source->setFeedUrl($feedUrl);
+            new FeedUrl($feedUrl);
         } catch (InvalidFeedUrlException) {
             $this->controller->addFlash('error', 'Invalid feed URL format.');
 
@@ -109,6 +110,7 @@ final class EditSourceController
         }
 
         $source->setName($name);
+        $source->setFeedUrl($feedUrl);
         $source->setCategory($category);
         $source->setSiteUrl($siteUrl !== '' ? $siteUrl : null);
         $source->setLanguage($language !== '' ? $language : null);
