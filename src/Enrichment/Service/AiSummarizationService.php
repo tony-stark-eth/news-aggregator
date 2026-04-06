@@ -30,6 +30,7 @@ PROMPT;
         private AiQualityGateServiceInterface $qualityGate,
         private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
+        private AiTextCleanupService $textCleanup,
     ) {
     }
 
@@ -41,7 +42,7 @@ PROMPT;
         for ($attempt = 1; $attempt <= self::MAX_AI_ATTEMPTS; $attempt++) {
             try {
                 $result = $this->platform->invoke(self::MODEL, $input);
-                $summary = trim($result->asText());
+                $summary = $this->textCleanup->clean(trim($result->asText()));
                 /** @var string $actualModel */
                 $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
 

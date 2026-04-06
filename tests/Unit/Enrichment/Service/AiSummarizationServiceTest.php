@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Enrichment\Service;
 
 use App\Enrichment\Service\AiQualityGateServiceInterface;
 use App\Enrichment\Service\AiSummarizationService;
+use App\Enrichment\Service\AiTextCleanupService;
 use App\Enrichment\Service\RuleBasedSummarizationService;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\ValueObject\EnrichmentResult;
@@ -37,6 +38,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize('Long article content about government economic measures and inflation...', 'Economy News');
@@ -74,6 +76,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             $logger,
+            new AiTextCleanupService(),
         );
 
         $content = 'This is the first sentence of a long article. This is the second sentence with more detail. And a third one.';
@@ -111,6 +114,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             $logger,
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. It should trigger the rule-based fallback.';
@@ -131,6 +135,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. It should trigger the rule-based fallback.';
@@ -155,6 +160,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize('Content text', 'My Title');
@@ -173,6 +179,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize($longContent, 'Title');
@@ -191,6 +198,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize($multibyteContent, 'Title');
@@ -219,6 +227,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             $logger,
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. Second sentence here for rule based.';
@@ -240,6 +249,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';
@@ -259,6 +269,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';
@@ -275,6 +286,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize('Zcontent text here', 'Title');
@@ -303,6 +315,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             $logger,
+            new AiTextCleanupService(),
         );
 
         $content = 'This is long enough content for the summarization service to process properly.';
@@ -319,6 +332,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize('Long content text here', 'Title');
@@ -358,6 +372,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             $logger,
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';
@@ -386,6 +401,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize('Content text', 'Title');
@@ -420,6 +436,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             $logger,
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';
@@ -449,6 +466,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $qualityTracker,
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->summarize('Content text', 'Title');
@@ -471,6 +489,7 @@ final class AiSummarizationServiceTest extends TestCase
             $this->createQualityGateStub(),
             $this->createStub(ModelQualityTrackerInterface::class),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';

@@ -28,6 +28,7 @@ PROMPT;
         private PlatformInterface $platform,
         private TranslationServiceInterface $ruleBasedFallback,
         private LoggerInterface $logger,
+        private AiTextCleanupService $textCleanup,
     ) {
     }
 
@@ -44,7 +45,7 @@ PROMPT;
             try {
                 $prompt = sprintf(self::PROMPT_TEMPLATE, $fromLabel, $toLabel, $text);
                 $input = new MessageBag(Message::ofUser($prompt));
-                $translated = trim($this->platform->invoke(self::MODEL, $input)->asText());
+                $translated = $this->textCleanup->clean(trim($this->platform->invoke(self::MODEL, $input)->asText()));
 
                 if ($translated !== '' && ! $this->isTooSimilar($text, $translated)) {
                     return $translated;

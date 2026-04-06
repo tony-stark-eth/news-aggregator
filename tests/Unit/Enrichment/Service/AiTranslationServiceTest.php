@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Enrichment\Service;
 
+use App\Enrichment\Service\AiTextCleanupService;
 use App\Enrichment\Service\AiTranslationService;
 use App\Enrichment\Service\RuleBasedTranslationService;
 use App\Enrichment\Service\TranslationServiceInterface;
@@ -28,6 +29,7 @@ final class AiTranslationServiceTest extends TestCase
             $platform,
             new RuleBasedTranslationService(),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->translate('Bundesregierung beschließt neue Maßnahmen', 'de', 'en');
@@ -55,7 +57,7 @@ final class AiTranslationServiceTest extends TestCase
         $fallback = $this->createStub(TranslationServiceInterface::class);
         $fallback->method('translate')->willReturn('fallback');
 
-        $service = new AiTranslationService($platform, $fallback, new NullLogger());
+        $service = new AiTranslationService($platform, $fallback, new NullLogger(), new AiTextCleanupService());
 
         $service->translate('Ein deutscher Text', 'de', 'en');
 
@@ -77,7 +79,7 @@ final class AiTranslationServiceTest extends TestCase
         $fallback = $this->createMock(TranslationServiceInterface::class);
         $fallback->expects(self::once())->method('translate')->willReturn('fallback');
 
-        $service = new AiTranslationService($platform, $fallback, new NullLogger());
+        $service = new AiTranslationService($platform, $fallback, new NullLogger(), new AiTextCleanupService());
 
         $result = $service->translate('Original text here', 'de', 'en');
 
@@ -109,7 +111,7 @@ final class AiTranslationServiceTest extends TestCase
                 }),
             );
 
-        $service = new AiTranslationService($platform, $fallback, $logger);
+        $service = new AiTranslationService($platform, $fallback, $logger, new AiTextCleanupService());
 
         $result = $service->translate('Original text', 'de', 'en');
 
@@ -128,7 +130,7 @@ final class AiTranslationServiceTest extends TestCase
         $fallback = $this->createMock(TranslationServiceInterface::class);
         $fallback->expects(self::never())->method('translate');
 
-        $service = new AiTranslationService($platform, $fallback, new NullLogger());
+        $service = new AiTranslationService($platform, $fallback, new NullLogger(), new AiTextCleanupService());
 
         $result = $service->translate('Original text here', 'de', 'en');
 
@@ -162,6 +164,7 @@ final class AiTranslationServiceTest extends TestCase
             $platform,
             $fallback,
             $logger,
+            new AiTextCleanupService(),
         );
 
         $result = $service->translate($original, 'de', 'en');
@@ -195,6 +198,7 @@ final class AiTranslationServiceTest extends TestCase
             $platform,
             $fallback,
             $logger,
+            new AiTextCleanupService(),
         );
 
         $result = $service->translate($original, 'de', 'en');
@@ -216,6 +220,7 @@ final class AiTranslationServiceTest extends TestCase
             $platform,
             $fallback,
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->translate($original, 'en', 'en');
@@ -236,6 +241,7 @@ final class AiTranslationServiceTest extends TestCase
             $platform,
             $fallback,
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->translate($original, 'de', 'en');
@@ -251,6 +257,7 @@ final class AiTranslationServiceTest extends TestCase
             $platform,
             new RuleBasedTranslationService(),
             new NullLogger(),
+            new AiTextCleanupService(),
         );
 
         $result = $service->translate('Original text that is different enough', 'de', 'en');
@@ -267,7 +274,7 @@ final class AiTranslationServiceTest extends TestCase
         $fallback = $this->createMock(TranslationServiceInterface::class);
         $fallback->expects(self::once())->method('translate')->willReturn('fallback');
 
-        $service = new AiTranslationService($platform, $fallback, new NullLogger());
+        $service = new AiTranslationService($platform, $fallback, new NullLogger(), new AiTextCleanupService());
 
         $result = $service->translate($original, 'de', 'en');
 
@@ -292,7 +299,7 @@ final class AiTranslationServiceTest extends TestCase
         $fallback = $this->createStub(TranslationServiceInterface::class);
         $fallback->method('translate')->willReturn('fallback');
 
-        $service = new AiTranslationService($platform, $fallback, $logger);
+        $service = new AiTranslationService($platform, $fallback, $logger, new AiTextCleanupService());
 
         $service->translate('Original text here', 'de', 'en');
     }
