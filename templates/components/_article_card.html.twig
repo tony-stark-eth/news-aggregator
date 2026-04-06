@@ -1,5 +1,6 @@
-{# Expects: article (Article entity) #}
-<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow {{ article_read is defined and article_read ? 'opacity-60' : '' }}"
+{# Expects: article (Article entity), readArticleIds (optional array<int, true>) #}
+{% set is_read = readArticleIds is defined and article.id in readArticleIds|keys %}
+<div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow {{ is_read ? 'article-read' : 'article-unread' }}"
     data-article-id="{{ article.id }}"
     data-searchable="{{ article.title|lower }} {{ article.summary|default('')|lower }}"
     data-title-default="{{ article.title|e('html_attr') }}"
