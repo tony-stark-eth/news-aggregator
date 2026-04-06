@@ -45,6 +45,8 @@
                             <td>
                                 {% if source.lastFetchedAt %}
                                     <time datetime="{{ source.lastFetchedAt|date('c') }}" class="timeago">{{ source.lastFetchedAt|date('Y-m-d H:i') }}</time>
+                                {% elseif source.enabled %}
+                                    <span class="badge badge-warning badge-sm">Never fetched</span>
                                 {% else %}
                                     <span class="text-base-content/30">never</span>
                                 {% endif %}
