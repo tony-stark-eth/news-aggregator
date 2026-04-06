@@ -58,6 +58,18 @@ Before considering work complete, ask yourself:
 3. Do `make test` pass?
 4. Did I update tests for changed behavior?
 5. Did I update CLAUDE.md / docs if the change affects conventions?
+6. **Mutation testing**: will my tests kill mutants? (see checklist below)
+
+### Mutation Testing Checklist (check before submitting)
+
+Read `.claude/testing.md` "Writing mutation-resistant tests" for the full table. Key rules:
+
+- [ ] **Side-effect services mocked with expects()** — loggers, trackers, notifiers use `createMock()` + `expects(self::once())`, NOT `NullLogger` or `createStub()`
+- [ ] **Logger context verified** — `self::callback(fn(array $ctx) => $ctx['key'] === 'value')` on every logger call
+- [ ] **Null paths tested** — every `??` coalesce and nullable parameter has a test with `null` input
+- [ ] **Multibyte strings** — if code uses `mb_*` functions, at least one test uses characters where `mb_strlen !== strlen` (e.g. `'ä'`, `'über'`)
+- [ ] **Boundary values** — numeric comparisons like `> 90` tested with exactly 90 and 91
+- [ ] **All return paths asserted** — early returns, exception catches, fallback paths each have a test that verifies the specific return value
 
 ## Available Tools
 

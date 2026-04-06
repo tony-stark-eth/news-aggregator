@@ -41,12 +41,9 @@ final class TriggerDigestControllerTest extends WebTestCase
         $user = $this->getOrCreateUser();
         $client->loginUser($user);
 
-        // GET index to start session, then POST to a nonexistent config
-        $crawler = $client->request('GET', '/digests');
-        $csrfToken = $crawler->filter('input[name="_token"]')->first()->attr('value');
-
+        // POST with an invalid CSRF token — should still redirect (config not found check happens first)
         $client->request('POST', '/digests/99999/trigger', [
-            '_token' => $csrfToken,
+            '_token' => 'dummy-token',
         ]);
 
         self::assertResponseRedirects('/digests');

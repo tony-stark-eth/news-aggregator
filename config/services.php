@@ -6,12 +6,17 @@ use App\Article\Service\AiDeduplicationService;
 use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Digest\Service\DigestSummaryService;
+use App\Enrichment\Service\AiBatchTranslationService;
 use App\Enrichment\Service\AiCategorizationService;
+use App\Enrichment\Service\AiCombinedEnrichmentService;
 use App\Enrichment\Service\AiKeywordExtractionService;
 use App\Enrichment\Service\AiSummarizationService;
 use App\Enrichment\Service\AiTranslationService;
-use App\Enrichment\Service\ArticleEnrichmentService;
+use App\Enrichment\Service\ArticleTranslationService;
+use App\Enrichment\Service\ArticleTranslationServiceInterface;
+use App\Enrichment\Service\BatchTranslationServiceInterface;
 use App\Enrichment\Service\CategorizationServiceInterface;
+use App\Enrichment\Service\CombinedEnrichmentServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\RuleBasedCategorizationService;
 use App\Enrichment\Service\RuleBasedKeywordExtractionService;
@@ -83,6 +88,21 @@ return static function (ContainerConfigurator $container): void {
         AiKeywordExtractionService::class,
     );
 
+    $services->alias(
+        CombinedEnrichmentServiceInterface::class,
+        AiCombinedEnrichmentService::class,
+    );
+
+    $services->alias(
+        BatchTranslationServiceInterface::class,
+        AiBatchTranslationService::class,
+    );
+
+    $services->alias(
+        ArticleTranslationServiceInterface::class,
+        ArticleTranslationService::class,
+    );
+
     // Register openrouter/free router in the model catalog (not included by default)
     $services->set('ai.platform.model_catalog.openrouter', ModelCatalog::class)
         ->arg('$additionalModels', [
@@ -123,6 +143,16 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(AiKeywordExtractionService::class)
         ->arg('$ruleBasedFallback', service(RuleBasedKeywordExtractionService::class))
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    $services->set(AiCombinedEnrichmentService::class)
+        ->arg('$categorizationFallback', service(AiCategorizationService::class))
+        ->arg('$summarizationFallback', service(AiSummarizationService::class))
+        ->arg('$keywordExtractionFallback', service(AiKeywordExtractionService::class))
+        ->arg('$platform', service('ai.platform.openrouter.failover'));
+
+    $services->set(AiBatchTranslationService::class)
+        ->arg('$translationFallback', service(AiTranslationService::class))
         ->arg('$platform', service('ai.platform.openrouter.failover'));
 
     $services->set(AiDeduplicationService::class)
@@ -173,8 +203,8 @@ return static function (ContainerConfigurator $container): void {
     $services->set(NotificationDispatchService::class)
         ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%');
 
-    // Wire DISPLAY_LANGUAGES env var for ArticleEnrichmentService
-    $services->set(ArticleEnrichmentService::class)
+    // Wire DISPLAY_LANGUAGES env var for ArticleTranslationService
+    $services->set(ArticleTranslationService::class)
         ->arg('$displayLanguages', '%env(string:DISPLAY_LANGUAGES)%');
 
     // Search: SEAL/Loupe engine wired by argument name (loupeEngine → cmsig_seal.engine.loupe alias)
