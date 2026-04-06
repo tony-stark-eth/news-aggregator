@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Article\Mercure\MercurePublisherService;
+use App\Article\Mercure\MercurePublisherServiceInterface;
 use App\Article\Service\AiDeduplicationService;
 use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
@@ -19,6 +21,7 @@ use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\CombinedEnrichmentServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\RuleBasedCategorizationService;
+use App\Enrichment\Service\RuleBasedEnrichmentService;
 use App\Enrichment\Service\RuleBasedKeywordExtractionService;
 use App\Enrichment\Service\RuleBasedSummarizationService;
 use App\Enrichment\Service\RuleBasedTranslationService;
@@ -206,6 +209,15 @@ return static function (ContainerConfigurator $container): void {
     // Wire DISPLAY_LANGUAGES env var for ArticleTranslationService
     $services->set(ArticleTranslationService::class)
         ->arg('$displayLanguages', '%env(string:DISPLAY_LANGUAGES)%');
+
+    // Mercure publisher: real implementation when Hub is available
+    $services->alias(MercurePublisherServiceInterface::class, MercurePublisherService::class);
+
+    // RuleBasedEnrichmentService: explicitly bind rule-based implementations (not AI decorators)
+    $services->set(RuleBasedEnrichmentService::class)
+        ->arg('$categorization', service(RuleBasedCategorizationService::class))
+        ->arg('$summarization', service(RuleBasedSummarizationService::class))
+        ->arg('$keywordExtraction', service(RuleBasedKeywordExtractionService::class));
 
     // Search: SEAL/Loupe engine wired by argument name (loupeEngine → cmsig_seal.engine.loupe alias)
     $services->alias(ArticleSearchServiceInterface::class, SealArticleSearchService::class);

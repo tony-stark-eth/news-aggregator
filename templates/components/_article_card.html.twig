@@ -2,6 +2,7 @@
 {% set is_read = readArticleIds is defined and article.id in readArticleIds|keys %}
 <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow {{ is_read ? 'article-read' : 'article-unread' }}"
     data-article-id="{{ article.id }}"
+    data-enrichment-status="{{ article.enrichmentStatus ? article.enrichmentStatus.value : 'complete' }}"
     data-searchable="{{ article.title|lower }} {{ article.summary|default('')|lower }}"
     data-title-default="{{ article.title|e('html_attr') }}"
     data-summary-default="{{ article.summary|default('')|e('html_attr') }}"

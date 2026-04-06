@@ -6,14 +6,16 @@ namespace App\Tests\Unit\Article\MessageHandler;
 
 use App\Article\Entity\Article;
 use App\Article\Event\ArticleCreated;
+use App\Article\Message\EnrichArticleMessage;
 use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\ValueObject\ArticleCollection;
 use App\Article\ValueObject\ArticleFingerprint;
+use App\Article\ValueObject\EnrichmentStatus;
 use App\Article\ValueObject\FetchResult;
 use App\Article\ValueObject\PersistItemResult;
-use App\Enrichment\Service\ArticleEnrichmentServiceInterface;
+use App\Enrichment\Service\RuleBasedEnrichmentServiceInterface;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
@@ -32,6 +34,8 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\Messenger\Envelope;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 #[CoversClass(FetchSourceHandler::class)]
 #[UsesClass(FetchSourceMessage::class)]
@@ -43,6 +47,8 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 #[UsesClass(ArticleFingerprint::class)]
 #[UsesClass(ArticleCreated::class)]
 #[UsesClass(FeedFetchException::class)]
+#[UsesClass(EnrichArticleMessage::class)]
+#[UsesClass(EnrichmentStatus::class)]
 final class FetchSourceHandlerTest extends TestCase
 {
     private MockClock $clock;
@@ -62,7 +68,7 @@ final class FetchSourceHandlerTest extends TestCase
         self::assertSame(SourceHealth::Degraded, $this->source->getHealthStatus());
 
         $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
-        $enrichment = $this->createMock(ArticleEnrichmentServiceInterface::class);
+        $enrichment = $this->createMock(RuleBasedEnrichmentServiceInterface::class);
         $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
         $logger = $this->createMock(LoggerInterface::class);
 
@@ -120,6 +126,8 @@ final class FetchSourceHandlerTest extends TestCase
         self::assertNotNull($saved[0]->getFingerprint());
         self::assertNull($saved[1]->getContentRaw());
         self::assertNull($saved[1]->getFingerprint());
+        self::assertSame(EnrichmentStatus::Pending, $saved[0]->getEnrichmentStatus());
+        self::assertSame(EnrichmentStatus::Pending, $saved[1]->getEnrichmentStatus());
         self::assertSame(SourceHealth::Healthy, $this->source->getHealthStatus());
         self::assertSame(0, $this->source->getErrorCount());
     }
@@ -177,7 +185,7 @@ final class FetchSourceHandlerTest extends TestCase
     public function testSkipsDuplicateArticles(): void
     {
         $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
-        $enrichment = $this->createMock(ArticleEnrichmentServiceInterface::class);
+        $enrichment = $this->createMock(RuleBasedEnrichmentServiceInterface::class);
         $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
         $logger = $this->createMock(LoggerInterface::class);
 
@@ -260,6 +268,54 @@ final class FetchSourceHandlerTest extends TestCase
         self::assertSame(['First', 'Second', 'Third'], $dispatched);
     }
 
+    public function testDispatchesEnrichArticleMessageForEachNewArticle(): void
+    {
+        $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
+        $messageBus = $this->createMock(MessageBusInterface::class);
+
+        $fetcher = $this->createStub(FeedFetcherServiceInterface::class);
+        $fetcher->method('fetch')->willReturn('<rss>...</rss>');
+
+        $parser = $this->createStub(FeedParserServiceInterface::class);
+        $parser->method('parse')->willReturn(new FeedItemCollection([
+            new FeedItem('First', 'https://example.com/1', null, null, null),
+            new FeedItem('Second', 'https://example.com/2', null, null, null),
+        ]));
+
+        // Simulate DB save assigning IDs
+        $nextId = 1;
+        $articleRepository->method('save')
+            ->willReturnCallback(function (Article $article) use (&$nextId): void {
+                $ref = new \ReflectionProperty(Article::class, 'id');
+                $ref->setValue($article, $nextId++);
+            });
+        $articleRepository->method('flush');
+
+        $dispatched = [];
+        $messageBus->expects(self::exactly(2))
+            ->method('dispatch')
+            ->with(self::callback(static function (mixed $message) use (&$dispatched): bool {
+                self::assertInstanceOf(EnrichArticleMessage::class, $message);
+                $dispatched[] = $message;
+
+                return true;
+            }))
+            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+
+        $handler = $this->createHandler(
+            articleRepository: $articleRepository,
+            fetcher: $fetcher,
+            parser: $parser,
+            messageBus: $messageBus,
+        );
+
+        ($handler)(new FetchSourceMessage(1));
+
+        self::assertCount(2, $dispatched);
+        self::assertSame(1, $dispatched[0]->articleId);
+        self::assertSame(2, $dispatched[1]->articleId);
+    }
+
     public function testSetsArticlePropertiesFromFeedItem(): void
     {
         $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
@@ -309,8 +365,9 @@ final class FetchSourceHandlerTest extends TestCase
         ?FeedFetcherServiceInterface $fetcher = null,
         ?FeedParserServiceInterface $parser = null,
         ?DeduplicationServiceInterface $dedup = null,
-        ?ArticleEnrichmentServiceInterface $enrichment = null,
+        ?RuleBasedEnrichmentServiceInterface $enrichment = null,
         ?EventDispatcherInterface $eventDispatcher = null,
+        ?MessageBusInterface $messageBus = null,
         ?LoggerInterface $logger = null,
     ): FetchSourceHandler {
         if (! $sourceRepository instanceof SourceRepositoryInterface) {
@@ -323,6 +380,13 @@ final class FetchSourceHandlerTest extends TestCase
             $dedup->method('isDuplicate')->willReturn(false);
         }
 
+        if (! $messageBus instanceof MessageBusInterface) {
+            $messageBus = $this->createStub(MessageBusInterface::class);
+            $messageBus->method('dispatch')->willReturnCallback(
+                static fn (object $message): Envelope => new Envelope($message),
+            );
+        }
+
         $em = $this->createStub(EntityManagerInterface::class);
         $em->method('isOpen')->willReturn(true);
 
@@ -333,8 +397,9 @@ final class FetchSourceHandlerTest extends TestCase
             $fetcher ?? $this->createStub(FeedFetcherServiceInterface::class),
             $parser ?? $this->createStub(FeedParserServiceInterface::class),
             $dedup,
-            $enrichment ?? $this->createStub(ArticleEnrichmentServiceInterface::class),
+            $enrichment ?? $this->createStub(RuleBasedEnrichmentServiceInterface::class),
             $eventDispatcher ?? $this->createStub(EventDispatcherInterface::class),
+            $messageBus,
             $this->clock,
             $logger ?? new NullLogger(),
         );

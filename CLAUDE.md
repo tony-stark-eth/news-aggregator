@@ -84,7 +84,10 @@ make hooks       # Install git hooks
 ```
 src/
 ├── Article/         # Core: articles, scoring, deduplication, content fingerprinting
-│   └── Repository/  # ArticleRepositoryInterface + Doctrine implementation
+│   ├── Repository/  # ArticleRepositoryInterface + Doctrine implementation
+│   ├── Mercure/     # MercurePublisherService (real + null impl), ArticleCreatedMercureSubscriber
+│   ├── Message/     # EnrichArticleMessage, RescoreArticlesMessage
+│   └── MessageHandler/ # FetchSourceHandler (Phase 1), EnrichArticleHandler (Phase 2)
 ├── Enrichment/      # Rule-based + AI categorization/summarization/keywords/translation (decorator pattern)
 ├── Source/          # Feed management, fetching (laminas-feed), health tracking
 │   └── Repository/  # SourceRepositoryInterface + Doctrine implementation
@@ -108,6 +111,8 @@ src/
 
 ## AI Integration
 
+- **Two-phase enrichment**: Phase 1 (sync in FetchSourceHandler) applies rule-based categorization, summarization, keywords, scoring. Phase 2 (async via `async_enrich` transport) runs full AI enrichment + translation. Articles appear instantly with rule-based data and upgrade in-place when AI completes.
+- **Mercure SSE**: Real-time push via built-in FrankenPHP/Caddy Mercure hub. `MercurePublisherService` publishes article creation and enrichment completion events. Frontend uses native `EventSource` API to update article cards in-place and show "new articles" banner.
 - **Primary model**: `openrouter/free` — auto-routes to best available free model, zero maintenance
 - **Fallback chain**: `ModelFailoverPlatform` (PlatformInterface decorator) chains free → minimax → glm → gpt-oss → qwen → nemotron
 - **Rule-based fallback**: Always active — AI is an enhancement layer, not a dependency
@@ -132,6 +137,9 @@ src/
 | `NOTIFIER_CHATTER_DSN` | Notifier transport DSN | (optional — matches logged as `skipped` without it) |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | Default fetch interval | `60` |
 | `DISPLAY_LANGUAGES` | Comma-separated display languages (e.g. `en,de,fr`) | `en` |
+| `MERCURE_URL` | Internal Mercure hub URL (for publishing) | `https://php/.well-known/mercure` |
+| `MERCURE_PUBLIC_URL` | Public Mercure hub URL (for browser SSE) | `https://localhost:8443/.well-known/mercure` |
+| `MERCURE_JWT_SECRET` | JWT secret for Mercure publishing | `!ChangeThisMercureHubJWTSecretKey!` |
 | `RETENTION_ARTICLES` | Article retention period | `90` |
 | `RETENTION_LOGS` | Notification/digest log retention | `30` |
 | `DATABASE_URL` | PostgreSQL DSN | (set in compose) |

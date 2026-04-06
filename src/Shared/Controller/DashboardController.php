@@ -12,6 +12,7 @@ use App\User\Entity\User;
 use App\User\Repository\UserArticleReadRepositoryInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
@@ -30,12 +31,11 @@ final class DashboardController
 
     #[Route('/', name: 'app_dashboard')]
     public function __invoke(
+        Request $request,
         #[MapQueryParameter]
         ?string $category = null,
         #[MapQueryParameter]
         int $page = 1,
-        #[MapQueryParameter(name: '_fragment')]
-        ?string $fragment = null,
         #[MapQueryParameter]
         bool $unreadOnly = false,
     ): Response {
@@ -51,23 +51,29 @@ final class DashboardController
             $limit,
         );
 
+        // Build read-state set for the current user
+        $readArticleIds = $this->getReadArticleIds($articles);
+
+        $hasMore = \count($articles) >= $limit;
+
+        // htmx infinite scroll — return article cards + next sentinel
+        if ($request->headers->has('HX-Request')) {
+            return $this->controller->render('dashboard/_article_list.html.twig', [
+                'articles' => $articles,
+                'readArticleIds' => $readArticleIds,
+                'currentPage' => $page,
+                'currentCategory' => $category,
+                'unreadOnly' => $unreadOnly,
+                'hasMore' => $hasMore,
+            ]);
+        }
+
         // Stats
         $now = $this->clock->now();
         $todayStart = $now->setTime(0, 0);
         $articlesToday = $this->articleRepository->countSince($todayStart);
 
         $activeSources = $this->sourceRepository->countEnabled();
-
-        // Build read-state set for the current user
-        $readArticleIds = $this->getReadArticleIds($articles);
-
-        // AJAX fragment for infinite scroll
-        if ($fragment !== null) {
-            return $this->controller->render('dashboard/_article_list.html.twig', [
-                'articles' => $articles,
-                'readArticleIds' => $readArticleIds,
-            ]);
-        }
 
         return $this->controller->render('dashboard/index.html.twig', [
             'articles' => $articles,

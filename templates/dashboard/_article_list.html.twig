@@ -1,3 +1,11 @@
 {% for article in articles %}
     {% include 'components/_article_card.html.twig' %}
 {% endfor %}
+{% if hasMore is defined %}
+    {% include 'components/_pagination_loader.html.twig' with {
+        currentPage: currentPage,
+        currentCategory: currentCategory|default(null),
+        unreadOnly: unreadOnly|default(false),
+        hasMore: hasMore,
+    } %}
+{% endif %}

@@ -57,11 +57,14 @@ final class LayerDependencyTest
 
     public function testArticleDoesNotDependOnEnrichmentOrNotification(): Rule
     {
-        // FetchSourceHandler is the orchestration pipeline — it legitimately
-        // coordinates enrichment + notification after persisting an article.
+        // FetchSourceHandler and EnrichArticleHandler are orchestration pipelines —
+        // they legitimately coordinate enrichment after persisting/loading articles.
         return PHPat::rule()
             ->classes(Selector::inNamespace('App\Article'))
-            ->excluding(Selector::classname('App\Article\MessageHandler\FetchSourceHandler'))
+            ->excluding(
+                Selector::classname('App\Article\MessageHandler\FetchSourceHandler'),
+                Selector::classname('App\Article\MessageHandler\EnrichArticleHandler'),
+            )
             ->shouldNot()
             ->dependOn()
             ->classes(

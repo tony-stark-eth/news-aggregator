@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Async two-phase enrichment — Phase 1 (sync) applies rule-based categorization/summarization/keywords/scoring, Phase 2 (async via `async_enrich` transport) runs full AI enrichment + translation; articles appear instantly and upgrade in-place (#114)
+- Mercure real-time updates — SSE push via built-in FrankenPHP/Caddy Mercure hub; "new articles" banner on dashboard, in-place article card updates when AI enrichment completes (#119)
+- htmx integration — replaced custom infinite scroll TypeScript with declarative `hx-trigger="revealed"` pagination; htmx SSE extension available for future use
+- Dedicated enrichment worker (`enrichment-worker` service) with 256M memory for AI responses
+- `RuleBasedEnrichmentService` — lightweight Phase 1 enrichment calling only rule-based implementations
+- `EnrichArticleMessage` + `EnrichArticleHandler` — async AI enrichment with idempotency guard
+- `MercurePublisherService` — publishes article creation and enrichment completion events, with `NullMercurePublisherService` fallback
 - Batch AI prompts — combine categorize+summarize+keywords into one call, batch translation per language; reduces AI calls from 9 to 3 per article (#113, #117)
 - Edit existing feed sources — fix URLs, rename, change category without deleting (#72)
 - Digest configuration CRUD — create, edit, and delete digest configs from the UI (#93)
