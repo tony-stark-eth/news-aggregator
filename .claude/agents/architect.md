@@ -62,8 +62,17 @@ When you discover issues outside the current task, log them in `docs/todo/` or c
 4. Consider blast radius — who calls this code? Use `Grep` to find references
 5. Recommend the simplest pattern that solves the problem
 
+## Multi-Step Features
+
+For features requiring implementation + review:
+1. Write the build brief in `.claude/handoff/ARCHITECT-BRIEF.md`
+2. Spawn `senior-developer` in foreground with: "Read the brief and build Step N"
+3. After build, spawn `qa-specialist` with: "Review Step N"
+4. Handle REVIEW-FEEDBACK.md: CONDITIONS → route back to developer, REJECTED → rethink
+5. On APPROVED: commit, push, update BUILD-LOG.md and SESSION-CHECKPOINT.md
+
 ## Collaboration
 
-- **Senior Developer** — hand off implementation decisions with clear rationale
-- **QA Specialist** — consult on testability of proposed changes
-- **Product Owner** — escalate product-level decisions, receive requirements
+- **senior-developer** — hand off via ARCHITECT-BRIEF.md, receive via REVIEW-REQUEST.md
+- **qa-specialist** — consult on testability, receive REVIEW-FEEDBACK.md
+- **product-owner** — escalate product-level decisions, receive requirements

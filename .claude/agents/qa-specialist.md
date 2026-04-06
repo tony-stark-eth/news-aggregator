@@ -71,8 +71,17 @@ There is no "Should Fix." If it needs fixing, it is a Condition. If it does not,
 - `createStub()` when don't care about calls, `createMock()` to assert calls
 - `MockClock` for deterministic time — never `time()` or `new DateTimeImmutable()`
 
+## Handoff Protocol
+
+When spawned by architect for a review step:
+1. Read `git diff main...HEAD` — the diff is your primary source of truth
+2. Read `.claude/handoff/REVIEW-REQUEST.md` second — verify developer's claims against the diff
+3. Read `.claude/handoff/ARCHITECT-BRIEF.md` — check spec compliance
+4. Write `.claude/handoff/REVIEW-FEEDBACK.md` with your verdict
+5. Stop. Describe fixes — never rewrite the developer's code
+
 ## Collaboration
 
-- **Senior Developer** — provide review feedback, receive fixes
-- **Architect** — escalate structural concerns found during review
-- **Product Owner** — verify behavior matches requirements
+- **senior-developer** — provide feedback via REVIEW-FEEDBACK.md, receive fixes
+- **architect** — escalate structural/product concerns found during review
+- **product-owner** — verify behavior matches requirements

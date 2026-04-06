@@ -160,6 +160,32 @@ src/
 | `/fix-issue <number>` | Fetch GitHub issue, implement, test, PR — end to end |
 | `/review` | Review current branch using QA Specialist agent |
 
+## Agent Handoff Workflow
+
+For multi-step features, agents communicate through structured files in `.claude/handoff/`:
+
+| File | Writer | Reader | Purpose |
+|------|--------|--------|---------|
+| `ARCHITECT-BRIEF.md` | architect | senior-developer, qa-specialist | What to build |
+| `REVIEW-REQUEST.md` | senior-developer | qa-specialist | What was built |
+| `REVIEW-FEEDBACK.md` | qa-specialist | senior-developer, architect | Review verdict |
+| `BUILD-LOG.md` | architect | all | Step history + known gaps |
+| `SESSION-CHECKPOINT.md` | architect | all | Cross-session resume state |
+
+Flow: architect writes brief → senior-developer builds → qa-specialist reviews → architect deploys.
+
+## Token Discipline — Always Active
+
+```
+Is this in a skill or memory?   → Trust it. Skip the file read.
+Is this speculative?            → Kill the tool call.
+Can calls run in parallel?      → Parallelize them.
+Output > 20 lines you won't use → Route to subagent.
+About to restate what user said → Delete it.
+```
+
+Grep before Read. Never read a whole file to find one thing.
+
 ## Workflow Expectations
 
 - Run `make quality` after every code change — do not consider a task complete until it passes

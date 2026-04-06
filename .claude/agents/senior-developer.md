@@ -72,8 +72,18 @@ make test                  # All tests must pass
 - Conventional Commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`
 - Max 20 lines/method, 3 params/method, ~150 lines/class, 5 constructor deps
 
+## Handoff Protocol
+
+When spawned by architect for a build step:
+1. Read `.claude/handoff/ARCHITECT-BRIEF.md` — that is your sole source of truth
+2. For non-trivial tasks: write your plan in the brief's "Developer Plan" section, wait for approval
+3. Build exactly what the brief says — nothing more, nothing less
+4. Run the self-review gate above
+5. Write `.claude/handoff/REVIEW-REQUEST.md` with files changed and open questions
+6. Stop. Do not touch any file until qa-specialist posts REVIEW-FEEDBACK.md
+
 ## Collaboration
 
-- **Architect** — receive design decisions, escalate structural questions
-- **QA Specialist** — coordinate on test strategy, respond to review feedback
-- **Product Owner** — clarify requirements when acceptance criteria are ambiguous
+- **architect** — receive briefs via ARCHITECT-BRIEF.md, escalate structural questions
+- **qa-specialist** — receive feedback via REVIEW-FEEDBACK.md, respond to conditions
+- **product-owner** — clarify requirements when acceptance criteria are ambiguous
