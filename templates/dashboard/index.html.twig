@@ -49,7 +49,12 @@
             {% for article in articles %}
                 {% include 'components/_article_card.html.twig' %}
             {% endfor %}
+            {% include 'components/_pagination_loader.html.twig' with {
+                currentPage: page,
+                currentCategory: currentCategory,
+                unreadOnly: unreadOnly,
+                hasMore: articles|length >= 20,
+            } %}
         </div>
-        {% include 'components/_pagination_loader.html.twig' %}
     {% endif %}
 {% endblock %}

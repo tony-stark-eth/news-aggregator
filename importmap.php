@@ -18,4 +18,10 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
+    'htmx.org' => [
+        'version' => '2.0.7',
+    ],
+    'htmx-ext-sse' => [
+        'version' => '2.2.4',
+    ],
 ];

@@ -1,6 +1,13 @@
-<div id="scroll-sentinel" class="flex justify-center py-8">
-    <span class="loading loading-spinner loading-lg text-primary" id="scroll-spinner"></span>
-</div>
-<div id="no-more-articles" class="text-center py-8 text-base-content/50 hidden">
-    No more articles
-</div>
+{% if hasMore|default(false) %}
+    <div id="scroll-sentinel"
+         hx-get="{{ path('app_dashboard', {category: currentCategory|default(null), unreadOnly: unreadOnly|default(false) ? 1 : 0, page: currentPage + 1}) }}"
+         hx-trigger="revealed"
+         hx-swap="outerHTML"
+         class="flex justify-center py-8">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+{% else %}
+    <div class="text-center py-8 text-base-content/50">
+        No more articles
+    </div>
+{% endif %}

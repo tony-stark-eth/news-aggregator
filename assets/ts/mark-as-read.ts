@@ -83,7 +83,7 @@ function observeArticleCards(): void {
 // Observe initial cards
 observeArticleCards();
 
-// Re-observe after infinite scroll loads new cards
+// Re-observe when htmx or Mercure adds new cards to the feed
 const feed = document.querySelector<HTMLElement>('#article-feed');
 if (feed) {
     const mutationObserver = new MutationObserver((mutations) => {

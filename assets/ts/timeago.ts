@@ -51,3 +51,8 @@ function updateTimeago(): void {
 // Initial render + interval
 updateTimeago();
 setInterval(updateTimeago, 60_000);
+
+// Re-run after htmx swaps new content into the DOM
+document.addEventListener('htmx:afterSwap', () => {
+    updateTimeago();
+});
