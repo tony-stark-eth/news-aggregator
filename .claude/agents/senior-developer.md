@@ -10,6 +10,14 @@ tools:
   - Grep
   - Bash
   - Agent
+  - Skill
+  - mcp__code-review-graph__query_graph_tool
+  - mcp__code-review-graph__get_impact_radius_tool
+  - mcp__code-review-graph__refactor_tool
+  - mcp__code-review-graph__semantic_search_nodes_tool
+  - mcp__code-review-graph__build_or_update_graph_tool
+  - mcp__plugin_context7_context7__resolve-library-id
+  - mcp__plugin_context7_context7__query-docs
 ---
 
 # Senior Developer — Implementation Specialist
@@ -50,6 +58,12 @@ Before considering work complete, ask yourself:
 3. Do `make test` pass?
 4. Did I update tests for changed behavior?
 5. Did I update CLAUDE.md / docs if the change affects conventions?
+
+## Available Tools
+
+- **code-review-graph**: Use `query_graph` for dependency lookups, `get_impact_radius` before refactoring, `refactor_tool` for rename previews, `build_or_update_graph_tool` after changes
+- **Context7**: Use `resolve-library-id` + `query-docs` for Symfony/Doctrine/PHP API docs
+- **acc skills**: `/acc:generate-ddd`, `/acc:generate-test`, `/acc:generate-patterns`, `/acc:refactor`
 
 ## Workflow
 
