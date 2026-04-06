@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Enrichment\Service;
 
+use App\Shared\ValueObject\LanguageName;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -12,6 +13,8 @@ use Symfony\AI\Platform\PlatformInterface;
 final readonly class AiTranslationService implements TranslationServiceInterface
 {
     private const string MODEL = 'openrouter/free';
+
+    private const int MAX_AI_ATTEMPTS = 2;
 
     private const float SIMILARITY_THRESHOLD = 0.9;
 
@@ -34,24 +37,28 @@ PROMPT;
             return $text;
         }
 
-        try {
-            $prompt = sprintf(self::PROMPT_TEMPLATE, $fromLanguage, $toLanguage, $text);
+        $fromLabel = LanguageName::labelFor($fromLanguage);
+        $toLabel = LanguageName::labelFor($toLanguage);
 
-            $input = new MessageBag(Message::ofUser($prompt));
-            $translated = trim($this->platform->invoke(self::MODEL, $input)->asText());
+        for ($attempt = 1; $attempt <= self::MAX_AI_ATTEMPTS; $attempt++) {
+            try {
+                $prompt = sprintf(self::PROMPT_TEMPLATE, $fromLabel, $toLabel, $text);
+                $input = new MessageBag(Message::ofUser($prompt));
+                $translated = trim($this->platform->invoke(self::MODEL, $input)->asText());
 
-            if ($translated === '' || $this->isTooSimilar($text, $translated)) {
-                $this->logRejection($text, $translated);
+                if ($translated !== '' && ! $this->isTooSimilar($text, $translated)) {
+                    return $translated;
+                }
 
-                return $this->ruleBasedFallback->translate($text, $fromLanguage, $toLanguage);
+                $this->logRejection($text, $translated, $attempt);
+            } catch (\Throwable $e) {
+                $this->logger->warning('AI translation failed (attempt {attempt}/{max}): {error}', [
+                    'attempt' => $attempt,
+                    'max' => self::MAX_AI_ATTEMPTS,
+                    'error' => $e->getMessage(),
+                    'model' => self::MODEL,
+                ]);
             }
-
-            return $translated;
-        } catch (\Throwable $e) {
-            $this->logger->warning('AI translation failed, using fallback: {error}', [
-                'error' => $e->getMessage(),
-                'model' => self::MODEL,
-            ]);
         }
 
         return $this->ruleBasedFallback->translate($text, $fromLanguage, $toLanguage);
@@ -64,9 +71,11 @@ PROMPT;
         return $percent > (self::SIMILARITY_THRESHOLD * 100);
     }
 
-    private function logRejection(string $original, string $translated): void
+    private function logRejection(string $original, string $translated, int $attempt): void
     {
-        $this->logger->info('AI translation rejected: too similar to original or empty', [
+        $this->logger->info('AI translation rejected (attempt {attempt}/{max}): too similar to original or empty', [
+            'attempt' => $attempt,
+            'max' => self::MAX_AI_ATTEMPTS,
             'original_length' => mb_strlen($original),
             'translated_length' => mb_strlen($translated),
             'model' => self::MODEL,

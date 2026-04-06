@@ -11,6 +11,8 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\AI\Platform\Message\Content\Text;
+use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Test\InMemoryPlatform;
 
@@ -33,38 +35,105 @@ final class AiTranslationServiceTest extends TestCase
         self::assertSame($translated, $result);
     }
 
-    public function testFallsBackOnFailure(): void
+    public function testPromptUsesFullLanguageNames(): void
     {
-        $original = 'Bundesregierung beschließt neue Maßnahmen';
+        $capturedPrompt = '';
+        $platform = new InMemoryPlatform(static function (mixed $model, MessageBag $bag) use (&$capturedPrompt): string {
+            $userMessage = $bag->getUserMessage();
+            self::assertNotNull($userMessage);
 
-        $platform = $this->createStub(PlatformInterface::class);
-        $platform->method('invoke')->willThrowException(new \RuntimeException('API timeout'));
+            $content = $userMessage->getContent();
+            self::assertNotEmpty($content);
+
+            /** @var Text $text */
+            $text = $content[0];
+            $capturedPrompt = $text->getText();
+
+            return 'Dies ist ein deutscher Text';
+        });
+
+        $fallback = $this->createStub(TranslationServiceInterface::class);
+        $fallback->method('translate')->willReturn('fallback');
+
+        $service = new AiTranslationService($platform, $fallback, new NullLogger());
+
+        $service->translate('Ein deutscher Text', 'de', 'en');
+
+        self::assertStringContainsString('German', $capturedPrompt);
+        self::assertStringContainsString('English', $capturedPrompt);
+        self::assertStringNotContainsString(' de ', $capturedPrompt);
+        self::assertStringNotContainsString(' en ', $capturedPrompt);
+    }
+
+    public function testRetriesOnRejectionBeforeFallback(): void
+    {
+        $callCount = 0;
+        $platform = new InMemoryPlatform(static function () use (&$callCount): string {
+            $callCount++;
+
+            return ''; // empty = rejected
+        });
+
+        $fallback = $this->createMock(TranslationServiceInterface::class);
+        $fallback->expects(self::once())->method('translate')->willReturn('fallback');
+
+        $service = new AiTranslationService($platform, $fallback, new NullLogger());
+
+        $result = $service->translate('Original text here', 'de', 'en');
+
+        self::assertSame('fallback', $result);
+        self::assertSame(2, $callCount);
+    }
+
+    public function testRetriesOnExceptionBeforeFallback(): void
+    {
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::exactly(2))
+            ->method('invoke')
+            ->willThrowException(new \RuntimeException('API error'));
+
+        $fallback = $this->createMock(TranslationServiceInterface::class);
+        $fallback->expects(self::once())->method('translate')->willReturn('fallback');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('warning')
+        $logger->expects(self::exactly(2))->method('warning')
             ->with(
                 self::stringContains('AI translation failed'),
                 self::callback(static function (array $context): bool {
-                    return isset($context['error'])
+                    return isset($context['attempt'])
+                        && isset($context['max'])
+                        && isset($context['error'])
                         && isset($context['model'])
+                        && $context['error'] === 'API error'
                         && $context['model'] === 'openrouter/free';
                 }),
             );
 
+        $service = new AiTranslationService($platform, $fallback, $logger);
+
+        $result = $service->translate('Original text', 'de', 'en');
+
+        self::assertSame('fallback', $result);
+    }
+
+    public function testSucceedsOnSecondAttemptAfterRejection(): void
+    {
+        $callCount = 0;
+        $platform = new InMemoryPlatform(static function () use (&$callCount): string {
+            $callCount++;
+
+            return $callCount === 1 ? '' : 'Proper translation result';
+        });
+
         $fallback = $this->createMock(TranslationServiceInterface::class);
-        $fallback->expects(self::once())->method('translate')
-            ->with($original, 'de', 'en')
-            ->willReturn($original);
+        $fallback->expects(self::never())->method('translate');
 
-        $service = new AiTranslationService(
-            $platform,
-            $fallback,
-            $logger,
-        );
+        $service = new AiTranslationService($platform, $fallback, new NullLogger());
 
-        $result = $service->translate($original, 'de', 'en');
+        $result = $service->translate('Original text here', 'de', 'en');
 
-        self::assertSame($original, $result);
+        self::assertSame('Proper translation result', $result);
+        self::assertSame(2, $callCount);
     }
 
     public function testFallsBackOnEmptyResponse(): void
@@ -73,13 +142,14 @@ final class AiTranslationServiceTest extends TestCase
         $platform = new InMemoryPlatform('');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
                 self::stringContains('rejected'),
                 self::callback(static function (array $context): bool {
                     return isset($context['original_length'])
                         && isset($context['translated_length'])
                         && isset($context['model'])
+                        && isset($context['attempt'])
                         && $context['model'] === 'openrouter/free';
                 }),
             );
@@ -105,13 +175,14 @@ final class AiTranslationServiceTest extends TestCase
         $platform = new InMemoryPlatform($original);
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
                 self::stringContains('rejected'),
                 self::callback(static function (array $context): bool {
                     return isset($context['original_length'])
                         && isset($context['translated_length'])
                         && isset($context['model'])
+                        && isset($context['attempt'])
                         && $context['model'] === 'openrouter/free';
                 }),
             );
@@ -136,7 +207,6 @@ final class AiTranslationServiceTest extends TestCase
         $original = 'English text';
 
         $platform = $this->createStub(PlatformInterface::class);
-        // Platform should NOT be called when languages match
         $platform->method('invoke')->willThrowException(new \RuntimeException('Should not be called'));
 
         $fallback = $this->createMock(TranslationServiceInterface::class);
@@ -155,7 +225,6 @@ final class AiTranslationServiceTest extends TestCase
 
     public function testAcceptsSufficientlyDifferentTranslation(): void
     {
-        // German text -> very different English translation
         $original = 'Dies ist ein deutscher Text';
         $translated = 'This is a German text completely different';
         $platform = new InMemoryPlatform($translated);
@@ -210,7 +279,7 @@ final class AiTranslationServiceTest extends TestCase
         $platform = new InMemoryPlatform('');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
                 self::stringContains('rejected'),
                 self::callback(static function (array $context): bool {
