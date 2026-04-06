@@ -137,4 +137,4 @@ jobs:
             php vendor/bin/infection \
               --threads=4 \
               --test-framework-options="--testsuite=unit" \
-              --min-msi=80 --min-covered-msi=90 || true
+              --min-msi=80 --min-covered-msi=90
