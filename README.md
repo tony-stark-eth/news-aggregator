@@ -184,14 +184,16 @@ Navigate to **Alerts** in the sidebar, then:
 
 ## Digest Configuration
 
-Digests are periodic AI-generated editorial summaries. Navigate to **Digests** to create a schedule.
+Digests are periodic AI-generated editorial summaries. Navigate to **Digests** to manage configurations.
 
 | Setting | Description |
 |---------|-------------|
 | **Cron expression** | When to generate, e.g. `0 8 * * *` (daily 8am) |
 | **Categories** | Which categories to include (leave empty for all) |
-| **Max articles** | How many articles to summarize (default: 20) |
-| **Prompt** | Custom instructions for the AI editor |
+| **Max articles** | How many articles to summarize (default: 10) |
+| **Enabled** | Toggle digest on/off without deleting it |
+
+Full CRUD: create, edit, and delete digest configurations from the UI. Use the **Run Now** button to trigger a digest on demand without waiting for the schedule. View past digest content and included articles from the history section.
 
 The digest processor runs every 5 minutes and checks which schedules are due.
 

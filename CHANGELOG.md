@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Digest configuration CRUD — create, edit, and delete digest configs from the UI (#93)
+- Manual digest trigger — "Run Now" button dispatches on-demand digest generation (#99)
+- View digest history content — read past digest summaries and included article titles (#100)
 - Alert matches always logged regardless of notification transport — `DeliveryStatus` enum (sent/skipped/failed), colored badges in notification log UI, `CleanupCommand` now purges old notification and digest logs (#37)
 - Multi-language translation with EN/DE/FR language selector — articles translated to all configured display languages, client-side dropdown to switch, translations stored as JSON on article (#36)
 - Keyword extraction from articles — AI extracts key entities (people, orgs, places), displayed as badges, searchable (#21)
