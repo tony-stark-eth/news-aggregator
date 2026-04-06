@@ -18,4 +18,9 @@ interface NotificationLogRepositoryInterface
     public function save(NotificationLog $log, bool $flush = false): void;
 
     public function flush(): void;
+
+    /**
+     * @return array<int, array{count: int, lastTriggeredAt: \DateTimeImmutable|null}>
+     */
+    public function getMatchStatsByAlertRule(): array;
 }

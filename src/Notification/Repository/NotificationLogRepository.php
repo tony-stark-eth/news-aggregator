@@ -57,4 +57,31 @@ final class NotificationLogRepository extends ServiceEntityRepository implements
     {
         $this->getEntityManager()->flush();
     }
+
+    /**
+     * @return array<int, array{count: int, lastTriggeredAt: \DateTimeImmutable|null}>
+     */
+    public function getMatchStatsByAlertRule(): array
+    {
+        /** @var list<array{ruleId: string, matchCount: string, lastTriggeredAt: string|null}> $rows */
+        $rows = $this->createQueryBuilder('l')
+            ->select('IDENTITY(l.alertRule) AS ruleId')
+            ->addSelect('COUNT(l.id) AS matchCount')
+            ->addSelect('MAX(l.sentAt) AS lastTriggeredAt')
+            ->groupBy('l.alertRule')
+            ->getQuery()
+            ->getArrayResult();
+
+        $stats = [];
+        foreach ($rows as $row) {
+            $stats[(int) $row['ruleId']] = [
+                'count' => (int) $row['matchCount'],
+                'lastTriggeredAt' => $row['lastTriggeredAt'] !== null
+                    ? new \DateTimeImmutable($row['lastTriggeredAt'])
+                    : null,
+            ];
+        }
+
+        return $stats;
+    }
 }
