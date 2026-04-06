@@ -67,14 +67,9 @@ final class AiTranslationServiceTest extends TestCase
         self::assertStringNotContainsString(' en ', $capturedPrompt);
     }
 
-    public function testRetriesOnRejectionBeforeFallback(): void
+    public function testFallsBackOnRejection(): void
     {
-        $callCount = 0;
-        $platform = new InMemoryPlatform(static function () use (&$callCount): string {
-            $callCount++;
-
-            return ''; // empty = rejected
-        });
+        $platform = new InMemoryPlatform('');
 
         $fallback = $this->createMock(TranslationServiceInterface::class);
         $fallback->expects(self::once())->method('translate')->willReturn('fallback');
@@ -84,13 +79,12 @@ final class AiTranslationServiceTest extends TestCase
         $result = $service->translate('Original text here', 'de', 'en');
 
         self::assertSame('fallback', $result);
-        self::assertSame(2, $callCount);
     }
 
-    public function testRetriesOnExceptionBeforeFallback(): void
+    public function testFallsBackOnException(): void
     {
         $platform = $this->createMock(PlatformInterface::class);
-        $platform->expects(self::exactly(2))
+        $platform->expects(self::once())
             ->method('invoke')
             ->willThrowException(new \RuntimeException('API error'));
 
@@ -98,7 +92,7 @@ final class AiTranslationServiceTest extends TestCase
         $fallback->expects(self::once())->method('translate')->willReturn('fallback');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::exactly(2))->method('warning')
+        $logger->expects(self::once())->method('warning')
             ->with(
                 self::stringContains('AI translation failed'),
                 self::callback(static function (array $context): bool {
@@ -118,33 +112,13 @@ final class AiTranslationServiceTest extends TestCase
         self::assertSame('fallback', $result);
     }
 
-    public function testSucceedsOnSecondAttemptAfterRejection(): void
-    {
-        $callCount = 0;
-        $platform = new InMemoryPlatform(static function () use (&$callCount): string {
-            $callCount++;
-
-            return $callCount === 1 ? '' : 'Proper translation result';
-        });
-
-        $fallback = $this->createMock(TranslationServiceInterface::class);
-        $fallback->expects(self::never())->method('translate');
-
-        $service = new AiTranslationService($platform, $fallback, new NullLogger(), new AiTextCleanupService());
-
-        $result = $service->translate('Original text here', 'de', 'en');
-
-        self::assertSame('Proper translation result', $result);
-        self::assertSame(2, $callCount);
-    }
-
     public function testFallsBackOnEmptyResponse(): void
     {
         $original = 'Bundesregierung beschließt neue Maßnahmen';
         $platform = new InMemoryPlatform('');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::exactly(2))->method('info')
+        $logger->expects(self::once())->method('info')
             ->with(
                 self::stringContains('rejected'),
                 self::callback(static function (array $context): bool {
@@ -178,7 +152,7 @@ final class AiTranslationServiceTest extends TestCase
         $platform = new InMemoryPlatform($original);
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::exactly(2))->method('info')
+        $logger->expects(self::once())->method('info')
             ->with(
                 self::stringContains('rejected'),
                 self::callback(static function (array $context): bool {
@@ -286,7 +260,7 @@ final class AiTranslationServiceTest extends TestCase
         $platform = new InMemoryPlatform('');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::exactly(2))->method('info')
+        $logger->expects(self::once())->method('info')
             ->with(
                 self::stringContains('rejected'),
                 self::callback(static function (array $context): bool {

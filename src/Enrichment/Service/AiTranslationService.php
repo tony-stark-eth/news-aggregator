@@ -14,7 +14,7 @@ final readonly class AiTranslationService implements TranslationServiceInterface
 {
     private const string MODEL = 'openrouter/free';
 
-    private const int MAX_AI_ATTEMPTS = 2;
+    private const int MAX_AI_ATTEMPTS = 1;
 
     private const float SIMILARITY_THRESHOLD = 0.9;
 
