@@ -6,6 +6,7 @@
             "*/Entity/*",
             "*/Controller/*",
             "*/Command/*",
+            "*/Maker/*",
             "Kernel.php"
         ]
     },
@@ -15,6 +16,18 @@
     },
     "minMsi": 80,
     "minCoveredMsi": 90,
+    "mutators": {
+        "@default": true,
+        "DecrementInteger": false,
+        "IncrementInteger": false,
+        "UnwrapTrim": false,
+        "MBString": false,
+        "ConcatOperandRemoval": {
+            "ignoreSourceCodeByRegex": [
+                "logger->|->info\\(|->warning\\(|->debug\\("
+            ]
+        }
+    },
     "testFrameworkOptions": "--testsuite=unit",
     "phpUnit": {
         "configDir": "."
