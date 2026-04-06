@@ -67,9 +67,19 @@ Before considering work complete, ask yourself:
 
 ## Workflow
 
+Read `docs/common-patterns.md` for the full pattern reference and when to use each command.
+
 ```bash
-make sf c="make:entity"    # Scaffold entities (generates repository too)
-make sf c="make:command"   # Scaffold console commands
+# Scaffold (always prefer these over writing files manually)
+make sf c="make:entity"              # Entity + Repository
+make sf c="make:value-object"        # Self-validating VO (e.g. Article/Url)
+make sf c="make:service-interface"   # Interface + implementation pair
+make sf c="make:domain-message"      # Message DTO + handler
+make sf c="make:domain-exception"    # Exception with named constructor
+make sf c="make:enum"                # String-backed enum
+make sf c="make:dto"                 # Readonly DTO
+
+# Quality
 make ecs-fix               # Fix coding standards
 make quality               # ECS + PHPStan + Rector (must pass)
 make test                  # All tests must pass
