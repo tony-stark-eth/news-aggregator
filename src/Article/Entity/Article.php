@@ -249,7 +249,7 @@ class Article
     }
 
     /**
-     * @return array<string, array{title: string, summary: string|null}>|null
+     * @return array<string, array{title: string, summary: string|null, keywords?: list<string>}>|null
      */
     public function getTranslations(): ?array
     {
@@ -257,7 +257,7 @@ class Article
     }
 
     /**
-     * @param array<string, array{title: string, summary: string|null}>|null $translations
+     * @param array<string, array{title: string, summary: string|null, keywords?: list<string>}>|null $translations
      */
     public function setTranslations(?array $translations): void
     {
