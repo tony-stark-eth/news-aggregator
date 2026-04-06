@@ -59,6 +59,11 @@ final class ModelFailoverPlatform implements PlatformInterface
                     'model' => $candidateModel,
                     'error' => $e->getMessage(),
                 ]);
+
+                // Rate limiting affects the entire provider — don't waste time trying other models
+                if (str_contains($e->getMessage(), 'Rate limit')) {
+                    break;
+                }
             }
         }
 
