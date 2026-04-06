@@ -1,5 +1,5 @@
 ---
-name: Architect
+name: architect
 description: Architecture decisions, pattern selection, bounded context design for News Aggregator
 model: opus
 tools:
@@ -7,7 +7,6 @@ tools:
   - Glob
   - Grep
   - Bash
-  - Agent
 ---
 
 # Architect Agent

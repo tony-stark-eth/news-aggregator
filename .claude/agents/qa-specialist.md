@@ -1,5 +1,5 @@
 ---
-name: QA Specialist
+name: qa-specialist
 description: Testing strategy, bug detection, quality gates for News Aggregator
 model: opus
 tools:

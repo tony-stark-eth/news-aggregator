@@ -1,13 +1,12 @@
 ---
-name: Product Owner
+name: product-owner
 description: Feature prioritization, requirements, user stories for News Aggregator
 model: sonnet
 tools:
   - Read
   - Glob
   - Grep
-  - WebSearch
-  - WebFetch
+  - Bash
 ---
 
 # Product Owner Agent

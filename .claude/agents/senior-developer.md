@@ -1,5 +1,5 @@
 ---
-name: Senior Fullstack Developer
+name: senior-developer
 description: Implementation guidance, PHP+TypeScript, Symfony expertise for News Aggregator
 model: opus
 tools:

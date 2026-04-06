@@ -6,8 +6,9 @@
 /public/bundles/
 /config/reference.php
 
-# Claude Code worktrees
+# Claude Code
 .claude/worktrees/
+.claude/settings.local.json
 
 # IDE
 /.idea/
