@@ -162,6 +162,14 @@ src/
 | `/review` | Review current branch using QA Specialist agent |
 | `/browse [--screenshot] <path>` | Browse the running UI via Playwright, return page text |
 
+## Browser Tools (Playwright MCP)
+
+PO and QA agents have access to interactive browser tools via the Playwright MCP server (`.mcp.json`). These support persistent sessions, clicking, scrolling, form filling, and screenshots — unlike `/browse` which is a single-shot text dump.
+
+Key tools: `browser_navigate`, `browser_snapshot`, `browser_click`, `browser_take_screenshot`, `browser_evaluate`, `browser_wait_for`, `browser_fill_form`, `browser_run_code`.
+
+Login required: navigate to the app URL first, then use `browser_fill_form` to log in. Session persists across tool calls.
+
 ## Agent Handoff Workflow
 
 For multi-step features, agents communicate through structured files in `.claude/handoff/`:

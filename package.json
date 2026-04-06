@@ -1,6 +1,7 @@
 {
   "private": true,
   "dependencies": {
+    "@playwright/mcp": "^0.0.70",
     "playwright": "^1.59.1"
   }
 }
