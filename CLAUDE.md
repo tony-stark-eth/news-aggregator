@@ -147,10 +147,27 @@ src/
 
 | Agent | File | Purpose |
 |-------|------|---------|
-| Architect | `.claude/agents/architect.md` | Architecture decisions, pattern selection, bounded contexts |
-| Product Owner | `.claude/agents/product-owner.md` | Feature prioritization, requirements, user stories |
-| Senior Developer | `.claude/agents/senior-developer.md` | Implementation, PHP+TypeScript, Symfony expertise |
-| QA Specialist | `.claude/agents/qa-specialist.md` | Testing strategy, bug detection, quality gates |
+| `architect` | `.claude/agents/architect.md` | Architecture decisions, pattern selection, bounded contexts |
+| `product-owner` | `.claude/agents/product-owner.md` | Feature prioritization, requirements, user stories |
+| `senior-developer` | `.claude/agents/senior-developer.md` | Implementation, PHP+TypeScript, Symfony expertise |
+| `qa-specialist` | `.claude/agents/qa-specialist.md` | Testing, code review, quality gates |
+
+## Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/quality` | Run full quality pipeline, iteratively fix until green |
+| `/fix-issue <number>` | Fetch GitHub issue, implement, test, PR — end to end |
+| `/review` | Review current branch using QA Specialist agent |
+
+## Workflow Expectations
+
+- Run `make quality` after every code change — do not consider a task complete until it passes
+- Run `make test` before committing — all tests must pass
+- One issue per branch — do not bundle unrelated changes
+- Scope lock: when you find unrelated issues during work, log them in `docs/todo/` or create a GitHub issue — do not fix inline
+- Use `make sf c="make:entity"` to scaffold entities — never write entity + repository files manually
+- Always spawn implementation agents in foreground, never background (they need tool approval)
 
 ## Hard Rules
 
