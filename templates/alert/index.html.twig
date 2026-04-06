@@ -58,7 +58,8 @@
                                     <span class="text-base-content/50">never</span>
                                 {% endif %}
                             </td>
-                            <td>
+                            <td class="flex gap-1">
+                                <a href="{{ path('app_alerts_edit', {id: rule.id}) }}" class="btn btn-ghost btn-xs">Edit</a>
                                 <form method="POST" action="{{ path('app_alerts_delete', {id: rule.id}) }}" onsubmit="return confirm('Delete this alert rule?')">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete_alert_rule') }}">
                                     <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>

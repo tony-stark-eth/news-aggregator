@@ -85,9 +85,19 @@ class AlertRule
         return $this->name;
     }
 
+    public function setName(string $name): void
+    {
+        $this->name = $name;
+    }
+
     public function getType(): AlertRuleType
     {
         return $this->type;
+    }
+
+    public function setType(AlertRuleType $type): void
+    {
+        $this->type = $type;
     }
 
     /**

@@ -1,0 +1,69 @@
+{% extends 'base.html.twig' %}
+{% block title %}Edit Alert Rule{% endblock %}
+{% block body %}
+    <h1 class="text-2xl font-bold mb-6">Edit Alert Rule</h1>
+
+    <form method="POST" action="{{ path('app_alerts_edit', {id: rule.id}) }}" class="max-w-lg flex flex-col gap-4">
+        <div class="form-control">
+            <label class="label" for="name">
+                <span class="label-text">Name</span>
+            </label>
+            <input type="text" id="name" name="name" class="input input-bordered" required value="{{ rule.name }}">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="type">
+                <span class="label-text">Type</span>
+            </label>
+            <select id="type" name="type" class="select select-bordered" required>
+                <option value="keyword" {{ rule.type.value == 'keyword' ? 'selected' : '' }}>Keyword</option>
+                <option value="ai" {{ rule.type.value == 'ai' ? 'selected' : '' }}>AI</option>
+                <option value="both" {{ rule.type.value == 'both' ? 'selected' : '' }}>Both</option>
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="keywords">
+                <span class="label-text">Keywords (comma-separated)</span>
+            </label>
+            <input type="text" id="keywords" name="keywords" class="input input-bordered" value="{{ rule.keywords|join(', ') }}">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="urgency">
+                <span class="label-text">Urgency</span>
+            </label>
+            <select id="urgency" name="urgency" class="select select-bordered">
+                <option value="low" {{ rule.urgency.value == 'low' ? 'selected' : '' }}>Low</option>
+                <option value="medium" {{ rule.urgency.value == 'medium' ? 'selected' : '' }}>Medium</option>
+                <option value="high" {{ rule.urgency.value == 'high' ? 'selected' : '' }}>High</option>
+            </select>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="context_prompt">
+                <span class="label-text">Context Prompt (optional)</span>
+            </label>
+            <textarea id="context_prompt" name="context_prompt" class="textarea textarea-bordered" rows="3">{{ rule.contextPrompt }}</textarea>
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="severity_threshold">
+                <span class="label-text">Severity Threshold (1-10)</span>
+            </label>
+            <input type="number" id="severity_threshold" name="severity_threshold" class="input input-bordered" value="{{ rule.severityThreshold }}" min="1" max="10">
+        </div>
+
+        <div class="form-control">
+            <label class="label" for="cooldown_minutes">
+                <span class="label-text">Cooldown (minutes)</span>
+            </label>
+            <input type="number" id="cooldown_minutes" name="cooldown_minutes" class="input input-bordered" value="{{ rule.cooldownMinutes }}" min="1">
+        </div>
+
+        <div class="flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary">Update Rule</button>
+            <a href="{{ path('app_alerts') }}" class="btn btn-ghost">Cancel</a>
+        </div>
+    </form>
+{% endblock %}
