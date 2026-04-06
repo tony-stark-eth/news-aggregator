@@ -293,7 +293,7 @@ final class RuleBasedCategorizationServiceTest extends TestCase
         // Actually the check is bestScore < 2, and 0 < 2 → null regardless
         // So this mutation is equivalent for the null path.
         // Let's test with exactly 1 match to verify bestScore tracking
-        $result2 = $this->service->categorize('government', 'no other keywords.');
+        $this->service->categorize('government', 'no other keywords.');
         // score=1 for politics, bestScore=0 → 1 > 0 → bestCategory='politics', bestScore=1
         // But bestScore(1) < 2 → returns null
         // With bestScore=-1 initially: 1 > -1 → same result

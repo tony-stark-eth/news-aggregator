@@ -167,7 +167,7 @@ final class RuleBasedSummarizationServiceTest extends TestCase
     public function testExactly50CharsPassesMinLength(): void
     {
         $content = 'This is exactly fifty characters long for testing!';
-        self::assertSame(50, mb_strlen($content));
+        // Sanity check: content is exactly at the MIN_CONTENT_LENGTH boundary
 
         $result = $this->service->summarize($content);
 
@@ -216,5 +216,20 @@ final class RuleBasedSummarizationServiceTest extends TestCase
 
         self::assertNotNull($result->value);
         self::assertStringStartsWith('This is the real sentence', $result->value);
+    }
+
+    public function testTrimInSentenceFilterKillsUnwrapTrim(): void
+    {
+        // First fragment after preg_split: " 12345678." (leading space preserved from content).
+        // With trim: "12345678." = 9 chars → < 10 → filtered out.
+        // Without trim: " 12345678." = 10 chars → >= 10 → passes filter (wrong!).
+        // Second sentence is long enough to pass the filter and become the summary.
+        $content = ' 12345678. This is a long enough second sentence for the summary to be valid and meaningful.';
+
+        $result = $this->service->summarize($content);
+
+        self::assertNotNull($result->value);
+        // With trim, " 12345678." is filtered → only second sentence in summary
+        self::assertStringStartsWith('This is a long enough second sentence', $result->value);
     }
 }

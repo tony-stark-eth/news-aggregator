@@ -150,4 +150,36 @@ XML;
         self::assertCount(1, $items);
         self::assertStringContainsString('AT&T', $items[0]->contentText ?? '');
     }
+
+    public function testTrimOnStripHtmlKillsUnwrapTrim(): void
+    {
+        // After strip_tags + html_entity_decode + preg_replace, the text may have
+        // leading/trailing single spaces (preg_replace collapses \s+ to single space).
+        // Without trim: " Content here " (leading/trailing space from collapsed whitespace).
+        // With trim: "Content here".
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Test</title>
+    <link>https://example.com</link>
+    <item>
+      <title>Trim Test</title>
+      <link>https://example.com/trim</link>
+      <description> &lt;p&gt; Trimmed content &lt;/p&gt; </description>
+    </item>
+  </channel>
+</rss>
+XML;
+
+        $collection = $this->parser->parse($xml);
+        $items = $collection->toArray();
+
+        self::assertCount(1, $items);
+        $contentText = $items[0]->contentText;
+        self::assertNotNull($contentText);
+        // With trim: no leading/trailing whitespace
+        self::assertSame(trim($contentText), $contentText, 'Content text should not have leading/trailing whitespace');
+        self::assertSame('Trimmed content', $contentText);
+    }
 }

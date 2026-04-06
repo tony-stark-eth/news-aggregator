@@ -188,4 +188,43 @@ final class AiTranslationServiceTest extends TestCase
 
         self::assertSame('Translated text with whitespace', $result);
     }
+
+    public function testMbStrtolowerBothSidesRequired(): void
+    {
+        $original = 'ÜBER DIE NACHRICHTEN HEUTE ABEND IM FERNSEHEN';
+        $translated = 'ÜBER DIE NACHRICHTEN HEUTE ABEND IM FERNSEHEN';
+        $platform = new InMemoryPlatform($translated);
+
+        $fallback = $this->createMock(TranslationServiceInterface::class);
+        $fallback->expects(self::once())->method('translate')->willReturn('fallback');
+
+        $service = new AiTranslationService($platform, $fallback, new NullLogger());
+
+        $result = $service->translate($original, 'de', 'en');
+
+        self::assertSame('fallback', $result);
+    }
+
+    public function testMbStrlenTranslatedInLogRejection(): void
+    {
+        $platform = new InMemoryPlatform('');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('rejected'),
+                self::callback(static function (array $context): bool {
+                    return $context['original_length'] === 18
+                        && $context['translated_length'] === 0
+                        && $context['model'] === 'openrouter/free';
+                }),
+            );
+
+        $fallback = $this->createStub(TranslationServiceInterface::class);
+        $fallback->method('translate')->willReturn('fallback');
+
+        $service = new AiTranslationService($platform, $fallback, $logger);
+
+        $service->translate('Original text here', 'de', 'en');
+    }
 }

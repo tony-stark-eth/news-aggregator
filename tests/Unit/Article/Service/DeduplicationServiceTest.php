@@ -168,7 +168,9 @@ final class DeduplicationServiceTest extends TestCase
     public function testTrimOnInputDistinguishable(): void
     {
         $service = new DeduplicationService(
-            $this->buildRepoWithTitles([['title' => 'x']]),
+            $this->buildRepoWithTitles([[
+                'title' => 'x',
+            ]]),
         );
 
         self::assertTrue($service->isDuplicate('https://example.com/new', '  x  ', null));
@@ -177,7 +179,9 @@ final class DeduplicationServiceTest extends TestCase
     public function testTrimOnExistingTitleDistinguishable(): void
     {
         $service = new DeduplicationService(
-            $this->buildRepoWithTitles([['title' => '  exact match title here  ']]),
+            $this->buildRepoWithTitles([[
+                'title' => '  exact match title here  ',
+            ]]),
         );
 
         self::assertTrue($service->isDuplicate('https://example.com/new', 'exact match title here', null));
@@ -186,7 +190,9 @@ final class DeduplicationServiceTest extends TestCase
     public function testMbStrtolowerOnInputWithUmlauts(): void
     {
         $service = new DeduplicationService(
-            $this->buildRepoWithTitles([['title' => 'über die wichtigen nachrichten von heute abend']]),
+            $this->buildRepoWithTitles([[
+                'title' => 'über die wichtigen nachrichten von heute abend',
+            ]]),
         );
 
         self::assertTrue($service->isDuplicate(
@@ -199,7 +205,9 @@ final class DeduplicationServiceTest extends TestCase
     public function testMbStrtolowerOnExistingWithUmlauts(): void
     {
         $service = new DeduplicationService(
-            $this->buildRepoWithTitles([['title' => 'MÜNCHEN STADTRAT BESCHLIESST NEUE MAßNAHMEN HEUTE']]),
+            $this->buildRepoWithTitles([[
+                'title' => 'MÜNCHEN STADTRAT BESCHLIESST NEUE MAßNAHMEN HEUTE',
+            ]]),
         );
 
         self::assertTrue($service->isDuplicate(
@@ -212,7 +220,9 @@ final class DeduplicationServiceTest extends TestCase
     public function testSimilarityAt85PercentBoundary(): void
     {
         $service = new DeduplicationService(
-            $this->buildRepoWithTitles([['title' => 'abcdefghijklmnopqrst']]),
+            $this->buildRepoWithTitles([[
+                'title' => 'abcdefghijklmnopqrst',
+            ]]),
         );
 
         self::assertTrue($service->isDuplicate(
@@ -220,6 +230,20 @@ final class DeduplicationServiceTest extends TestCase
             'abcdefghijklmnopqXXX',
             null,
         ));
+    }
+
+    public function testTrimOnExistingTitleKillsUnwrapTrim(): void
+    {
+        // Stored title has massive whitespace padding.
+        // Without trim: mb_strtolower("  hi  ") = "  hi  " compared to "hi" → similar_text gives ~57% (below 85%)
+        // With trim: mb_strtolower("hi") = "hi" compared to "hi" → 100% match
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([[
+                'title' => '  hi  ',
+            ]]),
+        );
+
+        self::assertTrue($service->isDuplicate('https://example.com/new', 'hi', null));
     }
 
     /**

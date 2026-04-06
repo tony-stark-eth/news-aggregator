@@ -20,7 +20,6 @@
         "@default": true,
         "DecrementInteger": false,
         "IncrementInteger": false,
-        "UnwrapTrim": false,
         "ConcatOperandRemoval": {
             "ignoreSourceCodeByRegex": [
                 "logger->|->info\\(|->warning\\(|->debug\\("

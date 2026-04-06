@@ -641,6 +641,36 @@ final class AiAlertEvaluationServiceTest extends TestCase
         self::assertSame(4, $result->severity);
     }
 
+    public function testTrimOnResponseBodyKillsUnwrapTrim(): void
+    {
+        // Response where SEVERITY is on first line preceded by whitespace.
+        // The regex searches the full string, so trim on the full response is
+        // technically equivalent. But we verify correctness with tight assertion.
+        $platform = new InMemoryPlatform("  SEVERITY: 9\nEXPLANATION: Trimmed correctly  ");
+        $service = new AiAlertEvaluationService($platform, new NullLogger());
+
+        $result = $service->evaluate($this->createArticle(), $this->createRule());
+
+        self::assertInstanceOf(EvaluationResult::class, $result);
+        self::assertSame(9, $result->severity);
+        self::assertSame('Trimmed correctly', $result->explanation);
+    }
+
+    public function testTrimOnExplanationFieldKillsUnwrapTrim(): void
+    {
+        // Explanation field captured by regex has trailing whitespace.
+        // Without trim on line 78: explanation = "  Important finding  " (with spaces)
+        // With trim on line 78: explanation = "Important finding"
+        $platform = new InMemoryPlatform("SEVERITY: 6\nEXPLANATION:   Important finding  ");
+        $service = new AiAlertEvaluationService($platform, new NullLogger());
+
+        $result = $service->evaluate($this->createArticle(), $this->createRule());
+
+        self::assertInstanceOf(EvaluationResult::class, $result);
+        self::assertSame('Important finding', $result->explanation);
+        self::assertStringNotContainsString('  ', $result->explanation);
+    }
+
     public function testLoggerCalledOnFailureWithContext(): void
     {
         $platform = $this->createStub(PlatformInterface::class);

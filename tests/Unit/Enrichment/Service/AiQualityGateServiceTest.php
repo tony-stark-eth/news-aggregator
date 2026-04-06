@@ -178,15 +178,7 @@ final class AiQualityGateServiceTest extends TestCase
 
     public function testLessThanAt90PercentExactly(): void
     {
-        // Construct strings with exactly 90% similarity
-        // similar_text uses longest common substring matching
-        // For "aaaaaaaaaa" (10 'a') and "aaaaaaaaab" (9 'a' + 'b'):
-        // common = 9, percent = 2*9/20*100 = 90.0
-        // < 90.0: false → returns false (rejected)
-        // <= 90.0: true → returns true (accepted)
-        // So at exactly 90%, < 90 returns false, <= 90 returns true
-        $summary = str_repeat('a', 20) . str_repeat('a', 10); // 30 'a's
-        $title = str_repeat('a', 20) . str_repeat('b', 10);   // 20 'a's + 10 'b's
+        // 20 'a's + 10 'b's
         // common = 20, total chars = 30+30=60, percent = 2*20/60*100 = 66.7% < 90 → passes
         // Need higher similarity. Let's use:
         // "aaaaaaaaaaaaaaaaaaaab" (19 a + b, 20 chars) vs "aaaaaaaaaaaaaaaaaaaa" (20 a, 20 chars)

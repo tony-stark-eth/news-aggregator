@@ -470,6 +470,65 @@ final class ModelDiscoveryServiceTest extends TestCase
         }
     }
 
+    public function testHalfOpenDebugLogOnlyWhenHalfOpen(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        $this->setBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+        $clock->modify('+25 hours');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('debug')
+            ->with(self::stringContains('half-open'));
+
+        $service = new ModelDiscoveryService(
+            $this->successClient(),
+            $cache,
+            $clock,
+            $logger,
+        );
+        $service->discoverFreeModels();
+    }
+
+    public function testOpenBreakerLogsWithSecondsContext(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        /** @var list<array{message: string, context: array<string, mixed>}> $warningCalls */
+        $warningCalls = [];
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->method('warning')->willReturnCallback(
+            static function (string $message, array $context) use (&$warningCalls): void {
+                $warningCalls[] = [
+                    'message' => $message,
+                    'context' => $context,
+                ];
+            },
+        );
+
+        for ($i = 0; $i < 3; $i++) {
+            $service = new ModelDiscoveryService(
+                $this->failingClient(),
+                $cache,
+                $clock,
+                $logger,
+            );
+            $service->discoverFreeModels();
+        }
+
+        $found = false;
+        foreach ($warningCalls as $call) {
+            if (str_contains($call['message'], 'Circuit breaker opened')) {
+                $found = true;
+                self::assertArrayHasKey('seconds', $call['context']);
+                self::assertSame(86400, $call['context']['seconds']);
+            }
+        }
+        self::assertTrue($found, 'Expected "Circuit breaker opened" warning was not logged');
+    }
+
     private function createService(
         MockHttpClient $client,
         ?ArrayAdapter $cache = null,

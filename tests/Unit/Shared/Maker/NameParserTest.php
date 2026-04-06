@@ -63,4 +63,42 @@ final class NameParserTest extends TestCase
 
         NameParser::parse('Context/');
     }
+
+    public function testTrimOnInputKillsUnwrapTrim(): void
+    {
+        // Without trim on line 25: "  NoSlash  " → str_contains("  NoSlash  ", "/") = false → throws
+        // With trim on line 25: "NoSlash" → same result. Equivalent for no-slash case.
+        // But for " / " (spaces around slash): without trim → str_contains(" / ", "/") = true
+        // → parts = [" ", " "] → trim each → ["", ""] → empty context/name → throws.
+        // With trim on input: "/" → str_contains("/", "/") = true
+        // → parts = ["", ""] → trim each → ["", ""] → throws. Same result.
+        // Real differentiator: "  Context/Name  " — line 25 trim ensures we parse clean.
+        [$context, $name] = NameParser::parse('  Context/Name  ');
+
+        self::assertSame('Context', $context);
+        self::assertSame('Name', $name);
+    }
+
+    public function testTrimOnContextPartKillsUnwrapTrim(): void
+    {
+        // Input " Context / Name " after input trim → "Context / Name"
+        // explode("/", ..., 2) → ["Context ", " Name"]
+        // Without trim on parts[0] (line 34): context = "Context " (trailing space)
+        // With trim on parts[0]: context = "Context"
+        [$context, $name] = NameParser::parse(' Context / Name ');
+
+        self::assertSame('Context', $context);
+        self::assertSame('Name', $name);
+    }
+
+    public function testTrimOnNamePartKillsUnwrapTrim(): void
+    {
+        // explode("/", "Context / Name", 2) → ["Context ", " Name"]
+        // Without trim on parts[1] (line 35): name = " Name" (leading space)
+        // With trim on parts[1]: name = "Name"
+        [$context, $name] = NameParser::parse('Context / Name');
+
+        self::assertSame('Context', $context);
+        self::assertSame('Name', $name);
+    }
 }

@@ -131,4 +131,28 @@ final class RuleBasedKeywordExtractionServiceTest extends TestCase
             self::assertNotSame('This', $firstWord);
         }
     }
+
+    public function testArrayValuesReindexesAfterUnique(): void
+    {
+        $keywords = $this->service->extract(
+            'Berlin and Berlin again',
+            'Munich hosted the event.',
+        );
+
+        self::assertContains('Berlin', $keywords);
+        self::assertContains('Munich', $keywords);
+        self::assertSame(0, array_key_first($keywords));
+    }
+
+    public function testArrayValuesReindexesAfterFilter(): void
+    {
+        $keywords = $this->service->extract(
+            'Berlin is great',
+            'However Munich is also nice.',
+        );
+
+        self::assertNotContains('However', $keywords);
+        self::assertContains('Berlin', $keywords);
+        self::assertSame(0, array_key_first($keywords));
+    }
 }
