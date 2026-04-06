@@ -16,7 +16,7 @@ final readonly class AiSummarizationService implements SummarizationServiceInter
 {
     private const string MODEL = 'openrouter/free';
 
-    private const int MAX_AI_ATTEMPTS = 2;
+    private const int MAX_AI_ATTEMPTS = 1;
 
     private const string PROMPT_TEMPLATE = <<<'PROMPT'
 Summarize the following news article in 1-2 concise sentences. Focus on the key facts.

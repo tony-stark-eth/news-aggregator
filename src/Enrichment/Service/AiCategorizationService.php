@@ -16,7 +16,7 @@ final readonly class AiCategorizationService implements CategorizationServiceInt
 {
     private const string MODEL = 'openrouter/free';
 
-    private const int MAX_AI_ATTEMPTS = 2;
+    private const int MAX_AI_ATTEMPTS = 1;
 
     private const string PROMPT_TEMPLATE = <<<'PROMPT'
 Categorize the following news article into exactly one of these categories: politics, business, tech, science, sports.
