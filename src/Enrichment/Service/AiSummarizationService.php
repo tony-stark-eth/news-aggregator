@@ -16,6 +16,8 @@ final readonly class AiSummarizationService implements SummarizationServiceInter
 {
     private const string MODEL = 'openrouter/free';
 
+    private const int MAX_AI_ATTEMPTS = 2;
+
     private const string PROMPT_TEMPLATE = <<<'PROMPT'
 Summarize the following news article in 1-2 concise sentences. Focus on the key facts.
 
@@ -33,31 +35,37 @@ PROMPT;
 
     public function summarize(string $contentText, string $title = ''): EnrichmentResult
     {
-        try {
-            $prompt = sprintf(self::PROMPT_TEMPLATE, mb_substr($contentText, 0, 2000));
+        $prompt = sprintf(self::PROMPT_TEMPLATE, mb_substr($contentText, 0, 2000));
+        $input = new MessageBag(Message::ofUser($prompt));
 
-            $input = new MessageBag(Message::ofUser($prompt));
-            $result = $this->platform->invoke(self::MODEL, $input);
-            $summary = trim($result->asText());
-            /** @var string $actualModel */
-            $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
+        for ($attempt = 1; $attempt <= self::MAX_AI_ATTEMPTS; $attempt++) {
+            try {
+                $result = $this->platform->invoke(self::MODEL, $input);
+                $summary = trim($result->asText());
+                /** @var string $actualModel */
+                $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
 
-            if ($this->qualityGate->validateSummary($summary, $title)) {
-                $this->qualityTracker->recordAcceptance($actualModel);
+                if ($this->qualityGate->validateSummary($summary, $title)) {
+                    $this->qualityTracker->recordAcceptance($actualModel);
 
-                return new EnrichmentResult($summary, EnrichmentMethod::Ai, $actualModel);
+                    return new EnrichmentResult($summary, EnrichmentMethod::Ai, $actualModel);
+                }
+
+                $this->qualityTracker->recordRejection($actualModel);
+                $this->logger->info('AI summary rejected (attempt {attempt}/{max})', [
+                    'attempt' => $attempt,
+                    'max' => self::MAX_AI_ATTEMPTS,
+                    'length' => mb_strlen($summary),
+                    'model' => $actualModel,
+                ]);
+            } catch (\Throwable $e) {
+                $this->logger->warning('AI summarization failed (attempt {attempt}/{max}): {error}', [
+                    'attempt' => $attempt,
+                    'max' => self::MAX_AI_ATTEMPTS,
+                    'error' => $e->getMessage(),
+                    'model' => self::MODEL,
+                ]);
             }
-
-            $this->qualityTracker->recordRejection($actualModel);
-            $this->logger->info('AI summary rejected by quality gate', [
-                'length' => mb_strlen($summary),
-                'model' => $actualModel,
-            ]);
-        } catch (\Throwable $e) {
-            $this->logger->warning('AI summarization failed, using rule-based fallback: {error}', [
-                'error' => $e->getMessage(),
-                'model' => self::MODEL,
-            ]);
         }
 
         return $this->ruleBasedFallback->summarize($contentText, $title);

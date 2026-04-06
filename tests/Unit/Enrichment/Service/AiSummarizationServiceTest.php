@@ -56,12 +56,14 @@ final class AiSummarizationServiceTest extends TestCase
         $qualityTracker->expects(self::never())->method('recordRejection');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('warning')
+        $logger->expects(self::exactly(2))->method('warning')
             ->with(
                 self::stringContains('AI summarization failed'),
                 self::callback(static function (array $context): bool {
                     return isset($context['error'])
                         && isset($context['model'])
+                        && isset($context['attempt'])
+                        && isset($context['max'])
                         && $context['model'] === 'openrouter/free';
                 }),
             );
@@ -88,15 +90,17 @@ final class AiSummarizationServiceTest extends TestCase
 
         $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
         $qualityTracker->expects(self::never())->method('recordAcceptance');
-        $qualityTracker->expects(self::once())->method('recordRejection')->with('openrouter/free');
+        $qualityTracker->expects(self::exactly(2))->method('recordRejection')->with('openrouter/free');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
-                self::stringContains('rejected by quality gate'),
+                self::stringContains('AI summary rejected'),
                 self::callback(static function (array $context): bool {
                     return isset($context['length'])
                         && isset($context['model'])
+                        && isset($context['attempt'])
+                        && isset($context['max'])
                         && $context['model'] === 'openrouter/free';
                 }),
             );
@@ -160,7 +164,6 @@ final class AiSummarizationServiceTest extends TestCase
 
     public function testTruncatesContentTo2000Chars(): void
     {
-        // Extremely long content should still work
         $longContent = str_repeat('This is a sentence. ', 500);
         $platform = new InMemoryPlatform('A valid AI summary of sufficient length for the quality gate.');
 
@@ -179,8 +182,6 @@ final class AiSummarizationServiceTest extends TestCase
 
     public function testMbSubstrUsedForContentTruncationWithMultibyte(): void
     {
-        // Content with 2001 multibyte chars. mb_substr(s, 0, 2000) takes 2000 chars.
-        // substr(s, 0, 2000) would take ~666 chars (3 bytes each)
         $multibyteContent = str_repeat('日', 2001);
         $platform = new InMemoryPlatform('A valid AI summary that passes quality gate.');
 
@@ -200,15 +201,13 @@ final class AiSummarizationServiceTest extends TestCase
 
     public function testMbStrlenUsedInRejectionLogWithMultibyte(): void
     {
-        // AI returns short summary -> rejected -> logger logs mb_strlen
         $platform = new InMemoryPlatform('Short.');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
-                self::stringContains('rejected by quality gate'),
+                self::stringContains('AI summary rejected'),
                 self::callback(static function (array $context): bool {
-                    // "Short." is 6 chars
                     return $context['length'] === 6
                         && $context['model'] === 'openrouter/free';
                 }),
@@ -231,7 +230,7 @@ final class AiSummarizationServiceTest extends TestCase
         $platform = new InMemoryPlatform('Short.');
 
         $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
-        $qualityTracker->expects(self::once())->method('recordRejection')
+        $qualityTracker->expects(self::exactly(2))->method('recordRejection')
             ->with('openrouter/free');
         $qualityTracker->expects(self::never())->method('recordAcceptance');
 
@@ -247,10 +246,10 @@ final class AiSummarizationServiceTest extends TestCase
         $service->summarize($content, 'Title');
     }
 
-    public function testPlatformInvokeCalledWithModel(): void
+    public function testPlatformInvokeCalledTwiceOnFailure(): void
     {
         $platform = $this->createMock(PlatformInterface::class);
-        $platform->expects(self::once())->method('invoke')
+        $platform->expects(self::exactly(2))->method('invoke')
             ->with('openrouter/free', self::anything())
             ->willThrowException(new \RuntimeException('Expected'));
 
@@ -268,8 +267,6 @@ final class AiSummarizationServiceTest extends TestCase
 
     public function testMbSubstrStartPositionZero(): void
     {
-        // Kills IncrementInteger (0→1) and DecrementInteger (0→-1) on mb_substr start
-        // Content starting with a specific char that would be missing if position=1
         $platform = new InMemoryPlatform('A valid summary of sufficient length for the quality gate check.');
 
         $service = new AiSummarizationService(
@@ -280,23 +277,19 @@ final class AiSummarizationServiceTest extends TestCase
             new NullLogger(),
         );
 
-        // Start with 'Z' — if position changes, Z would be lost from prompt
-        // But since AI response is fixed, we can't detect this in the output
         $result = $service->summarize('Zcontent text here', 'Title');
         self::assertSame(EnrichmentMethod::Ai, $result->method);
     }
 
     public function testMbStrlenInRejectionLogWithMultibyteChars(): void
     {
-        // Kills MBString on mb_strlen→strlen in rejection log
-        // AI returns short multibyte summary → rejected → logger logs mb_strlen
         $multibyteSummary = str_repeat('日', 5); // 5 mb chars, 15 bytes
         $platform = new InMemoryPlatform($multibyteSummary);
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
-                self::stringContains('rejected by quality gate'),
+                self::stringContains('AI summary rejected'),
                 self::callback(static function (array $context): bool {
                     // mb_strlen("日日日日日") = 5, strlen would give 15
                     return $context['length'] === 5
@@ -318,7 +311,6 @@ final class AiSummarizationServiceTest extends TestCase
 
     public function testTrimCalledOnAiResponse(): void
     {
-        // Trim should be called on the AI response
         $platform = new InMemoryPlatform('  A valid AI summary of sufficient length for the quality gate.  ');
 
         $service = new AiSummarizationService(
@@ -332,6 +324,159 @@ final class AiSummarizationServiceTest extends TestCase
         $result = $service->summarize('Long content text here', 'Title');
 
         self::assertSame('A valid AI summary of sufficient length for the quality gate.', $result->value);
+    }
+
+    public function testRetrySucceedsOnSecondAttemptAfterRejection(): void
+    {
+        $callCount = 0;
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::exactly(2))->method('invoke')
+            ->willReturnCallback(function () use (&$callCount): mixed {
+                ++$callCount;
+
+                $response = $callCount === 1
+                    ? 'Short.'
+                    : 'The government announced new economic measures to address inflation concerns.';
+
+                return new InMemoryPlatform($response)->invoke('openrouter/free', []);
+            });
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::once())->method('recordRejection')->with('openrouter/free');
+        $qualityTracker->expects(self::once())->method('recordAcceptance')->with('openrouter/free');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('AI summary rejected (attempt'),
+                self::callback(static fn (array $ctx): bool => $ctx['attempt'] === 1 && $ctx['max'] === 2),
+            );
+
+        $service = new AiSummarizationService(
+            $platform,
+            new RuleBasedSummarizationService(),
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            $logger,
+        );
+
+        $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';
+        $result = $service->summarize($content, 'Title');
+
+        self::assertSame('The government announced new economic measures to address inflation concerns.', $result->value);
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
+    }
+
+    public function testBothAttemptsRejectedFallsBackToRuleBased(): void
+    {
+        $platform = new InMemoryPlatform('Short.');
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::exactly(2))->method('recordRejection');
+        $qualityTracker->expects(self::never())->method('recordAcceptance');
+
+        $fallback = $this->createMock(SummarizationServiceInterface::class);
+        $fallback->expects(self::once())->method('summarize')
+            ->with('Content text', 'Title')
+            ->willReturn(new EnrichmentResult('Rule-based summary', EnrichmentMethod::RuleBased));
+
+        $service = new AiSummarizationService(
+            $platform,
+            $fallback,
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            new NullLogger(),
+        );
+
+        $result = $service->summarize('Content text', 'Title');
+
+        self::assertSame('Rule-based summary', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
+    }
+
+    public function testFirstAttemptThrowsSecondSucceeds(): void
+    {
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::exactly(2))->method('invoke')
+            ->willReturnOnConsecutiveCalls(
+                $this->throwException(new \RuntimeException('API timeout')),
+                new InMemoryPlatform('A valid AI summary of sufficient length for the quality gate.')->invoke('openrouter/free', []),
+            );
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::once())->method('recordAcceptance')->with('openrouter/free');
+        $qualityTracker->expects(self::never())->method('recordRejection');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')
+            ->with(
+                self::stringContains('AI summarization failed (attempt'),
+                self::callback(static fn (array $ctx): bool => $ctx['attempt'] === 1 && $ctx['max'] === 2),
+            );
+
+        $service = new AiSummarizationService(
+            $platform,
+            new RuleBasedSummarizationService(),
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            $logger,
+        );
+
+        $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';
+        $result = $service->summarize($content, 'Title');
+
+        self::assertSame('A valid AI summary of sufficient length for the quality gate.', $result->value);
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
+    }
+
+    public function testBothAttemptsThrowFallsBackToRuleBased(): void
+    {
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')->willThrowException(new \RuntimeException('API down'));
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::never())->method('recordAcceptance');
+        $qualityTracker->expects(self::never())->method('recordRejection');
+
+        $fallback = $this->createMock(SummarizationServiceInterface::class);
+        $fallback->expects(self::once())->method('summarize')
+            ->with('Content text', 'Title')
+            ->willReturn(new EnrichmentResult('Rule-based summary', EnrichmentMethod::RuleBased));
+
+        $service = new AiSummarizationService(
+            $platform,
+            $fallback,
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            new NullLogger(),
+        );
+
+        $result = $service->summarize('Content text', 'Title');
+
+        self::assertSame('Rule-based summary', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
+    }
+
+    public function testFirstAttemptSucceedsReturnsImmediately(): void
+    {
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::once())->method('invoke')
+            ->willReturnCallback(
+                static fn (): mixed => new InMemoryPlatform('A valid AI summary of sufficient length for the quality gate.')->invoke('openrouter/free', []),
+            );
+
+        $service = new AiSummarizationService(
+            $platform,
+            new RuleBasedSummarizationService(),
+            $this->createQualityGateStub(),
+            $this->createStub(ModelQualityTrackerInterface::class),
+            new NullLogger(),
+        );
+
+        $content = 'This is a sufficiently long article content for testing purposes. Second sentence here.';
+        $result = $service->summarize($content, 'Title');
+
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
     }
 
     private function createQualityGateStub(): AiQualityGateServiceInterface

@@ -16,6 +16,8 @@ final readonly class AiCategorizationService implements CategorizationServiceInt
 {
     private const string MODEL = 'openrouter/free';
 
+    private const int MAX_AI_ATTEMPTS = 2;
+
     private const string PROMPT_TEMPLATE = <<<'PROMPT'
 Categorize the following news article into exactly one of these categories: politics, business, tech, science, sports.
 
@@ -36,35 +38,41 @@ PROMPT;
 
     public function categorize(string $title, ?string $contentText): EnrichmentResult
     {
-        try {
-            $prompt = sprintf(
-                self::PROMPT_TEMPLATE,
-                $title,
-                mb_substr($contentText ?? '', 0, 1000),
-            );
+        $prompt = sprintf(
+            self::PROMPT_TEMPLATE,
+            $title,
+            mb_substr($contentText ?? '', 0, 1000),
+        );
+        $input = new MessageBag(Message::ofUser($prompt));
 
-            $input = new MessageBag(Message::ofUser($prompt));
-            $result = $this->platform->invoke(self::MODEL, $input);
-            $categorySlug = trim(mb_strtolower($result->asText()));
-            /** @var string $actualModel */
-            $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
+        for ($attempt = 1; $attempt <= self::MAX_AI_ATTEMPTS; $attempt++) {
+            try {
+                $result = $this->platform->invoke(self::MODEL, $input);
+                $categorySlug = trim(mb_strtolower($result->asText()));
+                /** @var string $actualModel */
+                $actualModel = $result->getMetadata()->get('actual_model', self::MODEL);
 
-            if ($this->qualityGate->validateCategorization($categorySlug)) {
-                $this->qualityTracker->recordAcceptance($actualModel);
+                if ($this->qualityGate->validateCategorization($categorySlug)) {
+                    $this->qualityTracker->recordAcceptance($actualModel);
 
-                return new EnrichmentResult($categorySlug, EnrichmentMethod::Ai, $actualModel);
+                    return new EnrichmentResult($categorySlug, EnrichmentMethod::Ai, $actualModel);
+                }
+
+                $this->qualityTracker->recordRejection($actualModel);
+                $this->logger->info('AI categorization rejected (attempt {attempt}/{max}): {slug}', [
+                    'attempt' => $attempt,
+                    'max' => self::MAX_AI_ATTEMPTS,
+                    'slug' => $categorySlug,
+                    'model' => $actualModel,
+                ]);
+            } catch (\Throwable $e) {
+                $this->logger->warning('AI categorization failed (attempt {attempt}/{max}): {error}', [
+                    'attempt' => $attempt,
+                    'max' => self::MAX_AI_ATTEMPTS,
+                    'error' => $e->getMessage(),
+                    'model' => self::MODEL,
+                ]);
             }
-
-            $this->qualityTracker->recordRejection($actualModel);
-            $this->logger->info('AI categorization rejected by quality gate: {slug}', [
-                'slug' => $categorySlug,
-                'model' => $actualModel,
-            ]);
-        } catch (\Throwable $e) {
-            $this->logger->warning('AI categorization failed, using rule-based fallback: {error}', [
-                'error' => $e->getMessage(),
-                'model' => self::MODEL,
-            ]);
         }
 
         return $this->ruleBasedFallback->categorize($title, $contentText);

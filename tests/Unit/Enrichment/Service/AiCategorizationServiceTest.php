@@ -55,12 +55,14 @@ final class AiCategorizationServiceTest extends TestCase
         $qualityTracker->expects(self::never())->method('recordRejection');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('warning')
+        $logger->expects(self::exactly(2))->method('warning')
             ->with(
                 self::stringContains('AI categorization failed'),
                 self::callback(static function (array $context): bool {
                     return isset($context['error'])
                         && isset($context['model'])
+                        && isset($context['attempt'])
+                        && isset($context['max'])
                         && $context['error'] === 'API down'
                         && $context['model'] === 'openrouter/free';
                 }),
@@ -90,15 +92,17 @@ final class AiCategorizationServiceTest extends TestCase
 
         $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
         $qualityTracker->expects(self::never())->method('recordAcceptance');
-        $qualityTracker->expects(self::once())->method('recordRejection')->with('openrouter/free');
+        $qualityTracker->expects(self::exactly(2))->method('recordRejection')->with('openrouter/free');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
-                self::stringContains('rejected by quality gate'),
+                self::stringContains('AI categorization rejected'),
                 self::callback(static function (array $context): bool {
                     return isset($context['slug'])
                         && isset($context['model'])
+                        && isset($context['attempt'])
+                        && isset($context['max'])
                         && $context['slug'] === 'invalid_category'
                         && $context['model'] === 'openrouter/free';
                 }),
@@ -123,7 +127,6 @@ final class AiCategorizationServiceTest extends TestCase
 
     public function testTruncatesContentTo1000Chars(): void
     {
-        // Verify it uses mb_substr to limit content - test by sending long content that still categorizes
         $longContent = str_repeat('The government passed a new policy. ', 100);
         $platform = new InMemoryPlatform('politics');
 
@@ -202,8 +205,6 @@ final class AiCategorizationServiceTest extends TestCase
 
     public function testMbStrtolowerUsedOnAiResponseWithUmlauts(): void
     {
-        // AI returns "TECH" with leading umlaut — mb_strtolower handles, strtolower may not
-        // But since category slugs are ASCII, let's test the mb_substr truncation instead
         $platform = new InMemoryPlatform('  Science  ');
 
         $service = new AiCategorizationService(
@@ -216,14 +217,12 @@ final class AiCategorizationServiceTest extends TestCase
 
         $result = $service->categorize('Test', 'Content');
 
-        // mb_strtolower("Science") = "science" which is valid
         self::assertSame('science', $result->value);
         self::assertSame(EnrichmentMethod::Ai, $result->method);
     }
 
     public function testMbSubstrUsedForContentTruncationWithMultibyte(): void
     {
-        // Content with multibyte chars exceeding 1000 chars
         $multibyteContent = str_repeat('日', 1001);
         $platform = new InMemoryPlatform('tech');
 
@@ -237,7 +236,6 @@ final class AiCategorizationServiceTest extends TestCase
 
         $result = $service->categorize('Tech Title', $multibyteContent);
 
-        // Should work without error, mb_substr truncates correctly
         self::assertSame('tech', $result->value);
         self::assertSame(EnrichmentMethod::Ai, $result->method);
     }
@@ -247,7 +245,7 @@ final class AiCategorizationServiceTest extends TestCase
         $platform = new InMemoryPlatform('nonsense');
 
         $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
-        $qualityTracker->expects(self::once())->method('recordRejection')
+        $qualityTracker->expects(self::exactly(2))->method('recordRejection')
             ->with('openrouter/free');
         $qualityTracker->expects(self::never())->method('recordAcceptance');
 
@@ -267,12 +265,14 @@ final class AiCategorizationServiceTest extends TestCase
         $platform = new InMemoryPlatform('invalid');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
+        $logger->expects(self::exactly(2))->method('info')
             ->with(
-                self::stringContains('rejected by quality gate'),
+                self::stringContains('AI categorization rejected'),
                 self::callback(static function (array $context): bool {
                     return $context['slug'] === 'invalid'
-                        && $context['model'] === 'openrouter/free';
+                        && $context['model'] === 'openrouter/free'
+                        && isset($context['attempt'])
+                        && isset($context['max']);
                 }),
             );
 
@@ -287,10 +287,10 @@ final class AiCategorizationServiceTest extends TestCase
         $service->categorize('Test', 'Content');
     }
 
-    public function testPlatformInvokeCalledWithModel(): void
+    public function testPlatformInvokeCalledTwiceOnFailure(): void
     {
         $platform = $this->createMock(PlatformInterface::class);
-        $platform->expects(self::once())->method('invoke')
+        $platform->expects(self::exactly(2))->method('invoke')
             ->with('openrouter/free', self::anything())
             ->willThrowException(new \RuntimeException('Expected'));
 
@@ -307,9 +307,6 @@ final class AiCategorizationServiceTest extends TestCase
 
     public function testMbSubstrContentStartsAtZero(): void
     {
-        // Kills IncrementInteger on mb_substr start position (0→1)
-        // and DecrementInteger (0→-1)
-        // Content starts with a unique char that should be in the prompt
         $platform = new InMemoryPlatform('tech');
 
         $service = new AiCategorizationService(
@@ -320,7 +317,6 @@ final class AiCategorizationServiceTest extends TestCase
             new NullLogger(),
         );
 
-        // Content starts with 'Z' — if position 0 is mutated to 1, Z is skipped
         $result = $service->categorize('Title', 'Zcontent here software developer cloud');
 
         self::assertSame('tech', $result->value);
@@ -328,12 +324,6 @@ final class AiCategorizationServiceTest extends TestCase
 
     public function testMbSubstrContentTruncatesExactly1000(): void
     {
-        // Kills IncrementInteger (1000→1001) and DecrementInteger (1000→999)
-        // Content of exactly 1001 chars, 1001st char is crucial
-        // With 1000: 1001st char is cut off
-        // With 1001: 1001st char is included
-        // But since the content goes to the AI and we get a fixed response, we can't distinguish
-        // This mutation is practically equivalent in test context.
         $platform = new InMemoryPlatform('tech');
 
         $service = new AiCategorizationService(
@@ -350,14 +340,6 @@ final class AiCategorizationServiceTest extends TestCase
 
     public function testCoalesceOnNullContent(): void
     {
-        // Kills Coalesce mutation: $contentText ?? '' → '' ?? $contentText
-        // When contentText is null:
-        // Original: null ?? '' = ''
-        // Mutated: '' ?? null = '' (same! '' is not null)
-        // When contentText is 'text':
-        // Original: 'text' ?? '' = 'text'
-        // Mutated: '' ?? 'text' = '' (different!)
-        // So we need to test with non-null content
         $platform = new InMemoryPlatform('tech');
 
         $service = new AiCategorizationService(
@@ -368,9 +350,6 @@ final class AiCategorizationServiceTest extends TestCase
             new NullLogger(),
         );
 
-        // With original: content 'software developer' is included in prompt
-        // With mutation: '' is used instead → content is empty
-        // Both return 'tech' from AI regardless... can't distinguish
         $result = $service->categorize('Title', 'software developer cloud api');
         self::assertSame('tech', $result->value);
     }
@@ -396,6 +375,154 @@ final class AiCategorizationServiceTest extends TestCase
         $result = $service->categorize('My Title', 'My Content');
 
         self::assertSame('tech', $result->value);
+    }
+
+    public function testRetrySucceedsOnSecondAttemptAfterRejection(): void
+    {
+        $callCount = 0;
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::exactly(2))->method('invoke')
+            ->willReturnCallback(function () use (&$callCount): mixed {
+                ++$callCount;
+
+                $response = $callCount === 1 ? 'invalid_slug' : 'tech';
+
+                return new InMemoryPlatform($response)->invoke('openrouter/free', []);
+            });
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::once())->method('recordRejection')->with('openrouter/free');
+        $qualityTracker->expects(self::once())->method('recordAcceptance')->with('openrouter/free');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('AI categorization rejected (attempt'),
+                self::callback(static fn (array $ctx): bool => $ctx['attempt'] === 1 && $ctx['max'] === 2),
+            );
+
+        $service = new AiCategorizationService(
+            $platform,
+            new RuleBasedCategorizationService(),
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            $logger,
+        );
+
+        $result = $service->categorize('Test', 'Content');
+
+        self::assertSame('tech', $result->value);
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
+    }
+
+    public function testBothAttemptsRejectedFallsBackToRuleBased(): void
+    {
+        $platform = new InMemoryPlatform('invalid_slug');
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::exactly(2))->method('recordRejection');
+        $qualityTracker->expects(self::never())->method('recordAcceptance');
+
+        $fallback = $this->createMock(CategorizationServiceInterface::class);
+        $fallback->expects(self::once())->method('categorize')
+            ->with('Title', 'Content')
+            ->willReturn(new EnrichmentResult('tech', EnrichmentMethod::RuleBased));
+
+        $service = new AiCategorizationService(
+            $platform,
+            $fallback,
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            new NullLogger(),
+        );
+
+        $result = $service->categorize('Title', 'Content');
+
+        self::assertSame('tech', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
+    }
+
+    public function testFirstAttemptThrowsSecondSucceeds(): void
+    {
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::exactly(2))->method('invoke')
+            ->willReturnOnConsecutiveCalls(
+                $this->throwException(new \RuntimeException('API timeout')),
+                new InMemoryPlatform('science')->invoke('openrouter/free', []),
+            );
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::once())->method('recordAcceptance')->with('openrouter/free');
+        $qualityTracker->expects(self::never())->method('recordRejection');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')
+            ->with(
+                self::stringContains('AI categorization failed (attempt'),
+                self::callback(static fn (array $ctx): bool => $ctx['attempt'] === 1 && $ctx['max'] === 2),
+            );
+
+        $service = new AiCategorizationService(
+            $platform,
+            new RuleBasedCategorizationService(),
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            $logger,
+        );
+
+        $result = $service->categorize('Test', 'Content');
+
+        self::assertSame('science', $result->value);
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
+    }
+
+    public function testBothAttemptsThrowFallsBackToRuleBased(): void
+    {
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')->willThrowException(new \RuntimeException('API down'));
+
+        $qualityTracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $qualityTracker->expects(self::never())->method('recordAcceptance');
+        $qualityTracker->expects(self::never())->method('recordRejection');
+
+        $fallback = $this->createMock(CategorizationServiceInterface::class);
+        $fallback->expects(self::once())->method('categorize')
+            ->with('Title', 'Content')
+            ->willReturn(new EnrichmentResult('tech', EnrichmentMethod::RuleBased));
+
+        $service = new AiCategorizationService(
+            $platform,
+            $fallback,
+            $this->createQualityGateStub(),
+            $qualityTracker,
+            new NullLogger(),
+        );
+
+        $result = $service->categorize('Title', 'Content');
+
+        self::assertSame('tech', $result->value);
+        self::assertSame(EnrichmentMethod::RuleBased, $result->method);
+    }
+
+    public function testFirstAttemptSucceedsReturnsImmediately(): void
+    {
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::once())->method('invoke')
+            ->willReturnCallback(
+                static fn (): mixed => new InMemoryPlatform('tech')->invoke('openrouter/free', []),
+            );
+
+        $service = new AiCategorizationService(
+            $platform,
+            new RuleBasedCategorizationService(),
+            $this->createQualityGateStub(),
+            $this->createStub(ModelQualityTrackerInterface::class),
+            new NullLogger(),
+        );
+
+        $result = $service->categorize('Test', 'Content');
+
+        self::assertSame(EnrichmentMethod::Ai, $result->method);
     }
 
     private function createQualityGateStub(): AiQualityGateServiceInterface

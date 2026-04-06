@@ -186,4 +186,109 @@ final class AiQualityGateServiceTest extends TestCase
         $title = 'aaaaaaaaaaaaaaaaaazz';
         self::assertFalse($this->gate->validateSummary($summary, $title));
     }
+
+    public function testReasoningPrefixBasedOnRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'Based on the provided information, the economy is struggling with inflation.',
+            'Economic Update',
+        ));
+    }
+
+    public function testReasoningPrefixAccordingToRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'According to the article, new policies were announced today by officials.',
+            'Policy Announcement',
+        ));
+    }
+
+    public function testReasoningPrefixHereIsRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'Here is a summary of the key points from the article about climate change.',
+            'Climate Report',
+        ));
+    }
+
+    public function testReasoningPrefixLetMeRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'Let me summarize this article about the latest technology trends and innovations.',
+            'Tech Trends',
+        ));
+    }
+
+    public function testReasoningPrefixSureRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'Sure, the article discusses the impact of new regulations on businesses.',
+            'Business Regulations',
+        ));
+    }
+
+    public function testReasoningPrefixCertainlyRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'Certainly! The main topic covers renewable energy advances in Europe.',
+            'Energy News',
+        ));
+    }
+
+    public function testReasoningPrefixTheArticleRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'The article discusses major breakthroughs in quantum computing research.',
+            'Quantum Computing',
+        ));
+    }
+
+    public function testReasoningPrefixInSummaryRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'In summary, global markets reacted negatively to the trade war escalation.',
+            'Trade War',
+        ));
+    }
+
+    public function testReasoningFragmentAsAnAiRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'The economy is growing but as an ai I must note these are uncertain times.',
+            'Economic Growth',
+        ));
+    }
+
+    public function testReasoningFragmentProvidedInformationRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'The key takeaway from the provided information is that inflation continues.',
+            'Inflation Report',
+        ));
+    }
+
+    public function testReasoningPrefixCaseInsensitiveRejected(): void
+    {
+        self::assertFalse($this->gate->validateSummary(
+            'BASED ON the latest reports, the stock market reached a new record high.',
+            'Stock Market',
+        ));
+    }
+
+    public function testBasedOnMidSentencePassesFalsePositiveSafety(): void
+    {
+        // "based on" mid-sentence should NOT be rejected — only prefix matches
+        self::assertTrue($this->gate->validateSummary(
+            'The decision was based on economic data from the latest quarterly report.',
+            'Economic Decision',
+        ));
+    }
+
+    public function testCleanSummaryStillPasses(): void
+    {
+        self::assertTrue($this->gate->validateSummary(
+            'Global temperatures rose by 1.5 degrees Celsius in 2025, exceeding targets.',
+            'Climate Report 2025',
+        ));
+    }
 }
