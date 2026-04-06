@@ -17,6 +17,11 @@ interface CategoryRepositoryInterface
 
     public function findBySlug(string $slug): ?Category;
 
+    /**
+     * @return list<Category>
+     */
+    public function findAllOrderedByWeight(): array;
+
     public function save(Category $category, bool $flush = false): void;
 
     public function flush(): void;

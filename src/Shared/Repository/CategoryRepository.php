@@ -32,6 +32,17 @@ final class CategoryRepository extends ServiceEntityRepository implements Catego
         return parent::findAll();
     }
 
+    /**
+     * @return list<Category>
+     */
+    public function findAllOrderedByWeight(): array
+    {
+        /** @var list<Category> */
+        return $this->findBy([], [
+            'weight' => 'ASC',
+        ]);
+    }
+
     public function findBySlug(string $slug): ?Category
     {
         return $this->findOneBy([

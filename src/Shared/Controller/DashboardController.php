@@ -6,6 +6,7 @@ namespace App\Shared\Controller;
 
 use App\Article\Entity\Article;
 use App\Article\Repository\ArticleRepositoryInterface;
+use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
 use App\User\Repository\UserArticleReadRepositoryInterface;
@@ -22,6 +23,7 @@ final class DashboardController
         private readonly ArticleRepositoryInterface $articleRepository,
         private readonly UserArticleReadRepositoryInterface $userArticleReadRepository,
         private readonly SourceRepositoryInterface $sourceRepository,
+        private readonly CategoryRepositoryInterface $categoryRepository,
         private readonly ClockInterface $clock,
     ) {
     }
@@ -70,6 +72,7 @@ final class DashboardController
         return $this->controller->render('dashboard/index.html.twig', [
             'articles' => $articles,
             'currentCategory' => $category,
+            'categories' => $this->categoryRepository->findAllOrderedByWeight(),
             'articlesToday' => $articlesToday,
             'activeSources' => $activeSources,
             'page' => $page,

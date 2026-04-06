@@ -12,11 +12,9 @@
     {# Category tabs #}
     <div class="tabs tabs-boxed mb-4 overflow-x-auto">
         <a href="{{ path('app_dashboard') }}" class="tab {{ currentCategory is null ? 'tab-active' : '' }}">All</a>
-        <a href="{{ path('app_dashboard', {category: 'politics'}) }}" class="tab {{ currentCategory == 'politics' ? 'tab-active' : '' }}">Politics</a>
-        <a href="{{ path('app_dashboard', {category: 'business'}) }}" class="tab {{ currentCategory == 'business' ? 'tab-active' : '' }}">Business</a>
-        <a href="{{ path('app_dashboard', {category: 'tech'}) }}" class="tab {{ currentCategory == 'tech' ? 'tab-active' : '' }}">Tech</a>
-        <a href="{{ path('app_dashboard', {category: 'science'}) }}" class="tab {{ currentCategory == 'science' ? 'tab-active' : '' }}">Science</a>
-        <a href="{{ path('app_dashboard', {category: 'sports'}) }}" class="tab {{ currentCategory == 'sports' ? 'tab-active' : '' }}">Sports</a>
+        {% for category in categories %}
+            <a href="{{ path('app_dashboard', {category: category.slug}) }}" class="tab {{ currentCategory == category.slug ? 'tab-active' : '' }}">{{ category.name }}</a>
+        {% endfor %}
     </div>
 
     {# Unread filter + Mark all read #}
