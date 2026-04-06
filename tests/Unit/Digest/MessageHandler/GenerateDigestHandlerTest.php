@@ -20,8 +20,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\NullLogger;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Component\Notifier\NotifierInterface;
 
 #[CoversClass(GenerateDigestHandler::class)]
@@ -39,6 +40,8 @@ final class GenerateDigestHandlerTest extends TestCase
 
     private MockObject&NotifierInterface $notifier;
 
+    private MockObject&LoggerInterface $logger;
+
     private MockClock $clock;
 
     private GenerateDigestHandler $handler;
@@ -50,6 +53,7 @@ final class GenerateDigestHandlerTest extends TestCase
         $this->generator = $this->createMock(DigestGeneratorServiceInterface::class);
         $this->summary = $this->createMock(DigestSummaryServiceInterface::class);
         $this->notifier = $this->createMock(NotifierInterface::class);
+        $this->logger = $this->createMock(LoggerInterface::class);
         $this->clock = new MockClock();
 
         $this->handler = new GenerateDigestHandler(
@@ -59,11 +63,11 @@ final class GenerateDigestHandlerTest extends TestCase
             $this->summary,
             $this->notifier,
             $this->clock,
-            new NullLogger(),
+            $this->logger,
         );
     }
 
-    public function testArticleTitlesAreStoredInLog(): void
+    public function testSuccessfulRunStoresArticleTitlesAndUpdatesLastRunAt(): void
     {
         $user = new User('test@example.com', 'hashed');
         $config = new DigestConfig('Test', '0 8 * * *', $user, new \DateTimeImmutable());
@@ -82,6 +86,19 @@ final class GenerateDigestHandlerTest extends TestCase
         $this->generator->method('collectArticles')->willReturn($grouped);
         $this->summary->method('generate')->willReturn('Summary content');
 
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(static function (Notification $n): bool {
+                return str_contains($n->getSubject(), 'Test') && str_contains($n->getSubject(), '2 articles');
+            }));
+
+        $this->configRepository->expects(self::once())->method('flush');
+
+        $this->logger->expects(self::once())->method('info')
+            ->with(
+                'Digest "{name}" generated: {count} articles',
+                self::callback(static fn (array $ctx): bool => $ctx['name'] === 'Test' && $ctx['count'] === 2 && $ctx['delivery_success'] === true && $ctx['digest_config_id'] === 1),
+            );
+
         $savedLog = null;
         $this->logRepository
             ->expects(self::once())
@@ -96,9 +113,13 @@ final class GenerateDigestHandlerTest extends TestCase
 
         self::assertNotNull($savedLog);
         self::assertSame(['Article One', 'Article Two'], $savedLog->getArticleTitles());
+        self::assertSame(2, $savedLog->getArticleCount());
+        self::assertTrue($savedLog->isDeliverySuccess());
+        self::assertSame('Summary content', $savedLog->getContent());
+        self::assertEquals($this->clock->now(), $config->getLastRunAt());
     }
 
-    public function testSkippedRunIsLogged(): void
+    public function testSkippedRunIsLoggedWithLastRunAtUpdate(): void
     {
         $user = new User('test@example.com', 'hashed');
         $config = new DigestConfig('Test', '0 8 * * *', $user, new \DateTimeImmutable());
@@ -107,6 +128,14 @@ final class GenerateDigestHandlerTest extends TestCase
 
         $this->configRepository->method('findById')->willReturn($config);
         $this->generator->method('collectArticles')->willReturn($grouped);
+
+        $this->configRepository->expects(self::once())->method('flush');
+
+        $this->logger->expects(self::once())->method('info')
+            ->with(
+                'Digest "{name}" skipped: no articles found',
+                self::callback(static fn (array $ctx): bool => $ctx['name'] === 'Test' && $ctx['digest_config_id'] === 1),
+            );
 
         $savedLog = null;
         $this->logRepository
@@ -125,6 +154,7 @@ final class GenerateDigestHandlerTest extends TestCase
         self::assertFalse($savedLog->isDeliverySuccess());
         self::assertSame([], $savedLog->getArticleTitles());
         self::assertStringContainsString('Skipped', $savedLog->getContent());
+        self::assertEquals($this->clock->now(), $config->getLastRunAt());
     }
 
     public function testForceFlagBypassesEnabledCheck(): void
@@ -157,5 +187,40 @@ final class GenerateDigestHandlerTest extends TestCase
         $this->logRepository->expects(self::never())->method('save');
 
         ($this->handler)(new GenerateDigestMessage(1));
+    }
+
+    public function testNotificationFailureLogsWarningAndSetsSuccessFalse(): void
+    {
+        $user = new User('test@example.com', 'hashed');
+        $config = new DigestConfig('Test', '0 8 * * *', $user, new \DateTimeImmutable());
+
+        $article = $this->createMock(Article::class);
+        $article->method('getTitle')->willReturn('Title');
+        $collection = new ArticleCollection([$article]);
+        $grouped = new GroupedArticles([
+            'tech' => $collection,
+        ]);
+
+        $this->configRepository->method('findById')->willReturn($config);
+        $this->generator->method('collectArticles')->willReturn($grouped);
+        $this->summary->method('generate')->willReturn('Content');
+        $this->notifier->method('send')->willThrowException(new \RuntimeException('Transport error'));
+
+        $this->logger->expects(self::exactly(2))->method(self::anything());
+
+        $savedLog = null;
+        $this->logRepository
+            ->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (DigestLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
+
+                return true;
+            }));
+
+        ($this->handler)(new GenerateDigestMessage(1));
+
+        self::assertNotNull($savedLog);
+        self::assertFalse($savedLog->isDeliverySuccess());
     }
 }
