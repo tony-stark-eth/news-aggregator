@@ -5,25 +5,21 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Enrichment\Service;
 
 use App\Enrichment\Service\AiKeywordExtractionService;
+use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\RuleBasedKeywordExtractionService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\AI\Platform\PlatformInterface;
-use Symfony\AI\Platform\Result\DeferredResult;
-use Symfony\AI\Platform\Result\RawResultInterface;
-use Symfony\AI\Platform\Result\TextResult;
-use Symfony\AI\Platform\ResultConverterInterface;
+use Symfony\AI\Platform\Test\InMemoryPlatform;
 
 #[CoversClass(AiKeywordExtractionService::class)]
 final class AiKeywordExtractionServiceTest extends TestCase
 {
     public function testUsesAiWhenSuccessful(): void
     {
-        $platform = $this->createStub(PlatformInterface::class);
-        $platform->method('invoke')->willReturn(
-            $this->makeDeferredResult('Google, Artificial Intelligence, Developers'),
-        );
+        $platform = new InMemoryPlatform('Google, Artificial Intelligence, Developers');
 
         $service = new AiKeywordExtractionService(
             $platform,
@@ -44,10 +40,21 @@ final class AiKeywordExtractionServiceTest extends TestCase
         $platform = $this->createStub(PlatformInterface::class);
         $platform->method('invoke')->willThrowException(new \RuntimeException('API down'));
 
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')
+            ->with(
+                self::stringContains('AI keyword extraction failed'),
+                self::callback(static function (array $context): bool {
+                    return isset($context['error'])
+                        && isset($context['model'])
+                        && $context['model'] === 'openrouter/free';
+                }),
+            );
+
         $service = new AiKeywordExtractionService(
             $platform,
             new RuleBasedKeywordExtractionService(),
-            new NullLogger(),
+            $logger,
         );
 
         $keywords = $service->extract(
@@ -55,20 +62,29 @@ final class AiKeywordExtractionServiceTest extends TestCase
             'Microsoft released a major Azure cloud platform update.',
         );
 
-        // Rule-based should extract proper nouns
         self::assertNotSame([], $keywords);
         self::assertContains('Microsoft', $keywords);
     }
 
     public function testFallsBackOnEmptyAiResponse(): void
     {
-        $platform = $this->createStub(PlatformInterface::class);
-        $platform->method('invoke')->willReturn($this->makeDeferredResult(''));
+        $platform = new InMemoryPlatform('');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('no valid keywords'),
+                self::callback(static function (array $context): bool {
+                    return isset($context['response'])
+                        && isset($context['model'])
+                        && $context['model'] === 'openrouter/free';
+                }),
+            );
 
         $service = new AiKeywordExtractionService(
             $platform,
             new RuleBasedKeywordExtractionService(),
-            new NullLogger(),
+            $logger,
         );
 
         $keywords = $service->extract(
@@ -76,16 +92,12 @@ final class AiKeywordExtractionServiceTest extends TestCase
             'Apple announced a new product at their Cupertino headquarters.',
         );
 
-        // Empty AI response should fall back to rule-based
         self::assertContains('Apple', $keywords);
     }
 
     public function testTrimsKeywords(): void
     {
-        $platform = $this->createStub(PlatformInterface::class);
-        $platform->method('invoke')->willReturn(
-            $this->makeDeferredResult(' Google ,  AI , Cloud '),
-        );
+        $platform = new InMemoryPlatform(' Google ,  AI , Cloud ');
 
         $service = new AiKeywordExtractionService(
             $platform,
@@ -100,10 +112,7 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
     public function testLimitsToMaxKeywords(): void
     {
-        $platform = $this->createStub(PlatformInterface::class);
-        $platform->method('invoke')->willReturn(
-            $this->makeDeferredResult('A, B, C, D, E, F, G, H, I, J'),
-        );
+        $platform = new InMemoryPlatform('A, B, C, D, E, F, G, H, I, J');
 
         $service = new AiKeywordExtractionService(
             $platform,
@@ -113,19 +122,108 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $keywords = $service->extract('Test', 'Content');
 
-        self::assertLessThanOrEqual(8, \count($keywords));
+        self::assertCount(8, $keywords);
+        self::assertSame(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], $keywords);
     }
 
-    private function makeDeferredResult(string $text): DeferredResult
+    public function testFiltersEmptyKeywordsAfterTrim(): void
     {
-        $textResult = new TextResult($text);
+        $platform = new InMemoryPlatform('Google, , , AI');
 
-        $rawResult = $this->createStub(RawResultInterface::class);
+        $service = new AiKeywordExtractionService(
+            $platform,
+            new RuleBasedKeywordExtractionService(),
+            new NullLogger(),
+        );
 
-        $converter = $this->createStub(ResultConverterInterface::class);
-        $converter->method('convert')->willReturn($textResult);
-        $converter->method('getTokenUsageExtractor')->willReturn(null);
+        $keywords = $service->extract('Test', 'Content');
 
-        return new DeferredResult($converter, $rawResult);
+        self::assertSame(['Google', 'AI'], $keywords);
+    }
+
+    public function testFiltersKeywordsOver100Chars(): void
+    {
+        $longKeyword = str_repeat('x', 101);
+        $platform = new InMemoryPlatform("Google, {$longKeyword}, AI");
+
+        $service = new AiKeywordExtractionService(
+            $platform,
+            new RuleBasedKeywordExtractionService(),
+            new NullLogger(),
+        );
+
+        $keywords = $service->extract('Test', 'Content');
+
+        self::assertSame(['Google', 'AI'], $keywords);
+    }
+
+    public function testKeywordExactly100CharsIsAccepted(): void
+    {
+        $keyword100 = str_repeat('x', 100);
+        $platform = new InMemoryPlatform("Google, {$keyword100}");
+
+        $service = new AiKeywordExtractionService(
+            $platform,
+            new RuleBasedKeywordExtractionService(),
+            new NullLogger(),
+        );
+
+        $keywords = $service->extract('Test', 'Content');
+
+        self::assertCount(2, $keywords);
+        self::assertSame($keyword100, $keywords[1]);
+    }
+
+    public function testFallbackCalledOnEmptyResult(): void
+    {
+        $platform = new InMemoryPlatform(',,,'); // All empty after trim
+
+        $fallback = $this->createMock(KeywordExtractionServiceInterface::class);
+        $fallback->expects(self::once())->method('extract')
+            ->with('My Title', 'My Content')
+            ->willReturn(['Fallback']);
+
+        $service = new AiKeywordExtractionService(
+            $platform,
+            $fallback,
+            new NullLogger(),
+        );
+
+        $keywords = $service->extract('My Title', 'My Content');
+
+        self::assertSame(['Fallback'], $keywords);
+    }
+
+    public function testKeywordsWithMbChars(): void
+    {
+        $platform = new InMemoryPlatform('München, São Paulo, Café');
+
+        $service = new AiKeywordExtractionService(
+            $platform,
+            new RuleBasedKeywordExtractionService(),
+            new NullLogger(),
+        );
+
+        $keywords = $service->extract('Test', 'Content');
+
+        self::assertCount(3, $keywords);
+        self::assertSame('München', $keywords[0]);
+        self::assertSame('São Paulo', $keywords[1]);
+        self::assertSame('Café', $keywords[2]);
+    }
+
+    public function testHandlesNullContent(): void
+    {
+        $platform = new InMemoryPlatform('Keyword1, Keyword2');
+
+        $service = new AiKeywordExtractionService(
+            $platform,
+            new RuleBasedKeywordExtractionService(),
+            new NullLogger(),
+        );
+
+        $keywords = $service->extract('Test Title', null);
+
+        self::assertSame(['Keyword1', 'Keyword2'], $keywords);
     }
 }

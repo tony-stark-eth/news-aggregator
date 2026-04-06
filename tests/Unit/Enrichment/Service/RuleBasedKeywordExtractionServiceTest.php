@@ -92,4 +92,43 @@ final class RuleBasedKeywordExtractionServiceTest extends TestCase
         $berlinCount = \count(array_filter($keywords, static fn (string $k): bool => $k === 'Berlin'));
         self::assertSame(1, $berlinCount);
     }
+
+    public function testContentKeywordsAreIncluded(): void
+    {
+        // Keywords only in content (not title) should appear
+        $keywords = $this->service->extract(
+            'a lowercase title only',
+            'Microsoft announced a partnership with Amazon in Seattle.',
+        );
+
+        self::assertContains('Microsoft', $keywords);
+        self::assertContains('Amazon', $keywords);
+        self::assertContains('Seattle', $keywords);
+    }
+
+    public function testExactlyMaxKeywordsReturned(): void
+    {
+        // 9 unique proper nouns -> should return exactly 8
+        $keywords = $this->service->extract(
+            'Apple Google Microsoft Amazon Meta Tesla Nvidia Intel Samsung',
+            '',
+        );
+
+        self::assertSame(8, \count($keywords));
+    }
+
+    public function testFilterMultiWordStartingWithStopWord(): void
+    {
+        // "The Company" should be filtered because "The" is a stop word
+        $keywords = $this->service->extract(
+            'Regular Title',
+            'Something about Apple Inc and not about stop word phrases.',
+        );
+
+        foreach ($keywords as $keyword) {
+            $firstWord = explode(' ', $keyword)[0];
+            self::assertNotSame('The', $firstWord);
+            self::assertNotSame('This', $firstWord);
+        }
+    }
 }

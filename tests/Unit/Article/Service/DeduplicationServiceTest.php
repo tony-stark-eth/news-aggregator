@@ -25,6 +25,19 @@ final class DeduplicationServiceTest extends TestCase
         self::assertTrue($service->isDuplicate('https://example.com/existing', 'Any Title', null));
     }
 
+    public function testUrlCheckShortCircuits(): void
+    {
+        $repo = $this->createMock(ArticleRepositoryInterface::class);
+        $repo->method('findByUrl')->willReturn($this->createStub(Article::class));
+        // Fingerprint and title checks should NOT be called if URL matches
+        $repo->expects(self::never())->method('findByFingerprint');
+        $repo->expects(self::never())->method('findRecentTitles');
+
+        $service = new DeduplicationService($repo);
+
+        self::assertTrue($service->isDuplicate('https://example.com/existing', 'Title', 'fp123'));
+    }
+
     public function testIsNotDuplicateForNewUrl(): void
     {
         $service = new DeduplicationService($this->buildRepoWithTitles([]));
@@ -44,6 +57,32 @@ final class DeduplicationServiceTest extends TestCase
         self::assertTrue($service->isDuplicate('https://example.com/new', 'Title', 'abc123'));
     }
 
+    public function testFingerprintCheckShortCircuits(): void
+    {
+        $repo = $this->createMock(ArticleRepositoryInterface::class);
+        $repo->method('findByUrl')->willReturn(null);
+        $repo->method('findByFingerprint')->willReturn($this->createStub(Article::class));
+        // Title check should NOT be called if fingerprint matches
+        $repo->expects(self::never())->method('findRecentTitles');
+
+        $service = new DeduplicationService($repo);
+
+        self::assertTrue($service->isDuplicate('https://example.com/new', 'Title', 'abc123'));
+    }
+
+    public function testNullFingerprintSkipsFingerprintCheck(): void
+    {
+        $repo = $this->createMock(ArticleRepositoryInterface::class);
+        $repo->method('findByUrl')->willReturn(null);
+        // Should NOT check fingerprint when it's null
+        $repo->expects(self::never())->method('findByFingerprint');
+        $repo->method('findRecentTitles')->willReturn([]);
+
+        $service = new DeduplicationService($repo);
+
+        self::assertFalse($service->isDuplicate('https://example.com/new', 'Unique Title', null));
+    }
+
     public function testIsDuplicateBySimilarTitle(): void
     {
         $service = new DeduplicationService(
@@ -57,6 +96,73 @@ final class DeduplicationServiceTest extends TestCase
             'Breaking: Major Event Happens Today!',
             null,
         ));
+    }
+
+    public function testIsNotDuplicateByDifferentTitle(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([[
+                'title' => 'Completely different article about sports',
+            ]]),
+        );
+
+        self::assertFalse($service->isDuplicate(
+            'https://example.com/new',
+            'Technology news about quantum computing',
+            null,
+        ));
+    }
+
+    public function testEmptyTitleIsNotDuplicate(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([[
+                'title' => 'Some existing article',
+            ]]),
+        );
+
+        self::assertFalse($service->isDuplicate('https://example.com/new', '', null));
+    }
+
+    public function testWhitespaceOnlyTitleIsNotDuplicate(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([[
+                'title' => 'Some existing article',
+            ]]),
+        );
+
+        self::assertFalse($service->isDuplicate('https://example.com/new', '   ', null));
+    }
+
+    public function testTitleComparisonIsCaseInsensitive(): void
+    {
+        $service = new DeduplicationService(
+            $this->buildRepoWithTitles([[
+                'title' => 'BREAKING NEWS: Major Event',
+            ]]),
+        );
+
+        self::assertTrue($service->isDuplicate(
+            'https://example.com/new',
+            'breaking news: major event',
+            null,
+        ));
+    }
+
+    public function testChecksUpTo1000RecentTitles(): void
+    {
+        $repo = $this->createMock(ArticleRepositoryInterface::class);
+        $repo->method('findByUrl')->willReturn(null);
+        $repo->method('findByFingerprint')->willReturn(null);
+        $repo->expects(self::once())
+            ->method('findRecentTitles')
+            ->with(1000)
+            ->willReturn([]);
+
+        $service = new DeduplicationService($repo);
+
+        $service->isDuplicate('https://example.com/new', 'Title', null);
     }
 
     /**

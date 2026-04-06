@@ -10,6 +10,7 @@ use App\Notification\Entity\NotificationLog;
 use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Notification\Service\NotificationDispatchService;
 use App\Notification\ValueObject\AlertRuleType;
+use App\Notification\ValueObject\AlertUrgency;
 use App\Notification\ValueObject\DeliveryStatus;
 use App\Notification\ValueObject\EvaluationResult;
 use App\Shared\Entity\Category;
@@ -20,6 +21,7 @@ use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Component\Notifier\NotifierInterface;
 
 #[CoversClass(NotificationDispatchService::class)]
@@ -216,5 +218,221 @@ final class NotificationDispatchServiceTest extends TestCase
         );
 
         self::assertTrue($service->hasTransport());
+    }
+
+    public function testHasTransportReturnsFalseForEmptyDsn(): void
+    {
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            '',
+        );
+
+        self::assertFalse($service->hasTransport());
+    }
+
+    public function testDispatchWithoutEvaluationSetsKeywordMatchType(): void
+    {
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            '',
+        );
+
+        $savedLog = null;
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (NotificationLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
+
+                return true;
+            }), true);
+
+        $service->dispatch($this->rule, $this->article, ['bitcoin']);
+
+        self::assertInstanceOf(NotificationLog::class, $savedLog);
+        self::assertSame('keyword', $savedLog->getMatchType());
+        self::assertNull($savedLog->getAiSeverity());
+        self::assertNull($savedLog->getAiExplanation());
+        self::assertNull($savedLog->getAiModelUsed());
+    }
+
+    public function testDispatchWithEvaluationSetsAiMatchType(): void
+    {
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            '',
+        );
+
+        $evaluation = new EvaluationResult(5, 'Moderate event', 'test-model');
+
+        $savedLog = null;
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (NotificationLog $log) use (&$savedLog): bool {
+                $savedLog = $log;
+
+                return true;
+            }), true);
+
+        $service->dispatch($this->rule, $this->article, ['bitcoin'], $evaluation);
+
+        self::assertInstanceOf(NotificationLog::class, $savedLog);
+        self::assertSame('ai', $savedLog->getMatchType());
+        self::assertSame(5, $savedLog->getAiSeverity());
+        self::assertSame('Moderate event', $savedLog->getAiExplanation());
+        self::assertSame('test-model', $savedLog->getAiModelUsed());
+    }
+
+    public function testDispatchSavesWithFlush(): void
+    {
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            '',
+        );
+
+        $this->logRepository->expects(self::once())
+            ->method('save')
+            ->with(self::isInstanceOf(NotificationLog::class), true);
+
+        $service->dispatch($this->rule, $this->article, ['bitcoin']);
+    }
+
+    public function testHighUrgencyRuleSendsNotification(): void
+    {
+        $user = new User('admin@example.com', 'hashed');
+        $rule = new AlertRule('High Rule', AlertRuleType::Keyword, $user, new \DateTimeImmutable());
+        $rule->setUrgency(AlertUrgency::High);
+
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            'pushover://USER@TOKEN',
+        );
+
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(static function (Notification $n): bool {
+                return $n->getImportance() === Notification::IMPORTANCE_URGENT;
+            }));
+
+        $this->logRepository->method('save');
+
+        $service->dispatch($rule, $this->article, ['bitcoin']);
+    }
+
+    public function testLowUrgencyRuleSendsNotification(): void
+    {
+        $user = new User('admin@example.com', 'hashed');
+        $rule = new AlertRule('Low Rule', AlertRuleType::Keyword, $user, new \DateTimeImmutable());
+        $rule->setUrgency(AlertUrgency::Low);
+
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            'pushover://USER@TOKEN',
+        );
+
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(static function (Notification $n): bool {
+                return $n->getImportance() === Notification::IMPORTANCE_MEDIUM;
+            }));
+
+        $this->logRepository->method('save');
+
+        $service->dispatch($rule, $this->article, ['bitcoin']);
+    }
+
+    public function testNotificationSubjectContainsUrgencyAndTitle(): void
+    {
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            'pushover://USER@TOKEN',
+        );
+
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(static function (Notification $n): bool {
+                return str_contains($n->getSubject(), 'MEDIUM')
+                    && str_contains($n->getSubject(), 'Test Article');
+            }));
+
+        $this->logRepository->method('save');
+
+        $service->dispatch($this->rule, $this->article, ['bitcoin']);
+    }
+
+    public function testNotificationContentContainsRuleNameAndUrl(): void
+    {
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            'pushover://USER@TOKEN',
+        );
+
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(static function (Notification $n): bool {
+                $content = $n->getContent();
+
+                return str_contains($content, 'Rule: Test Rule')
+                    && str_contains($content, 'Keywords: bitcoin')
+                    && str_contains($content, 'URL: https://example.com/1');
+            }));
+
+        $this->logRepository->method('save');
+
+        $service->dispatch($this->rule, $this->article, ['bitcoin']);
+    }
+
+    public function testNotificationContentIncludesSummaryWhenPresent(): void
+    {
+        $this->article->setSummary('An important summary');
+
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            'pushover://USER@TOKEN',
+        );
+
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(static function (Notification $n): bool {
+                return str_contains($n->getContent(), 'Summary: An important summary');
+            }));
+
+        $this->logRepository->method('save');
+
+        $service->dispatch($this->rule, $this->article, ['bitcoin']);
+    }
+
+    public function testNotificationContentIncludesAiEvaluation(): void
+    {
+        $evaluation = new EvaluationResult(9, 'Critical event', 'test-model');
+
+        $service = new NotificationDispatchService(
+            $this->notifier,
+            $this->logRepository,
+            $this->clock,
+            'pushover://USER@TOKEN',
+        );
+
+        $this->notifier->expects(self::once())->method('send')
+            ->with(self::callback(static function (Notification $n): bool {
+                return str_contains($n->getContent(), 'AI Severity: 9/10')
+                    && str_contains($n->getContent(), 'AI Analysis: Critical event');
+            }));
+
+        $this->logRepository->method('save');
+
+        $service->dispatch($this->rule, $this->article, ['bitcoin'], $evaluation);
     }
 }

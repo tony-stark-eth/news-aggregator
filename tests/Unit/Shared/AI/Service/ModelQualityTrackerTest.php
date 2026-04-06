@@ -54,4 +54,48 @@ final class ModelQualityTrackerTest extends TestCase
         self::assertTrue($all->containsKey('model-y'));
         self::assertContainsOnlyInstancesOf(ModelQualityStats::class, $all->toArray());
     }
+
+    public function testRecordRejectionOnly(): void
+    {
+        $this->tracker->recordRejection('model-b');
+
+        $stats = $this->tracker->getStats('model-b');
+
+        self::assertSame(0, $stats->accepted);
+        self::assertSame(1, $stats->rejected);
+        self::assertSame(0.0, $stats->acceptanceRate);
+    }
+
+    public function testRecordAcceptanceOnly(): void
+    {
+        $this->tracker->recordAcceptance('model-c');
+
+        $stats = $this->tracker->getStats('model-c');
+
+        self::assertSame(1, $stats->accepted);
+        self::assertSame(0, $stats->rejected);
+        self::assertSame(1.0, $stats->acceptanceRate);
+    }
+
+    public function testIndexDoesNotDuplicate(): void
+    {
+        $this->tracker->recordAcceptance('model-d');
+        $this->tracker->recordAcceptance('model-d');
+        $this->tracker->recordAcceptance('model-d');
+
+        $all = $this->tracker->getAllStats();
+
+        // Model-d should appear only once
+        self::assertCount(1, $all);
+        $stats = $all->get('model-d');
+        self::assertInstanceOf(ModelQualityStats::class, $stats);
+        self::assertSame(3, $stats->accepted);
+    }
+
+    public function testGetAllStatsEmptyWhenNoRecords(): void
+    {
+        $all = $this->tracker->getAllStats();
+
+        self::assertCount(0, $all);
+    }
 }
