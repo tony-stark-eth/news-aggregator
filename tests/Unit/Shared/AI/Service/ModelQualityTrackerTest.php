@@ -4,20 +4,32 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Shared\AI\Service;
 
+use App\Shared\AI\Entity\ModelQualityStat;
 use App\Shared\AI\Service\ModelQualityTracker;
 use App\Shared\AI\ValueObject\ModelQualityStats;
+use App\Shared\AI\ValueObject\ModelQualityStatsMap;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 
 #[CoversClass(ModelQualityTracker::class)]
+#[UsesClass(ModelQualityStat::class)]
+#[UsesClass(ModelQualityStats::class)]
+#[UsesClass(ModelQualityStatsMap::class)]
 final class ModelQualityTrackerTest extends TestCase
 {
     private ModelQualityTracker $tracker;
 
+    private InMemoryModelQualityStatRepository $repository;
+
     protected function setUp(): void
     {
-        $this->tracker = new ModelQualityTracker(new ArrayAdapter());
+        $this->repository = new InMemoryModelQualityStatRepository();
+        $this->tracker = new ModelQualityTracker(
+            $this->repository,
+            new MockClock(),
+        );
     }
 
     public function testInitialStatsAreZero(): void
@@ -85,7 +97,6 @@ final class ModelQualityTrackerTest extends TestCase
 
         $all = $this->tracker->getAllStats();
 
-        // Model-d should appear only once
         self::assertCount(1, $all);
         $stats = $all->get('model-d');
         self::assertInstanceOf(ModelQualityStats::class, $stats);
@@ -101,10 +112,6 @@ final class ModelQualityTrackerTest extends TestCase
 
     public function testAcceptanceRateRoundedTo4Decimals(): void
     {
-        // 1 accepted, 2 rejected = rate = 1/3 = 0.33333...
-        // round(0.33333, 4) = 0.3333
-        // round(0.33333, 3) = 0.333 (kills DecrementInteger)
-        // round(0.33333, 5) = 0.33333 (kills IncrementInteger)
         $this->tracker->recordAcceptance('model-x');
         $this->tracker->recordRejection('model-x');
         $this->tracker->recordRejection('model-x');
@@ -114,28 +121,21 @@ final class ModelQualityTrackerTest extends TestCase
         self::assertSame(0.3333, $stats->acceptanceRate);
     }
 
-    public function testCacheExpirySetOnUpdate(): void
+    public function testEntityIsPersistedOnRecord(): void
     {
-        // Record and verify data persists (kills MethodCallRemoval on expiresAfter)
-        $cache = new ArrayAdapter();
-        $tracker = new ModelQualityTracker($cache);
+        $this->tracker->recordAcceptance('test-model');
 
-        $tracker->recordAcceptance('test-model');
-
-        $stats = $tracker->getStats('test-model');
-        self::assertSame(1, $stats->accepted);
+        $stat = $this->repository->findByModelId('test-model');
+        self::assertNotNull($stat);
+        self::assertSame(1, $stat->getAccepted());
+        self::assertSame(0, $stat->getRejected());
     }
 
-    public function testIndexCacheExpirySet(): void
+    public function testRepositoryFlushCalledOnSave(): void
     {
-        // Record and verify index persists (kills MethodCallRemoval on expiresAfter in addToIndex)
-        $cache = new ArrayAdapter();
-        $tracker = new ModelQualityTracker($cache);
+        $this->tracker->recordAcceptance('model-a');
+        $this->tracker->recordRejection('model-b');
 
-        $tracker->recordAcceptance('model-a');
-        $tracker->recordAcceptance('model-b');
-
-        $all = $tracker->getAllStats();
-        self::assertCount(2, $all);
+        self::assertSame(2, $this->repository->getSaveCount());
     }
 }

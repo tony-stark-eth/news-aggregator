@@ -4,106 +4,75 @@ declare(strict_types=1);
 
 namespace App\Shared\AI\Service;
 
+use App\Shared\AI\Entity\ModelQualityStat;
+use App\Shared\AI\Repository\ModelQualityStatRepositoryInterface;
 use App\Shared\AI\ValueObject\ModelQualityStats;
 use App\Shared\AI\ValueObject\ModelQualityStatsMap;
-use Psr\Cache\CacheItemPoolInterface;
+use Psr\Clock\ClockInterface;
 
 final class ModelQualityTracker implements ModelQualityTrackerInterface
 {
-    private const string CACHE_PREFIX = 'model_quality_';
-
-    private const int CACHE_TTL = 604800; // 7 days
-
     public function __construct(
-        private readonly CacheItemPoolInterface $cache,
+        private readonly ModelQualityStatRepositoryInterface $repository,
+        private readonly ClockInterface $clock,
     ) {
     }
 
     public function recordAcceptance(string $modelId): void
     {
-        $this->updateStats($modelId, accepted: true);
+        $stat = $this->findOrCreate($modelId);
+        $stat->incrementAccepted($this->clock->now());
+        $this->repository->save($stat, true);
     }
 
     public function recordRejection(string $modelId): void
     {
-        $this->updateStats($modelId, accepted: false);
+        $stat = $this->findOrCreate($modelId);
+        $stat->incrementRejected($this->clock->now());
+        $this->repository->save($stat, true);
     }
 
     public function getStats(string $modelId): ModelQualityStats
     {
-        $data = $this->loadStats($modelId);
+        $stat = $this->repository->findByModelId($modelId);
 
-        $total = $data['accepted'] + $data['rejected'];
-        $rate = $total > 0 ? $data['accepted'] / $total : 0.0;
+        if (! $stat instanceof ModelQualityStat) {
+            return new ModelQualityStats(
+                accepted: 0,
+                rejected: 0,
+                acceptanceRate: 0.0,
+            );
+        }
 
-        return new ModelQualityStats(
-            accepted: $data['accepted'],
-            rejected: $data['rejected'],
-            acceptanceRate: round($rate, 4),
-        );
+        return $this->toValueObject($stat);
     }
 
     public function getAllStats(): ModelQualityStatsMap
     {
-        $item = $this->cache->getItem(self::CACHE_PREFIX . 'index');
-        /** @var list<string> $modelIds */
-        $modelIds = $item->isHit() ? $item->get() : [];
-
         $stats = [];
-        foreach ($modelIds as $modelId) {
-            $stats[$modelId] = $this->getStats($modelId);
+
+        foreach ($this->repository->findAll() as $stat) {
+            $stats[$stat->getModelId()] = $this->toValueObject($stat);
         }
 
         return new ModelQualityStatsMap($stats);
     }
 
-    private function updateStats(string $modelId, bool $accepted): void
+    private function findOrCreate(string $modelId): ModelQualityStat
     {
-        $data = $this->loadStats($modelId);
-
-        if ($accepted) {
-            $data['accepted']++;
-        } else {
-            $data['rejected']++;
-        }
-
-        $item = $this->cache->getItem(self::CACHE_PREFIX . md5($modelId));
-        $item->set($data);
-        $item->expiresAfter(self::CACHE_TTL);
-        $this->cache->save($item);
-
-        $this->addToIndex($modelId);
+        return $this->repository->findByModelId($modelId)
+            ?? new ModelQualityStat($modelId, $this->clock->now());
     }
 
-    /**
-     * @return array{accepted: int, rejected: int}
-     */
-    private function loadStats(string $modelId): array
+    private function toValueObject(ModelQualityStat $stat): ModelQualityStats
     {
-        $item = $this->cache->getItem(self::CACHE_PREFIX . md5($modelId));
+        $total = $stat->getAccepted() + $stat->getRejected();
+        $rate = $total > 0 ? $stat->getAccepted() / $total : 0.0;
 
-        if ($item->isHit()) {
-            /** @var array{accepted: int, rejected: int} */
-            return $item->get();
-        }
-
-        return [
-            'accepted' => 0,
-            'rejected' => 0,
-        ];
-    }
-
-    private function addToIndex(string $modelId): void
-    {
-        $item = $this->cache->getItem(self::CACHE_PREFIX . 'index');
-        /** @var list<string> $modelIds */
-        $modelIds = $item->isHit() ? $item->get() : [];
-
-        if (! in_array($modelId, $modelIds, true)) {
-            $modelIds[] = $modelId;
-            $item->set($modelIds);
-            $item->expiresAfter(self::CACHE_TTL);
-            $this->cache->save($item);
-        }
+        return new ModelQualityStats(
+            accepted: $stat->getAccepted(),
+            rejected: $stat->getRejected(),
+            acceptanceRate: round($rate, 4),
+        );
     }
 }

@@ -27,6 +27,13 @@ return static function (ContainerConfigurator $container): void {
                     'prefix' => 'App\Shared\Entity',
                     'alias' => 'Shared',
                 ],
+                'SharedAI' => [
+                    'type' => 'attribute',
+                    'is_bundle' => false,
+                    'dir' => '%kernel.project_dir%/src/Shared/AI/Entity',
+                    'prefix' => 'App\Shared\AI\Entity',
+                    'alias' => 'SharedAI',
+                ],
                 'Article' => [
                     'type' => 'attribute',
                     'is_bundle' => false,
