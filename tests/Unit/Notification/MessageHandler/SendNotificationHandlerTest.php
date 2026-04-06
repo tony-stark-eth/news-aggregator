@@ -18,32 +18,24 @@ use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
 use App\User\Entity\User;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 #[CoversClass(SendNotificationHandler::class)]
+#[UsesClass(SendNotificationMessage::class)]
+#[UsesClass(EvaluationResult::class)]
 final class SendNotificationHandlerTest extends TestCase
 {
-    /**
-     * @var AlertRuleRepositoryInterface&MockObject
-     */
-    private MockObject $alertRuleRepository;
+    private MockObject&AlertRuleRepositoryInterface $alertRuleRepository;
 
-    /**
-     * @var ArticleRepositoryInterface&MockObject
-     */
-    private MockObject $articleRepository;
+    private MockObject&ArticleRepositoryInterface $articleRepository;
 
-    /**
-     * @var NotificationDispatchServiceInterface&MockObject
-     */
-    private MockObject $dispatchService;
+    private MockObject&NotificationDispatchServiceInterface $dispatchService;
 
-    /**
-     * @var AiAlertEvaluationServiceInterface&MockObject
-     */
-    private MockObject $aiEvaluationService;
+    private MockObject&AiAlertEvaluationServiceInterface $aiEvaluationService;
 
     private SendNotificationHandler $handler;
 
@@ -92,10 +84,23 @@ final class SendNotificationHandlerTest extends TestCase
         $message = new SendNotificationMessage(999, 1, ['bitcoin']);
 
         $this->alertRuleRepository->method('findById')->willReturn(null);
+        $this->articleRepository->method('findById')->willReturn($this->article);
+
+        $this->dispatchService->expects(self::never())->method('dispatch');
+        $this->aiEvaluationService->expects(self::never())->method('evaluate');
+
+        ($this->handler)($message);
+    }
+
+    public function testSkipsWhenArticleNotFound(): void
+    {
+        $message = new SendNotificationMessage(1, 999, ['bitcoin']);
+
+        $this->alertRuleRepository->method('findById')->willReturn($this->rule);
         $this->articleRepository->method('findById')->willReturn(null);
 
-        $this->dispatchService->expects(self::never())
-            ->method('dispatch');
+        $this->dispatchService->expects(self::never())->method('dispatch');
+        $this->aiEvaluationService->expects(self::never())->method('evaluate');
 
         ($this->handler)($message);
     }
@@ -108,8 +113,8 @@ final class SendNotificationHandlerTest extends TestCase
         $this->alertRuleRepository->method('findById')->willReturn($this->rule);
         $this->articleRepository->method('findById')->willReturn($this->article);
 
-        $this->dispatchService->expects(self::never())
-            ->method('dispatch');
+        $this->dispatchService->expects(self::never())->method('dispatch');
+        $this->aiEvaluationService->expects(self::never())->method('evaluate');
 
         ($this->handler)($message);
     }
@@ -125,12 +130,52 @@ final class SendNotificationHandlerTest extends TestCase
         $this->alertRuleRepository->method('findById')->willReturn($rule);
         $this->articleRepository->method('findById')->willReturn($this->article);
 
-        $this->aiEvaluationService->method('evaluate')
+        $this->aiEvaluationService->expects(self::once())
+            ->method('evaluate')
+            ->with($this->article, $rule)
             ->willReturn($evaluation);
 
         $this->dispatchService->expects(self::once())
             ->method('dispatch')
             ->with($rule, $this->article, ['bitcoin'], $evaluation);
+
+        ($this->handler)($message);
+    }
+
+    public function testBothTypeRuleTriggersAiEvaluation(): void
+    {
+        $user = new User('admin@example.com', 'hashed');
+        $rule = new AlertRule('Both Rule', AlertRuleType::Both, $user, new \DateTimeImmutable());
+        $evaluation = new EvaluationResult(9, 'Very critical', 'openrouter/auto');
+
+        $message = new SendNotificationMessage(1, 1, ['bitcoin']);
+
+        $this->alertRuleRepository->method('findById')->willReturn($rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
+
+        $this->aiEvaluationService->expects(self::once())
+            ->method('evaluate')
+            ->willReturn($evaluation);
+
+        $this->dispatchService->expects(self::once())
+            ->method('dispatch')
+            ->with($rule, $this->article, ['bitcoin'], $evaluation);
+
+        ($this->handler)($message);
+    }
+
+    public function testKeywordTypeRuleSkipsAiEvaluation(): void
+    {
+        $message = new SendNotificationMessage(1, 1, ['bitcoin']);
+
+        $this->alertRuleRepository->method('findById')->willReturn($this->rule); // Type: Keyword
+        $this->articleRepository->method('findById')->willReturn($this->article);
+
+        $this->aiEvaluationService->expects(self::never())->method('evaluate');
+
+        $this->dispatchService->expects(self::once())
+            ->method('dispatch')
+            ->with($this->rule, $this->article, ['bitcoin'], null);
 
         ($this->handler)($message);
     }
@@ -147,12 +192,120 @@ final class SendNotificationHandlerTest extends TestCase
         $this->alertRuleRepository->method('findById')->willReturn($rule);
         $this->articleRepository->method('findById')->willReturn($this->article);
 
-        $this->aiEvaluationService->method('evaluate')
-            ->willReturn($evaluation);
+        $this->aiEvaluationService->method('evaluate')->willReturn($evaluation);
 
-        $this->dispatchService->expects(self::never())
-            ->method('dispatch');
+        $this->dispatchService->expects(self::never())->method('dispatch');
 
         ($this->handler)($message);
+    }
+
+    public function testAiEvaluationAtExactThresholdDispatches(): void
+    {
+        $user = new User('admin@example.com', 'hashed');
+        $rule = new AlertRule('AI Rule', AlertRuleType::Ai, $user, new \DateTimeImmutable());
+        $rule->setSeverityThreshold(5);
+        $evaluation = new EvaluationResult(5, 'Exactly threshold', 'openrouter/auto');
+
+        $message = new SendNotificationMessage(1, 1, ['bitcoin']);
+
+        $this->alertRuleRepository->method('findById')->willReturn($rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
+
+        $this->aiEvaluationService->method('evaluate')->willReturn($evaluation);
+
+        // Severity 5 is NOT less than threshold 5 -> should dispatch
+        $this->dispatchService->expects(self::once())->method('dispatch');
+
+        ($this->handler)($message);
+    }
+
+    public function testNullAiEvaluationStillDispatches(): void
+    {
+        $user = new User('admin@example.com', 'hashed');
+        $rule = new AlertRule('AI Rule', AlertRuleType::Ai, $user, new \DateTimeImmutable());
+        $rule->setSeverityThreshold(5);
+
+        $message = new SendNotificationMessage(1, 1, ['bitcoin']);
+
+        $this->alertRuleRepository->method('findById')->willReturn($rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
+
+        $this->aiEvaluationService->method('evaluate')->willReturn(null);
+
+        // Null evaluation is NOT an instance of EvaluationResult, so severity check is skipped
+        $this->dispatchService->expects(self::once())
+            ->method('dispatch')
+            ->with($rule, $this->article, ['bitcoin'], null);
+
+        ($this->handler)($message);
+    }
+
+    public function testLoggerInfoOnSuccessfulDispatch(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('Notification sent'),
+                self::callback(static function (array $context): bool {
+                    return array_key_exists('rule', $context)
+                        && array_key_exists('rule_id', $context)
+                        && array_key_exists('article', $context)
+                        && array_key_exists('article_id', $context)
+                        && $context['rule'] === 'Test Rule'
+                        && $context['article'] === 'Test Article';
+                }),
+            );
+
+        $handler = new SendNotificationHandler(
+            $this->alertRuleRepository,
+            $this->articleRepository,
+            $this->dispatchService,
+            $this->aiEvaluationService,
+            $logger,
+        );
+
+        $message = new SendNotificationMessage(1, 1, ['bitcoin']);
+        $this->alertRuleRepository->method('findById')->willReturn($this->rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
+
+        ($handler)($message);
+    }
+
+    public function testLoggerInfoWhenAiSeverityBelowThreshold(): void
+    {
+        $user = new User('admin@example.com', 'hashed');
+        $rule = new AlertRule('AI Rule', AlertRuleType::Ai, $user, new \DateTimeImmutable());
+        $rule->setSeverityThreshold(7);
+        $evaluation = new EvaluationResult(3, 'Low impact', 'openrouter/auto');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('skipped'),
+                self::callback(static function (array $context): bool {
+                    return array_key_exists('rule', $context)
+                        && array_key_exists('rule_id', $context)
+                        && array_key_exists('article_id', $context)
+                        && array_key_exists('severity', $context)
+                        && array_key_exists('threshold', $context)
+                        && $context['severity'] === 3
+                        && $context['threshold'] === 7;
+                }),
+            );
+
+        $handler = new SendNotificationHandler(
+            $this->alertRuleRepository,
+            $this->articleRepository,
+            $this->dispatchService,
+            $this->aiEvaluationService,
+            $logger,
+        );
+
+        $message = new SendNotificationMessage(1, 1, ['bitcoin']);
+        $this->alertRuleRepository->method('findById')->willReturn($rule);
+        $this->articleRepository->method('findById')->willReturn($this->article);
+        $this->aiEvaluationService->method('evaluate')->willReturn($evaluation);
+
+        ($handler)($message);
     }
 }

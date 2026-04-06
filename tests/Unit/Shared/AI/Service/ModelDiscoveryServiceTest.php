@@ -7,9 +7,11 @@ namespace App\Tests\Unit\Shared\AI\Service;
 use App\Shared\AI\Service\ModelDiscoveryService;
 use App\Shared\AI\ValueObject\CircuitBreakerState;
 use App\Shared\AI\ValueObject\ModelId;
+use App\Shared\AI\ValueObject\ModelIdCollection;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -18,9 +20,13 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 #[CoversClass(ModelDiscoveryService::class)]
 #[UsesClass(CircuitBreakerState::class)]
+#[UsesClass(ModelId::class)]
+#[UsesClass(ModelIdCollection::class)]
 final class ModelDiscoveryServiceTest extends TestCase
 {
     private const string BREAKER_KEY = 'openrouter_cb';
+
+    private const string CACHE_KEY = 'openrouter_free_models';
 
     public function testDiscoversFreeModels(): void
     {
@@ -36,6 +42,72 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertContains('free-model-2', $values);
         self::assertNotContains('paid-model', $values);
         self::assertNotContains('free-small', $values);
+    }
+
+    public function testFiltersPaidModels(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'free-one',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+            ],
+            [
+                'id' => 'paid-prompt',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0.001',
+                    'completion' => '0',
+                ],
+            ],
+            [
+                'id' => 'paid-completion',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0.002',
+                ],
+            ],
+        ]));
+
+        $models = $service->discoverFreeModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('free-one', $first->value);
+    }
+
+    public function testFiltersModelsBelowMinContextLength(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'large-context',
+                'context_length' => 8192,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+            ],
+            [
+                'id' => 'small-context',
+                'context_length' => 4096,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+            ],
+        ]));
+
+        $models = $service->discoverFreeModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('large-context', $first->value);
     }
 
     public function testFilterBlockedModels(): void
@@ -70,6 +142,43 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertSame('good-model', $first->value);
     }
 
+    public function testFilterMultipleBlockedModels(): void
+    {
+        $service = $this->createService(
+            $this->clientWithModels([
+                [
+                    'id' => 'good-model',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                ],
+                [
+                    'id' => 'blocked-1',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                ],
+                [
+                    'id' => 'blocked-2',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                ],
+            ]),
+            blockedModels: 'blocked-1, blocked-2',
+        );
+
+        $models = $service->discoverFreeModels();
+
+        self::assertCount(1, $models);
+    }
+
     public function testCachesResults(): void
     {
         $callCount = 0;
@@ -85,6 +194,23 @@ final class ModelDiscoveryServiceTest extends TestCase
         $service->discoverFreeModels();
 
         self::assertSame(1, $callCount);
+    }
+
+    public function testCacheStoresModelIds(): void
+    {
+        $cache = new ArrayAdapter();
+        $service = $this->createService($this->successClient(), cache: $cache);
+
+        $service->discoverFreeModels();
+
+        $cacheItem = $cache->getItem(self::CACHE_KEY);
+        self::assertTrue($cacheItem->isHit());
+
+        /** @var list<string> $cached */
+        $cached = $cacheItem->get();
+        self::assertContains('free-model-1', $cached);
+        self::assertContains('free-model-2', $cached);
+        self::assertNotContains('paid-model', $cached);
     }
 
     public function testCircuitBreakerOpensAfterThresholdFailures(): void
@@ -110,6 +236,8 @@ final class ModelDiscoveryServiceTest extends TestCase
         /** @var array{state: string, failures: int, opened_at: ?int} $data */
         $data = $breakerItem->get();
         self::assertSame(CircuitBreakerState::Open->value, $data['state']);
+        self::assertSame(3, $data['failures']);
+        self::assertSame($clock->now()->getTimestamp(), $data['opened_at']);
     }
 
     public function testOpenBreakerReturnsCachedModelsWithoutApiCall(): void
@@ -141,6 +269,20 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertCount(2, $models);
     }
 
+    public function testOpenBreakerWithNoCacheReturnsEmpty(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Open breaker without any cached models
+        $this->setBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        $service = $this->createService($this->failingClient(), cache: $cache, clock: $clock);
+        $models = $service->discoverFreeModels();
+
+        self::assertCount(0, $models);
+    }
+
     public function testHalfOpenAfterResetPeriod(): void
     {
         $cache = new ArrayAdapter();
@@ -152,7 +294,7 @@ final class ModelDiscoveryServiceTest extends TestCase
         // Advance clock past reset period (24h)
         $clock->modify('+25 hours');
 
-        // Service should detect expired Open → HalfOpen → probe API
+        // Service should detect expired Open -> HalfOpen -> probe API
         $service = $this->createService($this->successClient(), cache: $cache, clock: $clock);
         $models = $service->discoverFreeModels();
 
@@ -185,6 +327,33 @@ final class ModelDiscoveryServiceTest extends TestCase
         /** @var array{state: string, failures: int, opened_at: ?int} $data */
         $data = $breakerItem->get();
         self::assertSame(CircuitBreakerState::Open->value, $data['state']);
+        self::assertSame(3, $data['failures']);
+        self::assertNotNull($data['opened_at']);
+    }
+
+    public function testBreakerStaysOpenBeforeResetPeriod(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Open breaker at time 0
+        $this->setBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        // Advance only 23 hours — not enough
+        $clock->modify('+23 hours');
+
+        $apiCallCount = 0;
+        $factory = function () use (&$apiCallCount): MockResponse {
+            $apiCallCount++;
+
+            return new MockResponse($this->modelsJson());
+        };
+
+        $service = $this->createService(new MockHttpClient($factory), cache: $cache, clock: $clock);
+        $service->discoverFreeModels();
+
+        // Should NOT have called API — breaker is still open
+        self::assertSame(0, $apiCallCount);
     }
 
     public function testFailureCountPersistsAcrossInstances(): void
@@ -206,6 +375,99 @@ final class ModelDiscoveryServiceTest extends TestCase
         /** @var array{state: string, failures: int, opened_at: ?int} $data */
         $data = $breakerItem->get();
         self::assertSame(2, $data['failures']);
+        self::assertSame(CircuitBreakerState::Closed->value, $data['state']);
+    }
+
+    public function testSuccessfulFetchResetsBreaker(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Set one failure
+        $failService = $this->createService($this->failingClient(), cache: $cache, clock: $clock);
+        $failService->discoverFreeModels();
+
+        // Successful fetch should delete breaker data
+        $successService = $this->createService($this->successClient(), cache: $cache, clock: $clock);
+        // Clear model cache to force API call
+        $cache->deleteItem(self::CACHE_KEY);
+        $successService->discoverFreeModels();
+
+        $breakerItem = $cache->getItem(self::BREAKER_KEY);
+        self::assertFalse($breakerItem->isHit());
+    }
+
+    public function testHandlesEmptyDataArray(): void
+    {
+        $client = new MockHttpClient(new MockResponse(json_encode([
+            'data' => [],
+        ], JSON_THROW_ON_ERROR)));
+        $service = $this->createService($client);
+
+        $models = $service->discoverFreeModels();
+
+        self::assertCount(0, $models);
+    }
+
+    public function testHandlesMissingDataKey(): void
+    {
+        $client = new MockHttpClient(new MockResponse(json_encode([], JSON_THROW_ON_ERROR)));
+        $service = $this->createService($client);
+
+        $models = $service->discoverFreeModels();
+
+        self::assertCount(0, $models);
+    }
+
+    public function testLoggerInfoOnSuccessfulDiscovery(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(self::stringContains('Discovered'), self::callback(static fn (array $ctx): bool => $ctx['count'] === 2));
+
+        $service = new ModelDiscoveryService(
+            $this->successClient(),
+            new ArrayAdapter(),
+            new MockClock(),
+            $logger,
+        );
+        $service->discoverFreeModels();
+    }
+
+    public function testLoggerWarningOnFailure(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')
+            ->with(self::stringContains('failed'));
+
+        $service = new ModelDiscoveryService(
+            $this->failingClient(),
+            new ArrayAdapter(),
+            new MockClock(),
+            $logger,
+        );
+        $service->discoverFreeModels();
+    }
+
+    public function testLoggerWarningOnBreakerOpen(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        // Should log "Circuit breaker opened" when threshold hit
+        $logger->expects(self::atLeastOnce())->method('warning');
+
+        // Three consecutive failures to trigger breaker
+        for ($i = 0; $i < 3; $i++) {
+            $service = new ModelDiscoveryService(
+                $this->failingClient(),
+                $cache,
+                $clock,
+                $logger,
+            );
+            $service->discoverFreeModels();
+        }
     }
 
     private function createService(

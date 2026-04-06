@@ -66,4 +66,38 @@ final class AiQualityGateServiceTest extends TestCase
         self::assertFalse($this->gate->validateCategorization('unknown'));
         self::assertFalse($this->gate->validateCategorization(''));
     }
+
+    public function testSummaryExactly20CharsPassesLowerBound(): void
+    {
+        // 20 chars exactly should pass length check
+        $summary = str_repeat('a', 20);
+        self::assertTrue($this->gate->validateSummary($summary, 'Different Title'));
+    }
+
+    public function testSummaryExactly19CharsFailsLowerBound(): void
+    {
+        $summary = str_repeat('a', 19);
+        self::assertFalse($this->gate->validateSummary($summary, 'Different Title'));
+    }
+
+    public function testSummaryExactly500CharsPassesUpperBound(): void
+    {
+        $summary = str_repeat('a', 500);
+        self::assertTrue($this->gate->validateSummary($summary, 'Different Title'));
+    }
+
+    public function testSummaryExactly501CharsFailsUpperBound(): void
+    {
+        $summary = str_repeat('a', 501);
+        self::assertFalse($this->gate->validateSummary($summary, 'Different Title'));
+    }
+
+    public function testSimilarButNotIdenticalTitlePasses(): void
+    {
+        // Just below 90% similarity should pass
+        self::assertTrue($this->gate->validateSummary(
+            'The quick brown fox jumps over the lazy dog near the park and the lake area.',
+            'A completely different title that has nothing to do with foxes',
+        ));
+    }
 }
