@@ -93,6 +93,8 @@ jobs:
         run: docker compose run --rm --no-deps --entrypoint composer php install --no-interaction --prefer-dist --no-scripts
       - name: Start database
         run: docker compose up -d database pgbouncer && docker compose exec -T database sh -c 'until pg_isready -U app; do sleep 1; done'
+      - name: Install importmap vendor assets
+        run: docker compose run --rm --no-deps --entrypoint "" php php bin/console importmap:install --no-interaction
       - name: Build TypeScript assets
         run: docker compose run --rm --no-deps --entrypoint "" php sh -c "bun build assets/ts/*.ts --outdir=assets/js/"
       - name: Start app (vendor already installed — entrypoint skips composer install)
