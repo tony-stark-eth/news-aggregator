@@ -21,7 +21,6 @@
         "DecrementInteger": false,
         "IncrementInteger": false,
         "UnwrapTrim": false,
-        "MBString": false,
         "ConcatOperandRemoval": {
             "ignoreSourceCodeByRegex": [
                 "logger->|->info\\(|->warning\\(|->debug\\("
