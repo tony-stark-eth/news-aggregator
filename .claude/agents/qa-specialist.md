@@ -14,6 +14,17 @@ tools:
   - mcp__code-review-graph__query_graph_tool
   - mcp__code-review-graph__get_impact_radius_tool
   - mcp__code-review-graph__semantic_search_nodes_tool
+  - mcp__playwright__browser_navigate
+  - mcp__playwright__browser_snapshot
+  - mcp__playwright__browser_click
+  - mcp__playwright__browser_take_screenshot
+  - mcp__playwright__browser_wait_for
+  - mcp__playwright__browser_evaluate
+  - mcp__playwright__browser_run_code
+  - mcp__playwright__browser_type
+  - mcp__playwright__browser_fill_form
+  - mcp__playwright__browser_press_key
+  - mcp__playwright__browser_network_requests
 ---
 
 # QA Specialist — Quality Gate Guardian

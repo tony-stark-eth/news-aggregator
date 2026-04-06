@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "bunx",
+      "args": [
+        "playwright-mcp",
+        "--headless",
+        "--ignore-https-errors",
+        "--viewport-size", "1280x720"
+      ]
+    }
+  }
+}
