@@ -43,10 +43,24 @@ final class ArticleExtensionTest extends TestCase
         self::assertNull($this->extension->readingTime(''));
     }
 
-    public function testReadingTimeReturnsOneMinuteForShortText(): void
+    public function testReadingTimeReturnsNullForShortExcerpt(): void
     {
-        // 10 words -> ceil(10/200) = 1
+        // 10 words (< 100 threshold) -> null — too short for meaningful estimate
         $text = 'one two three four five six seven eight nine ten';
+        self::assertNull($this->extension->readingTime($text));
+    }
+
+    public function testReadingTimeReturnsNullBelowThreshold(): void
+    {
+        // 99 words -> null (below 100-word threshold)
+        $text = implode(' ', array_fill(0, 99, 'word'));
+        self::assertNull($this->extension->readingTime($text));
+    }
+
+    public function testReadingTimeExactly100WordsReturnsOneMinute(): void
+    {
+        // 100 words -> ceil(100/200) = 1 (at threshold)
+        $text = implode(' ', array_fill(0, 100, 'word'));
         self::assertSame(1, $this->extension->readingTime($text));
     }
 

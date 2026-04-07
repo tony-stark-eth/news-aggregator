@@ -42,6 +42,10 @@ final class ArticleExtension extends AbstractExtension
     /**
      * Returns estimated reading time in minutes, or null when no text is available.
      */
+    /**
+     * Returns estimated reading time in minutes, or null when content is too short
+     * for a meaningful estimate (RSS feeds often provide only a brief excerpt).
+     */
     public function readingTime(?string $text): ?int
     {
         if ($text === null || $text === '') {
@@ -50,7 +54,10 @@ final class ArticleExtension extends AbstractExtension
 
         $wordCount = str_word_count($text);
 
-        if ($wordCount === 0) {
+        // Don't show reading time for short excerpts (< 100 words) — the estimate
+        // would always be "1 min" which adds no value. Full-text fetch (#71 T2-A)
+        // would provide meaningful content for this calculation.
+        if ($wordCount < 100) {
             return null;
         }
 
