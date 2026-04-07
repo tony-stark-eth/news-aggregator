@@ -88,6 +88,9 @@ final class TriggerFetchSourceControllerTest extends WebTestCase
         $user = $this->getOrCreateUser();
         $client->loginUser($user);
 
+        // Create a source so the page has a fetch button to extract CSRF from
+        $category = $this->getOrCreateCategory();
+        $this->createSourceAndReturnId('CSRF Source', $category);
         $csrfToken = $this->getCsrfTokenFromSourcesPage($client);
 
         $client->request('POST', '/sources/99999/fetch', [], [], [
