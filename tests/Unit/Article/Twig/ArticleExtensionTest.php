@@ -155,6 +155,31 @@ final class ArticleExtensionTest extends TestCase
         self::assertSame(0, $result['enrichment']);
     }
 
+    public function testScoreBreakdownKillsCeilMutant(): void
+    {
+        $article = $this->createArticle();
+        $article->setScore(0.5);
+
+        $this->scoringService->expects(self::once())
+            ->method('breakdown')
+            ->with($article)
+            ->willReturn([
+                'recency' => 0.551,
+                'category' => 0.552,
+                'source' => 0.553,
+                'enrichment' => 0.554,
+            ]);
+
+        $result = $this->extension->scoreBreakdown($article);
+
+        self::assertNotNull($result);
+        // round(55.1)=55, ceil(55.1)=56 — kills ceil mutant
+        self::assertSame(55, $result['recency']);
+        self::assertSame(55, $result['category']);
+        self::assertSame(55, $result['source']);
+        self::assertSame(55, $result['enrichment']);
+    }
+
     // --- Twig registration ---
 
     public function testRegistersReadingTimeFilter(): void

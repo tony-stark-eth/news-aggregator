@@ -12,7 +12,6 @@ use App\Source\Service\FeedItemCollection;
 use App\Source\Service\FeedLanguageDetectorInterface;
 use App\Source\Service\FeedParserServiceInterface;
 use App\Source\Service\FeedValidationService;
-use App\Source\ValueObject\FeedPreview;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -64,7 +63,6 @@ final class FeedValidationServiceTest extends TestCase
         $service = new FeedValidationService($fetcher, $parser, $languageDetector);
         $preview = $service->validate(self::VALID_URL);
 
-        self::assertInstanceOf(FeedPreview::class, $preview);
         self::assertSame('Test Feed', $preview->title);
         self::assertSame(2, $preview->itemCount);
         self::assertSame('en', $preview->detectedLanguage);

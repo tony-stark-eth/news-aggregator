@@ -66,7 +66,8 @@ final class ValidateFeedUrlControllerTest extends TestCase
     {
         $user = new User('test@example.com', 'hashed');
         $this->controllerHelper->method('getUser')->willReturn($user);
-        $this->controllerHelper->method('isCsrfTokenValid')
+        $this->controllerHelper->expects(self::once())
+            ->method('isCsrfTokenValid')
             ->with('validate_feed_url', '')
             ->willReturn(false);
 
@@ -78,7 +79,9 @@ final class ValidateFeedUrlControllerTest extends TestCase
             ))
             ->willReturn($expectedResponse);
 
-        $request = new Request(request: ['_validate_token' => '']);
+        $request = new Request(request: [
+            '_validate_token' => '',
+        ]);
         $response = ($this->controller)($request);
 
         self::assertSame($expectedResponse, $response);
@@ -98,7 +101,10 @@ final class ValidateFeedUrlControllerTest extends TestCase
             ))
             ->willReturn($expectedResponse);
 
-        $request = new Request(request: ['feed_url' => '', '_validate_token' => 'valid']);
+        $request = new Request(request: [
+            'feed_url' => '',
+            '_validate_token' => 'valid',
+        ]);
         $response = ($this->controller)($request);
 
         self::assertSame($expectedResponse, $response);
@@ -118,11 +124,14 @@ final class ValidateFeedUrlControllerTest extends TestCase
         $this->controllerHelper->expects(self::once())
             ->method('render')
             ->with('source/_feed_preview.html.twig', self::callback(
-                static fn (array $params): bool => str_contains($params['error'], 'Invalid URL format'),
+                static fn (array $params): bool => \is_string($params['error']) && str_contains($params['error'], 'Invalid URL format'),
             ))
             ->willReturn($expectedResponse);
 
-        $request = new Request(request: ['feed_url' => 'bad', '_validate_token' => 'valid']);
+        $request = new Request(request: [
+            'feed_url' => 'bad',
+            '_validate_token' => 'valid',
+        ]);
         $response = ($this->controller)($request);
 
         self::assertSame($expectedResponse, $response);
@@ -143,18 +152,21 @@ final class ValidateFeedUrlControllerTest extends TestCase
             ->method('warning')
             ->with('Feed validation fetch failed', self::callback(
                 static fn (array $ctx): bool => $ctx['url'] === $url
-                    && str_contains($ctx['reason'], 'timeout'),
+                    && \is_string($ctx['reason']) && str_contains($ctx['reason'], 'timeout'),
             ));
 
         $expectedResponse = new Response('error html');
         $this->controllerHelper->expects(self::once())
             ->method('render')
             ->with('source/_feed_preview.html.twig', self::callback(
-                static fn (array $params): bool => str_contains($params['error'], 'Could not fetch'),
+                static fn (array $params): bool => \is_string($params['error']) && str_contains($params['error'], 'Could not fetch'),
             ))
             ->willReturn($expectedResponse);
 
-        $request = new Request(request: ['feed_url' => $url, '_validate_token' => 'valid']);
+        $request = new Request(request: [
+            'feed_url' => $url,
+            '_validate_token' => 'valid',
+        ]);
         $response = ($this->controller)($request);
 
         self::assertSame($expectedResponse, $response);
@@ -182,11 +194,14 @@ final class ValidateFeedUrlControllerTest extends TestCase
         $this->controllerHelper->expects(self::once())
             ->method('render')
             ->with('source/_feed_preview.html.twig', self::callback(
-                static fn (array $params): bool => str_contains($params['error'], 'unexpected error'),
+                static fn (array $params): bool => \is_string($params['error']) && str_contains($params['error'], 'unexpected error'),
             ))
             ->willReturn($expectedResponse);
 
-        $request = new Request(request: ['feed_url' => $url, '_validate_token' => 'valid']);
+        $request = new Request(request: [
+            'feed_url' => $url,
+            '_validate_token' => 'valid',
+        ]);
         $response = ($this->controller)($request);
 
         self::assertSame($expectedResponse, $response);
@@ -219,7 +234,10 @@ final class ValidateFeedUrlControllerTest extends TestCase
             ))
             ->willReturn($expectedResponse);
 
-        $request = new Request(request: ['feed_url' => $url, '_validate_token' => 'valid']);
+        $request = new Request(request: [
+            'feed_url' => $url,
+            '_validate_token' => 'valid',
+        ]);
         $response = ($this->controller)($request);
 
         self::assertSame($expectedResponse, $response);
@@ -239,7 +257,10 @@ final class ValidateFeedUrlControllerTest extends TestCase
             ))
             ->willReturn($expectedResponse);
 
-        $request = new Request(request: ['feed_url' => '   ', '_validate_token' => 'valid']);
+        $request = new Request(request: [
+            'feed_url' => '   ',
+            '_validate_token' => 'valid',
+        ]);
         $response = ($this->controller)($request);
 
         self::assertSame($expectedResponse, $response);
