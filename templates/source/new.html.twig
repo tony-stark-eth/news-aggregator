@@ -15,7 +15,20 @@
             <label class="label" for="feed_url">
                 <span class="label-text">Feed URL</span>
             </label>
-            <input type="url" id="feed_url" name="feed_url" class="input input-bordered" required placeholder="https://example.com/feed.xml">
+            <div class="flex gap-2">
+                <input type="url" id="feed_url" name="feed_url" class="input input-bordered flex-1" required placeholder="https://example.com/feed.xml">
+                <button type="button"
+                        class="btn btn-outline btn-sm self-center"
+                        hx-post="{{ path('app_sources_validate_url') }}"
+                        hx-include="[name=feed_url], [name=_validate_token]"
+                        hx-target="#feed-preview"
+                        hx-indicator="#validate-spinner">
+                    <span class="htmx-indicator loading loading-spinner loading-xs" id="validate-spinner"></span>
+                    Validate
+                </button>
+            </div>
+            <input type="hidden" name="_validate_token" value="{{ csrf_token('validate_feed_url') }}">
+            <div id="feed-preview"></div>
         </div>
 
         <div class="form-control">
@@ -68,4 +81,16 @@
             <a href="{{ path('app_sources') }}" class="btn btn-ghost">Cancel</a>
         </div>
     </form>
+
+    <script>
+        document.getElementById('feed-preview')?.addEventListener('htmx:afterSwap', function () {
+            const preview = this.querySelector('[data-detected-language]');
+            if (!preview) return;
+            const lang = preview.dataset.detectedLanguage;
+            const select = document.getElementById('language');
+            if (lang && select && select.value === '') {
+                select.value = lang;
+            }
+        });
+    </script>
 {% endblock %}

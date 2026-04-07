@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Feed URL Validation
+- Validate feed URL before saving — htmx-powered "Validate" button on create/edit source forms fetches and parses the feed, showing title, item count, and detected language inline (#97)
+- Language auto-detection from feed content — checks RSS `<language>`, Atom `xml:lang`, `dc:language`, and character heuristic fallback (German/French/Spanish) (#97)
+- Auto-fill language field when validation detects a language and the field is empty (#97)
+
 ### Fixed
 - Full-text search returns no results after container rebuild — search index now rebuilds on container startup via entrypoint (#133)
 

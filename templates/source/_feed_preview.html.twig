@@ -1,0 +1,23 @@
+{% if error is defined and error %}
+    <div class="alert alert-error mt-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        <span>{{ error }}</span>
+    </div>
+{% elseif preview is defined and preview %}
+    <div class="alert alert-success mt-2" data-detected-language="{{ preview.detectedLanguage }}">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <div>
+            <p class="font-bold">{{ preview.title }}</p>
+            <p class="text-sm">
+                {{ preview.itemCount }} item{{ preview.itemCount != 1 ? 's' : '' }} found
+                {% if preview.detectedLanguage %}
+                    &middot; Language: <span class="badge badge-sm">{{ preview.detectedLanguage }}</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+{% endif %}
