@@ -51,6 +51,11 @@ interface ArticleRepositoryInterface
      */
     public function findUnreadForUser(User $user): array;
 
+    /**
+     * @return list<Article>
+     */
+    public function findWithoutTranslations(int $limit): array;
+
     public function save(Article $article, bool $flush = false): void;
 
     public function flush(): void;

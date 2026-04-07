@@ -195,6 +195,19 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             ->getResult();
     }
 
+    public function findWithoutTranslations(int $limit): array
+    {
+        /** @var list<Article> */
+        return $this->createQueryBuilder('a')
+            ->where('a.translations IS NULL')
+            ->andWhere('a.enrichmentMethod = :method')
+            ->setParameter('method', 'ai')
+            ->orderBy('a.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function save(Article $article, bool $flush = false): void
     {
         $this->getEntityManager()->persist($article);

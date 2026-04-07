@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Translation Backfill
+- `app:backfill-translations` command — dispatches re-enrichment for legacy articles missing translations (#146)
+
 #### Bookmarks
 - Article bookmark / save for later — toggle bookmark via htmx button on article cards, filter dashboard to show bookmarked articles only, persisted per-user with unique constraint (#134)
 
