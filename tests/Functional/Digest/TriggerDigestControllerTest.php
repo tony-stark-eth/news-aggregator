@@ -25,10 +25,12 @@ final class TriggerDigestControllerTest extends WebTestCase
 
         $configId = $this->createConfigAndReturnId($user, 'Trigger Test', '0 8 * * *');
 
-        // Use container CSRF manager instead of fragile DOM extraction
-        $client->request('GET', '/digests');
-        $csrfManager = self::getContainer()->get('security.csrf.token_manager');
-        $token = $csrfManager->getToken('trigger_digest')->getValue();
+        // GET index to extract CSRF token from htmx button
+        $crawler = $client->request('GET', '/digests');
+        $triggerBtn = $crawler->filter('button[hx-post$="/trigger"]')->first();
+        /** @var array<string, string> $headers */
+        $headers = json_decode($triggerBtn->attr('hx-headers') ?? '{}', true, 512, JSON_THROW_ON_ERROR);
+        $token = $headers['X-CSRF-Token'];
 
         $client->request('POST', '/digests/' . $configId . '/trigger', [
             '_token' => $token,

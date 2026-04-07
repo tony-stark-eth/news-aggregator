@@ -112,13 +112,13 @@ final class TriggerFetchSourceControllerTest extends WebTestCase
 
     private function getCsrfTokenFromSourcesPage(KernelBrowser $client): string
     {
-        // Use container CSRF manager instead of fragile DOM extraction
-        // (DOM extraction fails when page has no buttons — e.g. no sources)
-        $client->request('GET', '/sources');
+        $crawler = $client->request('GET', '/sources');
+        $fetchBtn = $crawler->filter('button[hx-post$="/fetch"]')->first();
 
-        $csrfManager = self::getContainer()->get('security.csrf.token_manager');
+        /** @var array<string, string> $headers */
+        $headers = json_decode($fetchBtn->attr('hx-headers') ?? '{}', true, 512, JSON_THROW_ON_ERROR);
 
-        return $csrfManager->getToken('trigger_fetch_source')->getValue();
+        return $headers['X-CSRF-Token'];
     }
 
     private function getOrCreateUser(): User
