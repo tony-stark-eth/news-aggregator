@@ -41,14 +41,17 @@
                             </td>
                             <td class="flex gap-1">
                                 <a href="{{ path('app_digests_edit', {id: config.id}) }}" class="btn btn-ghost btn-xs">Edit</a>
-                                <form method="POST" action="{{ path('app_digests_trigger', {id: config.id}) }}" class="inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('trigger_digest') }}">
-                                    <button type="submit" class="btn btn-ghost btn-xs text-info">Run Now</button>
-                                </form>
-                                <form method="POST" action="{{ path('app_digests_delete', {id: config.id}) }}" onsubmit="return confirm('Delete this digest configuration?')" class="inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_digest_config') }}">
-                                    <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>
-                                </form>
+                                <button hx-post="{{ path('app_digests_trigger', {id: config.id}) }}"
+                                        hx-headers='{"X-CSRF-Token": "{{ csrf_token('trigger_digest') }}"}'
+                                        hx-target="this"
+                                        hx-swap="outerHTML"
+                                        class="btn btn-ghost btn-xs text-info">Run Now</button>
+                                <button hx-post="{{ path('app_digests_delete', {id: config.id}) }}"
+                                        hx-headers='{"X-CSRF-Token": "{{ csrf_token('delete_digest_config') }}"}'
+                                        hx-confirm="Delete this digest configuration?"
+                                        hx-target="closest tr"
+                                        hx-swap="outerHTML swap:300ms"
+                                        class="btn btn-ghost btn-xs text-error">Delete</button>
                             </td>
                         </tr>
                     {% endfor %}

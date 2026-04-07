@@ -1,0 +1,22 @@
+{% if unreadOnly %}
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory}) }}"
+       hx-target="#article-feed"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       hx-indicator="#feed-loader"
+       class="btn btn-sm btn-outline btn-active">Unread Only</a>
+{% else %}
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory, unreadOnly: 1}) }}"
+       hx-target="#article-feed"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       hx-indicator="#feed-loader"
+       class="btn btn-sm btn-outline">Unread Only</a>
+{% endif %}
+<button hx-post="{{ path('app_articles_read_all') }}"
+        hx-target="#article-feed"
+        hx-swap="innerHTML"
+        hx-indicator="#feed-loader"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token('mark_all_read') }}"}'
+        class="btn btn-sm btn-ghost">Mark All Read</button>
+<input id="article-filter" type="text" placeholder="Filter articles..." class="input input-bordered input-sm flex-1" />

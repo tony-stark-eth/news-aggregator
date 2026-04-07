@@ -9,3 +9,13 @@
         hasMore: hasMore,
     } %}
 {% endif %}
+
+{# OOB swap: update filter bar when category/unread changes (only on non-pagination requests) #}
+{% if currentPage is defined and currentPage == 1 %}
+    <div id="filter-bar" hx-swap-oob="innerHTML" class="flex items-center gap-3 mb-4">
+        {% include 'dashboard/_filter_bar.html.twig' with {
+            currentCategory: currentCategory|default(null),
+            unreadOnly: unreadOnly|default(false),
+        } %}
+    </div>
+{% endif %}

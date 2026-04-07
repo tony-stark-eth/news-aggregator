@@ -7,6 +7,7 @@ namespace App\Shared\Controller;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Attribute\MapQueryParameter;
 use Symfony\Component\Routing\Attribute\Route;
@@ -22,6 +23,7 @@ final class SearchController
 
     #[Route('/search', name: 'app_search')]
     public function __invoke(
+        Request $request,
         #[MapQueryParameter]
         string $q = '',
         #[MapQueryParameter]
@@ -39,7 +41,11 @@ final class SearchController
             }
         }
 
-        return $this->controller->render('search/index.html.twig', [
+        $template = $request->headers->has('HX-Request')
+            ? 'search/_results.html.twig'
+            : 'search/index.html.twig';
+
+        return $this->controller->render($template, [
             'query' => $query,
             'results' => $results,
         ]);

@@ -1,0 +1,14 @@
+{% if query %}
+    {% if results is empty %}
+        {% include 'components/_empty_state.html.twig' with {
+            message: 'No results for "' ~ query ~ '"'
+        } %}
+    {% else %}
+        <p class="text-base-content/50 mb-4">{{ results|length }} result(s) for "{{ query }}"</p>
+        <div class="flex flex-col gap-3">
+            {% for article in results %}
+                {% include 'components/_article_card.html.twig' %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
