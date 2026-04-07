@@ -23,13 +23,18 @@ final class TriggerDigestControllerTest extends WebTestCase
         $user = $this->getOrCreateUser();
         $client->loginUser($user);
 
-        $this->createConfigAndReturnId($user, 'Trigger Test', '0 8 * * *');
+        $configId = $this->createConfigAndReturnId($user, 'Trigger Test', '0 8 * * *');
 
-        // GET index to start session and get the form with CSRF token
+        // GET index to extract CSRF token from htmx button
         $crawler = $client->request('GET', '/digests');
-        $form = $crawler->filter('form[action$="/trigger"]')->first()->form();
+        $triggerBtn = $crawler->filter('button[hx-post$="/trigger"]')->first();
+        /** @var array<string, string> $headers */
+        $headers = json_decode($triggerBtn->attr('hx-headers') ?? '{}', true, 512, JSON_THROW_ON_ERROR);
+        $token = $headers['X-CSRF-Token'];
 
-        $client->submit($form);
+        $client->request('POST', '/digests/' . $configId . '/trigger', [
+            '_token' => $token,
+        ]);
 
         self::assertResponseRedirects('/digests');
     }

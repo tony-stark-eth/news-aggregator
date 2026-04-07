@@ -21,31 +21,42 @@
     </div>
 
     {# Category tabs #}
-    <div class="tabs tabs-boxed mb-4 overflow-x-auto">
-        <a href="{{ path('app_dashboard') }}" class="tab {{ currentCategory is null ? 'tab-active' : '' }}">All</a>
+    <div id="category-tabs" class="tabs tabs-boxed mb-4 overflow-x-auto">
+        <a hx-get="{{ path('app_dashboard') }}"
+           hx-target="#article-feed"
+           hx-swap="innerHTML"
+           hx-push-url="true"
+           hx-indicator="#feed-loader"
+           class="tab {{ currentCategory is null ? 'tab-active' : '' }}"
+           hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">All</a>
         {% for category in categories %}
-            <a href="{{ path('app_dashboard', {category: category.slug}) }}" class="tab {{ currentCategory == category.slug ? 'tab-active' : '' }}">{{ category.name }}</a>
+            <a hx-get="{{ path('app_dashboard', {category: category.slug}) }}"
+               hx-target="#article-feed"
+               hx-swap="innerHTML"
+               hx-push-url="true"
+               hx-indicator="#feed-loader"
+               class="tab {{ currentCategory == category.slug ? 'tab-active' : '' }}"
+               hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">{{ category.name }}</a>
         {% endfor %}
     </div>
 
     {# Unread filter + Mark all read #}
-    <div class="flex items-center gap-3 mb-4">
-        {% if unreadOnly %}
-            <a href="{{ path('app_dashboard', {category: currentCategory}) }}" class="btn btn-sm btn-outline">Show All</a>
-        {% else %}
-            <a href="{{ path('app_dashboard', {category: currentCategory, unreadOnly: 1}) }}" class="btn btn-sm btn-outline">Unread Only</a>
-        {% endif %}
-        <form method="POST" action="{{ path('app_articles_read_all') }}">
-            <input type="hidden" name="_token" value="{{ csrf_token('mark_all_read') }}">
-            <button type="submit" class="btn btn-sm btn-ghost">Mark All Read</button>
-        </form>
-        <input id="article-filter" type="text" placeholder="Filter articles..." class="input input-bordered input-sm flex-1" />
+    <div id="filter-bar" class="flex items-center gap-3 mb-4">
+        {% include 'dashboard/_filter_bar.html.twig' with {
+            currentCategory: currentCategory,
+            unreadOnly: unreadOnly,
+        } %}
     </div>
 
     {# New articles banner (shown via Mercure SSE) #}
     <div id="new-articles-banner" class="alert alert-info mb-4 hidden cursor-pointer" role="button">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         <span id="new-articles-count"></span>
+    </div>
+
+    {# Loading indicator #}
+    <div id="feed-loader" class="htmx-indicator flex justify-center py-4">
+        <span class="loading loading-spinner loading-lg text-primary"></span>
     </div>
 
     {# Article feed #}

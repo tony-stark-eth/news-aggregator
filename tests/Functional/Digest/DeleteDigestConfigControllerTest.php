@@ -26,12 +26,16 @@ final class DeleteDigestConfigControllerTest extends WebTestCase
 
         $configId = $this->createConfigAndReturnId($user, 'To Delete', '0 8 * * *');
 
-        // GET to start session, then extract CSRF from rendered form
+        // GET index to extract CSRF token from htmx delete button
         $crawler = $client->request('GET', '/digests');
-        $deleteUrl = '/digests/' . $configId . '/delete';
-        $form = $crawler->filter('form[action="' . $deleteUrl . '"]')->first()->form();
+        $deleteBtn = $crawler->filter('button[hx-post$="/' . $configId . '/delete"]')->first();
+        /** @var array<string, string> $headers */
+        $headers = json_decode($deleteBtn->attr('hx-headers') ?? '{}', true, 512, JSON_THROW_ON_ERROR);
+        $token = $headers['X-CSRF-Token'];
 
-        $client->submit($form);
+        $client->request('POST', '/digests/' . $configId . '/delete', [
+            '_token' => $token,
+        ]);
 
         self::assertResponseRedirects('/digests');
 

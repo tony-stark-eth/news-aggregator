@@ -60,10 +60,12 @@
                             </td>
                             <td class="flex gap-1">
                                 <a href="{{ path('app_alerts_edit', {id: rule.id}) }}" class="btn btn-ghost btn-xs">Edit</a>
-                                <form method="POST" action="{{ path('app_alerts_delete', {id: rule.id}) }}" onsubmit="return confirm('Delete this alert rule?')">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_alert_rule') }}">
-                                    <button type="submit" class="btn btn-ghost btn-xs text-error">Delete</button>
-                                </form>
+                                <button hx-post="{{ path('app_alerts_delete', {id: rule.id}) }}"
+                                        hx-headers='{"X-CSRF-Token": "{{ csrf_token('delete_alert_rule') }}"}'
+                                        hx-confirm="Delete this alert rule?"
+                                        hx-target="closest tr"
+                                        hx-swap="outerHTML swap:300ms"
+                                        class="btn btn-ghost btn-xs text-error">Delete</button>
                             </td>
                         </tr>
                     {% endfor %}
