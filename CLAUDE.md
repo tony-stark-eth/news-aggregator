@@ -216,7 +216,7 @@ Grep before Read. Never read a whole file to find one thing.
 - Scope lock: when you find unrelated issues during work, log them in `docs/todo/` or create a GitHub issue — do not fix inline
 - Use `make sf c="make:entity"` to scaffold entities — never write entity + repository files manually
 - Always spawn implementation agents in foreground, never background (they need tool approval)
-- **Screenshots required for UI features**: use Playwright MCP (`browser_navigate` + `browser_take_screenshot`) to capture screenshots of new/changed UI. Save to `docs/screenshots/` and embed in PR description. Login: `demo@localhost` / `demo`
+- **Screenshots required for UI features**: use Playwright MCP tools only (`browser_navigate` + `browser_take_screenshot`) — never use raw headless Chrome CLI. Save to `docs/screenshots/`. In PR descriptions, reference images as `![alt](docs/screenshots/filename.png)` (relative path) — never use `raw.githubusercontent.com` branch URLs (they break after squash-merge). Login: `demo@localhost` / `demo`
 
 ## Hard Rules
 

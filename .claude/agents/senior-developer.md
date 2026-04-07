@@ -60,7 +60,7 @@ Before considering work complete, ask yourself:
 5. Does `make infection` pass? (run before submitting — catches MSI failures early, saves a CI round)
 6. Did I update tests for changed behavior?
 7. Did I update CLAUDE.md / docs if the change affects conventions?
-8. **Screenshots**: if this changes UI, capture with Playwright MCP and save to `docs/screenshots/`
+8. **Screenshots**: if this changes UI, capture with Playwright MCP tools only (`browser_navigate` + `browser_take_screenshot`) — never raw headless Chrome CLI. Save to `docs/screenshots/`. In PR body use relative path `![alt](docs/screenshots/file.png)` — never `raw.githubusercontent.com` URLs (break after merge)
 9. **Mutation testing**: will my tests kill mutants? (see checklist below)
 
 ### Token Efficiency Rules
