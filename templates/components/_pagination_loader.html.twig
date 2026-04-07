@@ -1,6 +1,6 @@
 {% if hasMore|default(false) %}
     <div id="scroll-sentinel"
-         hx-get="{{ path('app_dashboard', {category: currentCategory|default(null), unreadOnly: unreadOnly|default(false) ? 1 : 0, page: currentPage + 1}) }}"
+         hx-get="{{ path('app_dashboard', {category: currentCategory|default(null), source: currentSource|default(null), unreadOnly: unreadOnly|default(false) ? 1 : 0, page: currentPage + 1}) }}"
          hx-trigger="revealed"
          hx-swap="outerHTML"
          class="flex justify-center py-8">

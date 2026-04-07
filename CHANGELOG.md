@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Fetch All button on sources page — dispatches FetchSourceMessage for all enabled sources via htmx, shows "Queued N sources" badge (#129)
+- Dashboard source filter — dropdown to filter articles by source, works alongside category and unread filters with htmx no-reload interaction (#130)
 - Per-source fetch interval — optional override (5-1440 minutes) per source; falls back to category interval then global default; shown in sources table (#96)
 - Manual per-source fetch trigger — htmx "Fetch" button on sources table dispatches FetchSourceMessage with CSRF protection (#76)
 - Paid model overflow — `OPENROUTER_PAID_FALLBACK_MODEL` env var appends a low-cost paid model to the failover chain as last resort before rule-based (#115)

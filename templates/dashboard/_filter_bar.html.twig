@@ -1,12 +1,12 @@
 {% if unreadOnly %}
-    <a hx-get="{{ path('app_dashboard', {category: currentCategory}) }}"
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null)}) }}"
        hx-target="#article-feed"
        hx-swap="innerHTML"
        hx-push-url="true"
        hx-indicator="#feed-loader"
        class="btn btn-sm btn-outline btn-active">Unread Only</a>
 {% else %}
-    <a hx-get="{{ path('app_dashboard', {category: currentCategory, unreadOnly: 1}) }}"
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null), unreadOnly: 1}) }}"
        hx-target="#article-feed"
        hx-swap="innerHTML"
        hx-push-url="true"

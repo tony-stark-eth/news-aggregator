@@ -42,7 +42,7 @@ interface ArticleRepositoryInterface
     /**
      * @return list<Article>
      */
-    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit): array;
+    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit, ?int $sourceId = null): array;
 
     public function countSince(\DateTimeImmutable $since): int;
 

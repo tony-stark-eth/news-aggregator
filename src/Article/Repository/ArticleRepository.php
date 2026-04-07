@@ -116,7 +116,7 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
     /**
      * @return list<Article>
      */
-    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit): array
+    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit, ?int $sourceId = null): array
     {
         $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.category', 'c')
@@ -128,6 +128,10 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
 
         if ($categorySlug !== null && $categorySlug !== '') {
             $qb->andWhere('c.slug = :cat')->setParameter('cat', $categorySlug);
+        }
+
+        if ($sourceId !== null) {
+            $qb->andWhere('s.id = :sourceId')->setParameter('sourceId', $sourceId);
         }
 
         if ($unreadForUser instanceof User) {

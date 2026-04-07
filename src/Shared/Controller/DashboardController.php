@@ -40,6 +40,8 @@ final class DashboardController
         int $page = 1,
         #[MapQueryParameter]
         bool $unreadOnly = false,
+        #[MapQueryParameter]
+        ?int $source = null,
     ): Response {
         $page = max(1, $page);
         $limit = 20;
@@ -51,6 +53,7 @@ final class DashboardController
             $unreadOnly && $user instanceof User ? $user : null,
             $page,
             $limit,
+            $source,
         );
 
         // Build read-state set for the current user
@@ -65,6 +68,7 @@ final class DashboardController
                 'readArticleIds' => $readArticleIds,
                 'currentPage' => $page,
                 'currentCategory' => $category,
+                'currentSource' => $source,
                 'unreadOnly' => $unreadOnly,
                 'hasMore' => $hasMore,
             ]);
@@ -81,7 +85,9 @@ final class DashboardController
         return $this->controller->render('dashboard/index.html.twig', [
             'articles' => $articles,
             'currentCategory' => $category,
+            'currentSource' => $source,
             'categories' => $this->categoryRepository->findAllOrderedByWeight(),
+            'sources' => $this->sourceRepository->findEnabled(),
             'articlesToday' => $articlesToday,
             'activeSources' => $activeSources,
             'alertsToday' => $alertsToday,

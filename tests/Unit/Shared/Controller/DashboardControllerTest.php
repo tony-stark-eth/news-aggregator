@@ -82,6 +82,7 @@ final class DashboardControllerTest extends TestCase
         $this->controllerHelper->method('getUser')->willReturn(null);
         $this->articleRepository->method('countSince')->willReturn(5);
         $this->sourceRepository->method('countEnabled')->willReturn(3);
+        $this->sourceRepository->method('findEnabled')->willReturn([]);
         $this->notificationLogRepository->expects(self::once())
             ->method('countSentSince')
             ->with(new \DateTimeImmutable('2026-04-06 00:00:00', new \DateTimeZone('UTC')))
@@ -98,6 +99,8 @@ final class DashboardControllerTest extends TestCase
                 self::callback(static function (array $params): bool {
                     self::assertSame(7, $params['alertsToday']);
                     self::assertInstanceOf(\DateTimeImmutable::class, $params['lastFetchedAt']);
+                    self::assertNull($params['currentSource']);
+                    self::assertArrayHasKey('sources', $params);
 
                     return true;
                 }),
@@ -116,6 +119,7 @@ final class DashboardControllerTest extends TestCase
         $this->controllerHelper->method('getUser')->willReturn(null);
         $this->articleRepository->method('countSince')->willReturn(0);
         $this->sourceRepository->method('countEnabled')->willReturn(1);
+        $this->sourceRepository->method('findEnabled')->willReturn([]);
         $this->notificationLogRepository->method('countSentSince')->willReturn(0);
         $this->sourceRepository->method('findMostRecentFetchedAt')->willReturn(null);
         $this->categoryRepository->method('findAllOrderedByWeight')->willReturn([]);
@@ -136,6 +140,67 @@ final class DashboardControllerTest extends TestCase
 
         $request = new Request();
         ($this->controller)($request);
+    }
+
+    public function testDashboardPassesSourceFilterToArticleRepository(): void
+    {
+        $this->articleRepository->expects(self::once())
+            ->method('findPaginated')
+            ->with(null, null, 1, 20, 42)
+            ->willReturn([]);
+        $this->controllerHelper->method('getUser')->willReturn(null);
+        $this->articleRepository->method('countSince')->willReturn(0);
+        $this->sourceRepository->method('countEnabled')->willReturn(1);
+        $this->sourceRepository->method('findEnabled')->willReturn([]);
+        $this->notificationLogRepository->method('countSentSince')->willReturn(0);
+        $this->sourceRepository->method('findMostRecentFetchedAt')->willReturn(null);
+        $this->categoryRepository->method('findAllOrderedByWeight')->willReturn([]);
+
+        $expectedResponse = new Response();
+        $this->controllerHelper->expects(self::once())
+            ->method('render')
+            ->with(
+                'dashboard/index.html.twig',
+                self::callback(static function (array $params): bool {
+                    self::assertSame(42, $params['currentSource']);
+
+                    return true;
+                }),
+            )
+            ->willReturn($expectedResponse);
+
+        $request = new Request();
+        ($this->controller)($request, source: 42);
+    }
+
+    public function testHtmxRequestPassesSourceToPartial(): void
+    {
+        $this->articleRepository->expects(self::once())
+            ->method('findPaginated')
+            ->with(null, null, 1, 20, 7)
+            ->willReturn([]);
+        $this->controllerHelper->method('getUser')->willReturn(null);
+
+        $this->notificationLogRepository->expects(self::never())->method('countSentSince');
+        $this->sourceRepository->expects(self::never())->method('findMostRecentFetchedAt');
+
+        $expectedResponse = new Response();
+        $this->controllerHelper->expects(self::once())
+            ->method('render')
+            ->with(
+                'dashboard/_article_list.html.twig',
+                self::callback(static function (array $params): bool {
+                    self::assertSame(7, $params['currentSource']);
+
+                    return true;
+                }),
+            )
+            ->willReturn($expectedResponse);
+
+        $request = new Request();
+        $request->headers->set('HX-Request', 'true');
+
+        ($this->controller)($request, source: 7);
     }
 
     public function testHtmxRequestDoesNotQueryStats(): void

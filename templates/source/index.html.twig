@@ -5,7 +5,16 @@
 {% block body %}
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Feed Sources</h1>
-        <a href="{{ path('app_sources_new') }}" class="btn btn-primary btn-sm">New Source</a>
+        <div class="flex gap-2">
+            <span id="fetch-all-btn">
+                <button hx-post="{{ path('app_sources_fetch_all') }}"
+                        hx-headers='{"X-CSRF-Token": "{{ csrf_token('fetch_all_sources') }}"}'
+                        hx-target="#fetch-all-btn"
+                        hx-swap="innerHTML"
+                        class="btn btn-secondary btn-sm">Fetch All</button>
+            </span>
+            <a href="{{ path('app_sources_new') }}" class="btn btn-primary btn-sm">New Source</a>
+        </div>
     </div>
 
     {% if sources is empty %}

@@ -22,7 +22,7 @@
 
     {# Category tabs #}
     <div id="category-tabs" class="tabs tabs-boxed mb-4 overflow-x-auto">
-        <a hx-get="{{ path('app_dashboard') }}"
+        <a hx-get="{{ path('app_dashboard', {source: currentSource}) }}"
            hx-target="#article-feed"
            hx-swap="innerHTML"
            hx-push-url="true"
@@ -30,7 +30,7 @@
            class="tab {{ currentCategory is null ? 'tab-active' : '' }}"
            hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">All</a>
         {% for category in categories %}
-            <a hx-get="{{ path('app_dashboard', {category: category.slug}) }}"
+            <a hx-get="{{ path('app_dashboard', {category: category.slug, source: currentSource}) }}"
                hx-target="#article-feed"
                hx-swap="innerHTML"
                hx-push-url="true"
@@ -40,10 +40,25 @@
         {% endfor %}
     </div>
 
+    {# Source filter dropdown #}
+    <div class="mb-4">
+        <select class="select select-bordered select-sm w-full max-w-xs"
+                hx-on:change="window.location.href = this.value"
+                aria-label="Filter by source">
+            <option value="{{ path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0}) }}"
+                    {{ currentSource is null ? 'selected' : '' }}>All Sources</option>
+            {% for source in sources %}
+                <option value="{{ path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0, source: source.id}) }}"
+                        {{ currentSource == source.id ? 'selected' : '' }}>{{ source.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
     {# Unread filter + Mark all read #}
     <div id="filter-bar" class="flex items-center gap-3 mb-4">
         {% include 'dashboard/_filter_bar.html.twig' with {
             currentCategory: currentCategory,
+            currentSource: currentSource,
             unreadOnly: unreadOnly,
         } %}
     </div>
