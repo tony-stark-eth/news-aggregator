@@ -83,6 +83,22 @@ For features requiring implementation + review:
 4. Handle REVIEW-FEEDBACK.md: CONDITIONS → route back to developer, REJECTED → rethink
 5. On APPROVED: commit, push, update BUILD-LOG.md and SESSION-CHECKPOINT.md
 
+### Brief Template (target: 60-80 lines)
+
+Keep briefs concise. The senior dev reads code — don't describe what they can see. Focus on:
+
+```
+# Architect Brief
+## Feature — {title} ({issues})
+### Branch: `feat/{branch-name}`
+### What Needs to Change (entity, repo, controller, template — table format)
+### Key Decisions (numbered, with rationale — only non-obvious ones)
+### Build Order (numbered steps)
+### Flags (gotchas, constraints, things that break if done wrong)
+```
+
+**Avoid**: restating the issue body, listing acceptance criteria verbatim, describing existing code at length. The brief tells the dev WHAT to build and WHY the non-obvious choices were made.
+
 ## Collaboration
 
 - **senior-developer** — hand off via ARCHITECT-BRIEF.md, receive via REVIEW-REQUEST.md
