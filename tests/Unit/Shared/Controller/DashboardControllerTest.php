@@ -10,7 +10,7 @@ use App\Shared\Controller\DashboardController;
 use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Repository\UserArticleReadRepositoryInterface;
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
@@ -18,7 +18,7 @@ use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-#[CoversClass(DashboardController::class)]
+#[CoversNothing]
 final class DashboardControllerTest extends TestCase
 {
     /**
