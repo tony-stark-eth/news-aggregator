@@ -65,6 +65,45 @@ final class UserArticleReadRepository extends ServiceEntityRepository implements
         return $readIds;
     }
 
+    /**
+     * @return array{total: int, categories: array<string, int>}
+     */
+    public function countUnreadByCategory(User $user): array
+    {
+        $em = $this->getEntityManager();
+
+        // Total unread
+        $totalDql = $em->createQueryBuilder()
+            ->select('COUNT(a.id)')
+            ->from(Article::class, 'a')
+            ->where('a.id NOT IN (SELECT IDENTITY(r.article) FROM ' . UserArticleRead::class . ' r WHERE r.user = :user)')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Unread per category
+        /** @var list<array{slug: string, cnt: string}> $rows */
+        $rows = $em->createQueryBuilder()
+            ->select('c.slug, COUNT(a.id) AS cnt')
+            ->from(Article::class, 'a')
+            ->join('a.category', 'c')
+            ->where('a.id NOT IN (SELECT IDENTITY(r2.article) FROM ' . UserArticleRead::class . ' r2 WHERE r2.user = :user)')
+            ->setParameter('user', $user)
+            ->groupBy('c.slug')
+            ->getQuery()
+            ->getArrayResult();
+
+        $categories = [];
+        foreach ($rows as $row) {
+            $categories[$row['slug']] = (int) $row['cnt'];
+        }
+
+        return [
+            'total' => (int) $totalDql,
+            'categories' => $categories,
+        ];
+    }
+
     public function flush(): void
     {
         $this->getEntityManager()->flush();

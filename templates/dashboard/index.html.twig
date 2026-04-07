@@ -4,7 +4,7 @@
 
 {% block body %}
     {# Stats row #}
-    <div class="stats shadow mb-6 w-full">
+    <div class="stats shadow mb-6 w-full overflow-x-auto">
         {% include 'components/_stat_widget.html.twig' with { label: 'Articles Today', value: articlesToday, color: 'primary' } %}
         {% include 'components/_stat_widget.html.twig' with { label: 'Active Sources', value: activeSources, color: 'secondary' } %}
         {% include 'components/_stat_widget.html.twig' with { label: 'Alerts Today', value: alertsToday, color: 'accent' } %}
@@ -21,22 +21,23 @@
     </div>
 
     {# Category tabs #}
-    <div id="category-tabs" class="tabs tabs-boxed mb-4 overflow-x-auto">
+    <div id="category-tabs" class="tabs tabs-boxed mb-4 overflow-x-auto flex-nowrap">
         <a hx-get="{{ path('app_dashboard', {source: currentSource}) }}"
            hx-target="#article-feed"
            hx-swap="innerHTML"
            hx-push-url="true"
            hx-indicator="#feed-loader"
-           class="tab {{ currentCategory is null ? 'tab-active' : '' }}"
-           hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">All</a>
+           class="tab whitespace-nowrap {{ currentCategory is null ? 'tab-active' : '' }}"
+           hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">All{% if unreadCounts is defined and unreadCounts and unreadCounts.total > 0 %} ({{ unreadCounts.total }}){% endif %}</a>
         {% for category in categories %}
+            {% set cat_unread = (unreadCounts is defined and unreadCounts) ? unreadCounts.categories[category.slug] ?? 0 : 0 %}
             <a hx-get="{{ path('app_dashboard', {category: category.slug, source: currentSource}) }}"
                hx-target="#article-feed"
                hx-swap="innerHTML"
                hx-push-url="true"
                hx-indicator="#feed-loader"
-               class="tab {{ currentCategory == category.slug ? 'tab-active' : '' }}"
-               hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">{{ category.name }}</a>
+               class="tab whitespace-nowrap {{ currentCategory == category.slug ? 'tab-active' : '' }}"
+               hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">{{ category.name }}{% if cat_unread > 0 %} ({{ cat_unread }}){% endif %}</a>
         {% endfor %}
     </div>
 

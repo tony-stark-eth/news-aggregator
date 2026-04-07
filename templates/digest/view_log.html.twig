@@ -48,7 +48,7 @@
 
             <div>
                 <h3 class="font-bold mb-2">Content</h3>
-                <pre class="text-sm whitespace-pre-wrap bg-base-200 p-4 rounded-lg">{{ log.content }}</pre>
+                <div class="prose prose-sm max-w-none bg-base-200 p-4 rounded-lg">{{ log.content|markdown_to_html }}</div>
             </div>
         </div>
     </div>

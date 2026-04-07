@@ -21,5 +21,12 @@ interface UserArticleReadRepositoryInterface
 
     public function save(UserArticleRead $read, bool $flush = false): void;
 
+    /**
+     * Count unread articles per category for a user.
+     *
+     * @return array{total: int, categories: array<string, int>}
+     */
+    public function countUnreadByCategory(User $user): array;
+
     public function flush(): void;
 }

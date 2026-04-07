@@ -619,6 +619,57 @@ final class ScoringServiceTest extends TestCase
         self::assertGreaterThan($scoreWithoutPublished, $scoreWithPublished);
     }
 
+    public function testBreakdownReturnsAllFourComponentsInRange(): void
+    {
+        $article = $this->createArticle();
+        $breakdown = $this->service->breakdown($article);
+
+        self::assertGreaterThanOrEqual(0.0, $breakdown['recency']);
+        self::assertLessThanOrEqual(1.0, $breakdown['recency']);
+        self::assertGreaterThanOrEqual(0.0, $breakdown['category']);
+        self::assertLessThanOrEqual(1.0, $breakdown['category']);
+        self::assertGreaterThanOrEqual(0.0, $breakdown['source']);
+        self::assertLessThanOrEqual(1.0, $breakdown['source']);
+        self::assertGreaterThanOrEqual(0.0, $breakdown['enrichment']);
+        self::assertLessThanOrEqual(1.0, $breakdown['enrichment']);
+    }
+
+    public function testBreakdownMatchesScoreComputation(): void
+    {
+        $article = $this->createArticle();
+        $breakdown = $this->service->breakdown($article);
+
+        $expectedScore = round(
+            max(0.0, min(
+                1.0,
+                (0.3 * $breakdown['category'])
+                + (0.4 * $breakdown['recency'])
+                + (0.2 * $breakdown['source'])
+                + (0.1 * $breakdown['enrichment']),
+            )),
+            4,
+        );
+
+        self::assertSame($expectedScore, $this->service->score($article));
+    }
+
+    public function testBreakdownWithNullCategory(): void
+    {
+        $source = new Source('Test', 'https://example.com/feed', new Category('Tech', 'tech', 5, '#3B82F6'), new \DateTimeImmutable());
+        $article = new Article(
+            'Test',
+            'https://example.com/no-cat-' . random_int(1, 99999),
+            $source,
+            new \DateTimeImmutable('2026-04-04 11:00:00'),
+        );
+        $article->setPublishedAt(new \DateTimeImmutable('2026-04-04 11:00:00'));
+        // No category set
+
+        $breakdown = $this->service->breakdown($article);
+
+        self::assertSame(0.5, $breakdown['category']);
+    }
+
     private function createArticle(
         int $categoryWeight = 10,
         string $publishedAt = '2026-04-04 11:00:00',
