@@ -189,8 +189,10 @@ final class EditSourceControllerTest extends WebTestCase
 
     private function getCsrfTokenFromEditPage(KernelBrowser $client, int $sourceId): string
     {
-        $crawler = $client->request('GET', '/sources/' . $sourceId . '/edit');
+        $client->request('GET', '/sources/' . $sourceId . '/edit');
 
-        return $crawler->filter('input[name="_token"]')->attr('value') ?? '';
+        $csrfManager = self::getContainer()->get('security.csrf.token_manager');
+
+        return $csrfManager->getToken('edit_source')->getValue();
     }
 }

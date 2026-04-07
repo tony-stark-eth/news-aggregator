@@ -105,13 +105,11 @@ final class FetchAllSourcesControllerTest extends WebTestCase
 
     private function getCsrfTokenFromSourcesPage(KernelBrowser $client): string
     {
-        $crawler = $client->request('GET', '/sources');
-        $fetchAllBtn = $crawler->filter('button[hx-post$="/fetch-all"]')->first();
+        $client->request('GET', '/sources');
 
-        /** @var array<string, string> $headers */
-        $headers = json_decode($fetchAllBtn->attr('hx-headers') ?? '{}', true, 512, JSON_THROW_ON_ERROR);
+        $csrfManager = self::getContainer()->get('security.csrf.token_manager');
 
-        return $headers['X-CSRF-Token'];
+        return $csrfManager->getToken('fetch_all_sources')->getValue();
     }
 
     private function getOrCreateUser(): User

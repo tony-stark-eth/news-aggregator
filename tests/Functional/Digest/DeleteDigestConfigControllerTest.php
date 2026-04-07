@@ -26,12 +26,10 @@ final class DeleteDigestConfigControllerTest extends WebTestCase
 
         $configId = $this->createConfigAndReturnId($user, 'To Delete', '0 8 * * *');
 
-        // GET index to extract CSRF token from htmx delete button
-        $crawler = $client->request('GET', '/digests');
-        $deleteBtn = $crawler->filter('button[hx-post$="/' . $configId . '/delete"]')->first();
-        /** @var array<string, string> $headers */
-        $headers = json_decode($deleteBtn->attr('hx-headers') ?? '{}', true, 512, JSON_THROW_ON_ERROR);
-        $token = $headers['X-CSRF-Token'];
+        // Use container CSRF manager instead of fragile DOM extraction
+        $client->request('GET', '/digests');
+        $csrfManager = self::getContainer()->get('security.csrf.token_manager');
+        $token = $csrfManager->getToken('delete_digest_config')->getValue();
 
         $client->request('POST', '/digests/' . $configId . '/delete', [
             '_token' => $token,

@@ -1,0 +1,40 @@
+#!/bin/bash
+set -e
+
+# --- Pre-push: run mutation testing to catch MSI failures before CI ---
+# Saves ~15-20K tokens per CI fix round by catching failures locally.
+
+# Skip if pushing tags or if SKIP_INFECTION env var is set
+if [ -n "$SKIP_INFECTION" ]; then
+    echo "SKIP_INFECTION set, skipping mutation testing."
+    exit 0
+fi
+
+# Only run for feature/fix branches, not main
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "master" ]; then
+    exit 0
+fi
+
+# Check if there are PHP source changes (not just docs/config)
+CHANGED_PHP=$(git diff --name-only origin/main...HEAD -- '*.php' | grep -c '^src/' || true)
+if [ "$CHANGED_PHP" -eq 0 ]; then
+    echo "No src/ PHP changes, skipping mutation testing."
+    exit 0
+fi
+
+echo "Running mutation testing before push..."
+echo "(Skip with: SKIP_INFECTION=1 git push)"
+
+if ! docker compose exec -T php vendor/bin/infection \
+    --threads=4 \
+    --test-framework-options="--testsuite=unit" \
+    --min-msi=80 --min-covered-msi=90 2>/dev/null; then
+    echo ""
+    echo "❌ Mutation testing failed (MSI below threshold)."
+    echo "   Fix tests to kill more mutants, then push again."
+    echo "   Skip with: SKIP_INFECTION=1 git push"
+    exit 1
+fi
+
+echo "✅ Mutation testing passed."
