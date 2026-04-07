@@ -15,6 +15,7 @@
         "doctrine/doctrine-migrations-bundle": "^4.0",
         "doctrine/orm": "^3.6",
         "laminas/laminas-feed": "^2.26",
+        "league/commonmark": "^2.8",
         "symfony/ai-bundle": "^0.6.0",
         "symfony/ai-failover-platform": "*",
         "symfony/ai-open-router-platform": "^0.6.0",
@@ -38,6 +39,7 @@
         "symfony/validator": "8.0.*",
         "symfony/yaml": "8.0.*",
         "twig/extra-bundle": "^2.12|^3.0",
+        "twig/markdown-extra": "^3.24",
         "twig/twig": "^2.12|^3.0"
     },
     "config": {
