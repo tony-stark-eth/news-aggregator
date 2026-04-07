@@ -26,14 +26,19 @@ final class DigestLogRepository extends ServiceEntityRepository implements Diges
     /**
      * @return list<DigestLog>
      */
-    public function findRecent(int $limit): array
+    public function findRecent(int $limit, ?bool $deliverySuccess = null): array
     {
-        /** @var list<DigestLog> */
-        return $this->createQueryBuilder('l')
+        $qb = $this->createQueryBuilder('l')
             ->orderBy('l.generatedAt', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+
+        if ($deliverySuccess !== null) {
+            $qb->andWhere('l.deliverySuccess = :success')
+                ->setParameter('success', $deliverySuccess);
+        }
+
+        /** @var list<DigestLog> */
+        return $qb->getQuery()->getResult();
     }
 
     public function save(DigestLog $log, bool $flush = false): void

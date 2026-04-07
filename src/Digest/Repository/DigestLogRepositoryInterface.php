@@ -13,7 +13,7 @@ interface DigestLogRepositoryInterface
     /**
      * @return list<DigestLog>
      */
-    public function findRecent(int $limit): array;
+    public function findRecent(int $limit, ?bool $deliverySuccess = null): array;
 
     public function save(DigestLog $log, bool $flush = false): void;
 

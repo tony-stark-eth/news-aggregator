@@ -95,8 +95,9 @@ src/
 │   └── Repository/  # AlertRuleRepositoryInterface, NotificationLogRepositoryInterface
 ├── Digest/          # Periodic AI-generated editorial summaries
 │   └── Repository/  # DigestConfigRepositoryInterface, DigestLogRepositoryInterface
-├── User/            # Auth (symfony/security-bundle), per-user read state (UserArticleRead)
-│   └── Repository/  # UserRepositoryInterface, UserArticleReadRepositoryInterface
+├── User/            # Auth (symfony/security-bundle), per-user read state (UserArticleRead), bookmarks (UserArticleBookmark)
+│   ├── Controller/  # ToggleBookmarkController, MarkAllReadController
+│   └── Repository/  # UserRepositoryInterface, UserArticleReadRepositoryInterface, UserArticleBookmarkRepositoryInterface
 └── Shared/
     ├── AI/          # ModelFailoverPlatform, ModelDiscoveryService, ModelQualityTracker
     ├── Search/      # SEAL + Loupe full-text search (zero infrastructure)

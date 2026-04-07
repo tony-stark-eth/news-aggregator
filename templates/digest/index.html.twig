@@ -61,6 +61,21 @@
     {% endif %}
 
     <h2 class="text-xl font-bold mb-4">Recent Digest History</h2>
+
+    {# Status filter #}
+    <div class="mb-4">
+        <select class="select select-bordered select-sm w-full max-w-xs"
+                hx-on:change="window.location.href = this.value"
+                aria-label="Filter by status">
+            <option value="{{ path('app_digests') }}"
+                    {{ statusFilter|default(null) is null ? 'selected' : '' }}>All</option>
+            <option value="{{ path('app_digests', {status: 'success'}) }}"
+                    {{ statusFilter|default(null) == 'success' ? 'selected' : '' }}>Success</option>
+            <option value="{{ path('app_digests', {status: 'failed'}) }}"
+                    {{ statusFilter|default(null) == 'failed' ? 'selected' : '' }}>Failed / Skipped</option>
+        </select>
+    </div>
+
     {% if recentLogs is empty %}
         <p class="text-base-content/50">No digests generated yet.</p>
     {% else %}
@@ -77,7 +92,16 @@
                         {% else %}
                             <span class="badge badge-error badge-sm">failed</span>
                         {% endif %}
-                        <a href="{{ path('app_digests_log_view', {id: log.id}) }}" class="btn btn-ghost btn-xs ml-auto relative z-10">View</a>
+                        <div class="ml-auto flex items-center gap-1 relative z-10">
+                            {% if not log.deliverySuccess %}
+                                <button hx-post="{{ path('app_digests_trigger', {id: log.digestConfig.id}) }}"
+                                        hx-headers='{"X-CSRF-Token": "{{ csrf_token('trigger_digest') }}"}'
+                                        hx-target="this"
+                                        hx-swap="outerHTML"
+                                        class="btn btn-ghost btn-xs text-warning">Retry</button>
+                            {% endif %}
+                            <a href="{{ path('app_digests_log_view', {id: log.id}) }}" class="btn btn-ghost btn-xs">View</a>
+                        </div>
                     </div>
                     <div class="collapse-content">
                         <div class="prose prose-sm max-w-none">{{ log.content|markdown_to_html }}</div>

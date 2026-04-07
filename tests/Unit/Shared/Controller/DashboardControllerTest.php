@@ -10,6 +10,7 @@ use App\Shared\Controller\DashboardController;
 use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
+use App\User\Repository\UserArticleBookmarkRepositoryInterface;
 use App\User\Repository\UserArticleReadRepositoryInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -38,6 +39,11 @@ final class DashboardControllerTest extends TestCase
     private MockObject $userArticleReadRepository;
 
     /**
+     * @var UserArticleBookmarkRepositoryInterface&MockObject
+     */
+    private MockObject $userArticleBookmarkRepository;
+
+    /**
      * @var SourceRepositoryInterface&MockObject
      */
     private MockObject $sourceRepository;
@@ -61,6 +67,7 @@ final class DashboardControllerTest extends TestCase
         $this->controllerHelper = $this->createMock(ControllerHelper::class);
         $this->articleRepository = $this->createMock(ArticleRepositoryInterface::class);
         $this->userArticleReadRepository = $this->createMock(UserArticleReadRepositoryInterface::class);
+        $this->userArticleBookmarkRepository = $this->createMock(UserArticleBookmarkRepositoryInterface::class);
         $this->sourceRepository = $this->createMock(SourceRepositoryInterface::class);
         $this->categoryRepository = $this->createMock(CategoryRepositoryInterface::class);
         $this->notificationLogRepository = $this->createMock(NotificationLogRepositoryInterface::class);
@@ -70,6 +77,7 @@ final class DashboardControllerTest extends TestCase
             $this->controllerHelper,
             $this->articleRepository,
             $this->userArticleReadRepository,
+            $this->userArticleBookmarkRepository,
             $this->sourceRepository,
             $this->categoryRepository,
             $this->notificationLogRepository,

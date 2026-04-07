@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Bookmarks
+- Article bookmark / save for later — toggle bookmark via htmx button on article cards, filter dashboard to show bookmarked articles only, persisted per-user with unique constraint (#134)
+
+#### Digest Improvements
+- Digest failure diagnosis and retry — failed/skipped digest logs show "Retry" htmx button to re-trigger generation, plus status filter dropdown (All/Success/Failed) on digest history (#136)
+
 #### Privacy
 - Strip UTM and tracking query parameters (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `fbclid`, `gclid`, `mc_cid`, `mc_eid`) from article URLs before storage (#138)
 
