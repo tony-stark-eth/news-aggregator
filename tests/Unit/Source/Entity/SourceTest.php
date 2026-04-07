@@ -26,6 +26,7 @@ final class SourceTest extends TestCase
         self::assertNull($source->getLastErrorMessage());
         self::assertSame(SourceHealth::Healthy, $source->getHealthStatus());
         self::assertNull($source->getLastFetchedAt());
+        self::assertNull($source->getFetchIntervalMinutes());
     }
 
     public function testRecordSuccess(): void
@@ -90,6 +91,19 @@ final class SourceTest extends TestCase
         self::assertSame(0, $source->getErrorCount());
         self::assertNull($source->getLastErrorMessage());
         self::assertSame(SourceHealth::Healthy, $source->getHealthStatus());
+    }
+
+    public function testFetchIntervalMinutesGetterAndSetter(): void
+    {
+        $source = $this->createSource();
+
+        self::assertNull($source->getFetchIntervalMinutes());
+
+        $source->setFetchIntervalMinutes(30);
+        self::assertSame(30, $source->getFetchIntervalMinutes());
+
+        $source->setFetchIntervalMinutes(null);
+        self::assertNull($source->getFetchIntervalMinutes());
     }
 
     private function createSource(): Source

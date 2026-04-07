@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Per-source fetch interval — optional override (5-1440 minutes) per source; falls back to category interval then global default; shown in sources table (#96)
+- Manual per-source fetch trigger — htmx "Fetch" button on sources table dispatches FetchSourceMessage with CSRF protection (#76)
 - Paid model overflow — `OPENROUTER_PAID_FALLBACK_MODEL` env var appends a low-cost paid model to the failover chain as last resort before rule-based (#115)
 - htmx enhancements across dashboard and CRUD pages — no-reload category tabs, unread toggle, Mark All Read, live search, inline delete with confirmation, digest Run Now (#122)
 - Dashboard stats row: added Alerts Today count and Last Fetch relative timestamp (#75)

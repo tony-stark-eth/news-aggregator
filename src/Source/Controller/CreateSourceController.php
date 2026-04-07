@@ -53,6 +53,7 @@ final class CreateSourceController
         $siteUrl = trim((string) $request->request->get('site_url'));
         $categoryId = (int) $request->request->get('category_id');
         $language = trim((string) $request->request->get('language'));
+        $fetchInterval = trim((string) $request->request->get('fetch_interval_minutes'));
         $enabled = $request->request->getBoolean('enabled');
 
         if ($name === '' || $feedUrl === '') {
@@ -77,6 +78,13 @@ final class CreateSourceController
 
         if ($language !== '') {
             $source->setLanguage($language);
+        }
+
+        if ($fetchInterval !== '') {
+            $intervalValue = (int) $fetchInterval;
+            if ($intervalValue >= 5 && $intervalValue <= 1440) {
+                $source->setFetchIntervalMinutes($intervalValue);
+            }
         }
 
         $this->sourceRepository->save($source, flush: true);

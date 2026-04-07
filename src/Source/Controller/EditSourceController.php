@@ -71,6 +71,7 @@ final class EditSourceController
         $siteUrl = trim((string) $request->request->get('site_url'));
         $categoryId = (int) $request->request->get('category_id');
         $language = trim((string) $request->request->get('language'));
+        $fetchInterval = trim((string) $request->request->get('fetch_interval_minutes'));
         $enabled = $request->request->getBoolean('enabled');
 
         if ($name === '' || $feedUrl === '') {
@@ -116,11 +117,24 @@ final class EditSourceController
         $source->setLanguage($language !== '' ? $language : null);
         $source->setEnabled($enabled);
 
+        $source->setFetchIntervalMinutes($this->parseFetchInterval($fetchInterval));
+
         $this->sourceRepository->save($source, flush: true);
 
         $this->controller->addFlash('success', 'Source updated.');
 
         return new RedirectResponse($this->urlGenerator->generate('app_sources'));
+    }
+
+    private function parseFetchInterval(string $input): ?int
+    {
+        if ($input === '') {
+            return null;
+        }
+
+        $value = (int) $input;
+
+        return ($value >= 5 && $value <= 1440) ? $value : null;
     }
 
     private function renderForm(Source $source): Response
