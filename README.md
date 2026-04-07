@@ -90,6 +90,7 @@ Copy `.env.example` to `.env.local` and adjust:
 | `ADMIN_EMAIL` | Admin login email | `admin@example.com` |
 | `ADMIN_PASSWORD_HASH` | Bcrypt hash of admin password | `$2y$13$...` |
 | `OPENROUTER_API_KEY` | OpenRouter API key (optional) | `sk-or-...` |
+| `OPENROUTER_PAID_FALLBACK_MODEL` | Paid model added to end of failover chain | `google/gemini-2.5-flash-lite` |
 | `NOTIFIER_CHATTER_DSN` | Notification transport DSN | see below |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | How often to fetch feeds | `60` |
 | `DISPLAY_LANGUAGES` | Comma-separated display languages | `en` |

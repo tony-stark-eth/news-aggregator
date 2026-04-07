@@ -27,12 +27,17 @@ final class ModelFailoverPlatform implements PlatformInterface
 
     /**
      * @param list<string> $fallbackModels Models to try after the requested model fails
+     * @param string $paidFallbackModel Optional paid model appended after free models (from OPENROUTER_PAID_FALLBACK_MODEL env var)
      */
     public function __construct(
         private readonly PlatformInterface $innerPlatform,
         array $fallbackModels = [],
+        private readonly string $paidFallbackModel = '',
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
+        if ($this->paidFallbackModel !== '') {
+            $fallbackModels[] = $this->paidFallbackModel;
+        }
         $this->fallbackModels = $fallbackModels;
     }
 

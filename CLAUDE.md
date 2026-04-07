@@ -114,7 +114,8 @@ src/
 - **Two-phase enrichment**: Phase 1 (sync in FetchSourceHandler) applies rule-based categorization, summarization, keywords, scoring. Phase 2 (async via `async_enrich` transport) runs full AI enrichment + translation. Articles appear instantly with rule-based data and upgrade in-place when AI completes.
 - **Mercure SSE**: Real-time push via built-in FrankenPHP/Caddy Mercure hub. `MercurePublisherService` publishes article creation and enrichment completion events. Frontend uses native `EventSource` API to update article cards in-place and show "new articles" banner.
 - **Primary model**: `openrouter/free` — auto-routes to best available free model, zero maintenance
-- **Fallback chain**: `ModelFailoverPlatform` (PlatformInterface decorator) chains free → minimax → glm → gpt-oss → qwen → nemotron
+- **Fallback chain**: `ModelFailoverPlatform` (PlatformInterface decorator) chains free → minimax → glm → gpt-oss → qwen → nemotron → optional paid model
+- **Paid fallback**: `OPENROUTER_PAID_FALLBACK_MODEL` env var appends a low-cost paid model (e.g. `google/gemini-2.5-flash-lite`) to the end of the failover chain. Empty by default — pure free tier unless configured.
 - **Rule-based fallback**: Always active — AI is an enhancement layer, not a dependency
 - **Quality gates**: `AiQualityGateService` — structured output validation, confidence >= 0.7, summary length heuristic
 - **Circuit breaker**: `ModelDiscoveryService` — 3 consecutive failures → 24h fallback to DB-persisted model list
@@ -134,6 +135,7 @@ src/
 | `ADMIN_PASSWORD_HASH` | Bcrypt/argon2 hash | (required) |
 | `OPENROUTER_API_KEY` | OpenRouter API key for AI | (optional — rule-based fallback works without it) |
 | `OPENROUTER_BLOCKED_MODELS` | Comma-separated blocked model IDs | (empty) |
+| `OPENROUTER_PAID_FALLBACK_MODEL` | Paid model appended to failover chain (e.g. `google/gemini-2.5-flash-lite`) | (empty) |
 | `NOTIFIER_CHATTER_DSN` | Notifier transport DSN | (optional — matches logged as `skipped` without it) |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | Default fetch interval | `60` |
 | `DISPLAY_LANGUAGES` | Comma-separated display languages (e.g. `en,de,fr`) | `en` |

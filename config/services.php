@@ -119,7 +119,7 @@ return static function (ContainerConfigurator $container): void {
             ],
         ]);
 
-    // Model failover platform: openrouter/free → specific :free models → exception
+    // Model failover platform: openrouter/free → specific :free models → optional paid fallback → exception
     // Wraps the OpenRouter platform with model-level failover (complements FailoverPlatform's platform-level failover)
     $services->set('ai.platform.openrouter.failover', ModelFailoverPlatform::class)
         ->arg('$innerPlatform', service('ai.platform.openrouter'))
@@ -129,7 +129,8 @@ return static function (ContainerConfigurator $container): void {
             'openai/gpt-oss-120b:free',
             'qwen/qwen3.6-plus:free',
             'nvidia/nemotron-3-super-120b-a12b:free',
-        ]);
+        ])
+        ->arg('$paidFallbackModel', '%env(string:OPENROUTER_PAID_FALLBACK_MODEL)%');
 
     // All AI services use the failover-wrapped platform
     $services->set(AiCategorizationService::class)

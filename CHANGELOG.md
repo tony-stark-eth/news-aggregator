@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Paid model overflow — `OPENROUTER_PAID_FALLBACK_MODEL` env var appends a low-cost paid model to the failover chain as last resort before rule-based (#115)
 - htmx enhancements across dashboard and CRUD pages — no-reload category tabs, unread toggle, Mark All Read, live search, inline delete with confirmation, digest Run Now (#122)
 - Dashboard stats row: added Alerts Today count and Last Fetch relative timestamp (#75)
 - Async two-phase enrichment — Phase 1 (sync) applies rule-based categorization/summarization/keywords/scoring, Phase 2 (async via `async_enrich` transport) runs full AI enrichment + translation; articles appear instantly and upgrade in-place (#114)
