@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Article\MessageHandler;
 use App\Article\Entity\Article;
 use App\Article\Event\ArticleCreated;
 use App\Article\Message\EnrichArticleMessage;
+use App\Article\Message\FetchFullTextMessage;
 use App\Article\MessageHandler\FetchSourceHandler;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
@@ -14,6 +15,7 @@ use App\Article\ValueObject\ArticleCollection;
 use App\Article\ValueObject\ArticleFingerprint;
 use App\Article\ValueObject\EnrichmentStatus;
 use App\Article\ValueObject\FetchResult;
+use App\Article\ValueObject\FullTextStatus;
 use App\Article\ValueObject\PersistItemResult;
 use App\Article\ValueObject\Url;
 use App\Enrichment\Service\RuleBasedEnrichmentServiceInterface;
@@ -49,7 +51,9 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[UsesClass(ArticleCreated::class)]
 #[UsesClass(FeedFetchException::class)]
 #[UsesClass(EnrichArticleMessage::class)]
+#[UsesClass(FetchFullTextMessage::class)]
 #[UsesClass(EnrichmentStatus::class)]
+#[UsesClass(FullTextStatus::class)]
 #[UsesClass(Url::class)]
 final class FetchSourceHandlerTest extends TestCase
 {
@@ -270,7 +274,7 @@ final class FetchSourceHandlerTest extends TestCase
         self::assertSame(['First', 'Second', 'Third'], $dispatched);
     }
 
-    public function testDispatchesEnrichArticleMessageForEachNewArticle(): void
+    public function testDispatchesFetchFullTextMessageWhenFullTextEnabled(): void
     {
         $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
         $messageBus = $this->createMock(MessageBusInterface::class);
@@ -284,7 +288,6 @@ final class FetchSourceHandlerTest extends TestCase
             new FeedItem('Second', 'https://example.com/2', null, null, null),
         ]));
 
-        // Simulate DB save assigning IDs
         $nextId = 1;
         $articleRepository->method('save')
             ->willReturnCallback(function (Article $article) use (&$nextId): void {
@@ -295,6 +298,53 @@ final class FetchSourceHandlerTest extends TestCase
 
         $dispatched = [];
         $messageBus->expects(self::exactly(2))
+            ->method('dispatch')
+            ->with(self::callback(static function (mixed $message) use (&$dispatched): bool {
+                self::assertInstanceOf(FetchFullTextMessage::class, $message);
+                $dispatched[] = $message;
+
+                return true;
+            }))
+            ->willReturnCallback(static fn (object $message): Envelope => new Envelope($message));
+
+        $handler = $this->createHandler(
+            articleRepository: $articleRepository,
+            fetcher: $fetcher,
+            parser: $parser,
+            messageBus: $messageBus,
+            fullTextEnabled: true,
+        );
+
+        ($handler)(new FetchSourceMessage(1));
+
+        self::assertCount(2, $dispatched);
+        self::assertSame(1, $dispatched[0]->articleId);
+        self::assertSame(2, $dispatched[1]->articleId);
+    }
+
+    public function testDispatchesEnrichArticleMessageWhenFullTextDisabled(): void
+    {
+        $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
+        $messageBus = $this->createMock(MessageBusInterface::class);
+
+        $fetcher = $this->createStub(FeedFetcherServiceInterface::class);
+        $fetcher->method('fetch')->willReturn('<rss>...</rss>');
+
+        $parser = $this->createStub(FeedParserServiceInterface::class);
+        $parser->method('parse')->willReturn(new FeedItemCollection([
+            new FeedItem('First', 'https://example.com/1', null, null, null),
+        ]));
+
+        $nextId = 1;
+        $articleRepository->method('save')
+            ->willReturnCallback(function (Article $article) use (&$nextId): void {
+                $ref = new \ReflectionProperty(Article::class, 'id');
+                $ref->setValue($article, $nextId++);
+            });
+        $articleRepository->method('flush');
+
+        $dispatched = [];
+        $messageBus->expects(self::once())
             ->method('dispatch')
             ->with(self::callback(static function (mixed $message) use (&$dispatched): bool {
                 self::assertInstanceOf(EnrichArticleMessage::class, $message);
@@ -309,13 +359,47 @@ final class FetchSourceHandlerTest extends TestCase
             fetcher: $fetcher,
             parser: $parser,
             messageBus: $messageBus,
+            fullTextEnabled: false,
         );
 
         ($handler)(new FetchSourceMessage(1));
 
-        self::assertCount(2, $dispatched);
+        self::assertCount(1, $dispatched);
         self::assertSame(1, $dispatched[0]->articleId);
-        self::assertSame(2, $dispatched[1]->articleId);
+    }
+
+    public function testSetsFullTextStatusPendingWhenFullTextEnabled(): void
+    {
+        $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
+
+        $fetcher = $this->createStub(FeedFetcherServiceInterface::class);
+        $fetcher->method('fetch')->willReturn('<rss>...</rss>');
+
+        $parser = $this->createStub(FeedParserServiceInterface::class);
+        $parser->method('parse')->willReturn(new FeedItemCollection([
+            new FeedItem('Article', 'https://example.com/1', null, null, null),
+        ]));
+
+        $saved = [];
+        $articleRepository->expects(self::once())
+            ->method('save')
+            ->willReturnCallback(function (Article $article) use (&$saved): void {
+                $ref = new \ReflectionProperty(Article::class, 'id');
+                $ref->setValue($article, 1);
+                $saved[] = $article;
+            });
+
+        $handler = $this->createHandler(
+            articleRepository: $articleRepository,
+            fetcher: $fetcher,
+            parser: $parser,
+            fullTextEnabled: true,
+        );
+
+        ($handler)(new FetchSourceMessage(1));
+
+        self::assertCount(1, $saved);
+        self::assertSame(FullTextStatus::Pending, $saved[0]->getFullTextStatus());
     }
 
     public function testSetsArticlePropertiesFromFeedItem(): void
@@ -444,6 +528,7 @@ final class FetchSourceHandlerTest extends TestCase
         ?EventDispatcherInterface $eventDispatcher = null,
         ?MessageBusInterface $messageBus = null,
         ?LoggerInterface $logger = null,
+        bool $fullTextEnabled = true,
     ): FetchSourceHandler {
         if (! $sourceRepository instanceof SourceRepositoryInterface) {
             $sourceRepository = $this->createStub(SourceRepositoryInterface::class);
@@ -477,6 +562,7 @@ final class FetchSourceHandlerTest extends TestCase
             $messageBus,
             $this->clock,
             $logger ?? new NullLogger(),
+            $fullTextEnabled,
         );
     }
 }

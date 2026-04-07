@@ -78,6 +78,14 @@
             </label>
         </div>
 
+        <div class="form-control">
+            <label class="label cursor-pointer justify-start gap-3">
+                <input type="checkbox" name="full_text_enabled" value="1" class="checkbox" {% if source.fullTextEnabled %}checked{% endif %} id="full_text_enabled">
+                <span class="label-text">Full-text fetch</span>
+            </label>
+            <span class="label-text-alt text-xs opacity-70 ml-9">Fetch full article content from the source website</span>
+        </div>
+
         <div class="flex gap-2 mt-2">
             <button type="submit" class="btn btn-primary">Update Source</button>
             <a href="{{ path('app_sources') }}" class="btn btn-ghost">Cancel</a>

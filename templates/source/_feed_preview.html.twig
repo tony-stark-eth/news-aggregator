@@ -18,6 +18,9 @@
                     &middot; Language: <span class="badge badge-sm">{{ preview.detectedLanguage }}</span>
                 {% endif %}
             </p>
+            {% if preview.hasFullContent %}
+                <p class="text-sm text-success mt-1" data-has-full-content="true">Full content detected — no scraping needed</p>
+            {% endif %}
         </div>
     </div>
 {% endif %}

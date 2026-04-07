@@ -7,12 +7,14 @@ namespace App\Article\MessageHandler;
 use App\Article\Entity\Article;
 use App\Article\Event\ArticleCreated;
 use App\Article\Message\EnrichArticleMessage;
+use App\Article\Message\FetchFullTextMessage;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Article\ValueObject\ArticleCollection;
 use App\Article\ValueObject\ArticleFingerprint;
 use App\Article\ValueObject\EnrichmentStatus;
 use App\Article\ValueObject\FetchResult;
+use App\Article\ValueObject\FullTextStatus;
 use App\Article\ValueObject\PersistItemResult;
 use App\Article\ValueObject\Url;
 use App\Enrichment\Service\RuleBasedEnrichmentServiceInterface;
@@ -27,6 +29,7 @@ use App\Source\Service\FeedParserServiceInterface;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\MessageBusInterface;
@@ -46,6 +49,8 @@ final readonly class FetchSourceHandler
         private MessageBusInterface $messageBus,
         private ClockInterface $clock,
         private LoggerInterface $logger,
+        #[Autowire('%env(bool:FULL_TEXT_FETCH_ENABLED)%')]
+        private bool $fullTextEnabled = true,
     ) {
     }
 
@@ -156,7 +161,14 @@ final readonly class FetchSourceHandler
     private function dispatchEnrichMessage(Article $article): void
     {
         $articleId = $article->getId();
-        if ($articleId !== null) {
+        if ($articleId === null) {
+            return;
+        }
+
+        if ($this->fullTextEnabled) {
+            $article->setFullTextStatus(FullTextStatus::Pending);
+            $this->messageBus->dispatch(new FetchFullTextMessage($articleId));
+        } else {
             $this->messageBus->dispatch(new EnrichArticleMessage($articleId));
         }
     }

@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Full-Text Article Fetch (Readability)
+- Three-phase enrichment pipeline: Phase 1 (sync rule-based) -> Phase 1.5 (async full-text fetch) -> Phase 2 (async AI enrichment) (#151)
+- `FetchFullTextHandler` fetches full article content from source websites using fivefilters/readability.php
+- Per-domain rate limiting via Symfony RateLimiter (sliding window, configurable)
+- HTML sanitization of extracted content via symfony/html-sanitizer
+- Per-source `fullTextEnabled` toggle on create/edit forms
+- Feed content auto-detection: "Full content detected" indicator when feed already provides full articles
+- Dedicated `async_fulltext` Messenger transport with fulltext-worker container
+- New env vars: `FULL_TEXT_FETCH_ENABLED`, `FULL_TEXT_FETCH_TIMEOUT`, `FULL_TEXT_RATE_LIMIT_REQUESTS`, `FULL_TEXT_RATE_LIMIT_INTERVAL`
+- Failed full-text fetch never blocks the pipeline — always dispatches enrichment
+
 #### Feed URL Validation
 - Validate feed URL before saving — htmx-powered "Validate" button on create/edit source forms fetches and parses the feed, showing title, item count, and detected language inline (#97)
 - Language auto-detection from feed content — checks RSS `<language>`, Atom `xml:lang`, `dc:language`, and character heuristic fallback (German/French/Spanish) (#97)

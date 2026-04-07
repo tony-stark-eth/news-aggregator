@@ -11,6 +11,7 @@ final readonly class FeedPreview
         public int $itemCount,
         public ?string $detectedLanguage,
         public FeedUrl $feedUrl,
+        public bool $hasFullContent = false,
     ) {
     }
 }

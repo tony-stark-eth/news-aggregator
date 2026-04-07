@@ -55,6 +55,7 @@ final class CreateSourceController
         $language = trim((string) $request->request->get('language'));
         $fetchInterval = trim((string) $request->request->get('fetch_interval_minutes'));
         $enabled = $request->request->getBoolean('enabled');
+        $fullTextEnabled = $request->request->getBoolean('full_text_enabled');
 
         if ($name === '' || $feedUrl === '') {
             $this->controller->addFlash('error', 'Name and Feed URL are required.');
@@ -71,6 +72,7 @@ final class CreateSourceController
 
         $source = new Source($name, $feedUrl, $category, $this->clock->now());
         $source->setEnabled($enabled);
+        $source->setFullTextEnabled($fullTextEnabled);
 
         if ($siteUrl !== '') {
             $source->setSiteUrl($siteUrl);

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Article\Entity;
 
 use App\Article\ValueObject\EnrichmentStatus;
+use App\Article\ValueObject\FullTextStatus;
 use App\Article\ValueObject\Url;
 use App\Shared\Entity\Category;
 use App\Shared\ValueObject\EnrichmentMethod;
@@ -84,6 +85,15 @@ class Article
      */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $keywords = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $contentFullText = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $contentFullHtml = null;
+
+    #[ORM\Column(length: 20, nullable: true, enumType: FullTextStatus::class)]
+    private ?FullTextStatus $fullTextStatus = null;
 
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $fetchedAt;
@@ -284,6 +294,36 @@ class Article
     public function getTranslation(string $lang): ?array
     {
         return $this->translations[$lang] ?? null;
+    }
+
+    public function getContentFullText(): ?string
+    {
+        return $this->contentFullText;
+    }
+
+    public function setContentFullText(?string $contentFullText): void
+    {
+        $this->contentFullText = $contentFullText;
+    }
+
+    public function getContentFullHtml(): ?string
+    {
+        return $this->contentFullHtml;
+    }
+
+    public function setContentFullHtml(?string $contentFullHtml): void
+    {
+        $this->contentFullHtml = $contentFullHtml;
+    }
+
+    public function getFullTextStatus(): ?FullTextStatus
+    {
+        return $this->fullTextStatus;
+    }
+
+    public function setFullTextStatus(?FullTextStatus $fullTextStatus): void
+    {
+        $this->fullTextStatus = $fullTextStatus;
     }
 
     public function getFetchedAt(): \DateTimeImmutable

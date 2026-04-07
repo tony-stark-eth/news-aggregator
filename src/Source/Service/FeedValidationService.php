@@ -14,6 +14,7 @@ final readonly class FeedValidationService implements FeedValidationServiceInter
         private FeedFetcherServiceInterface $feedFetcher,
         private FeedParserServiceInterface $feedParser,
         private FeedLanguageDetectorInterface $languageDetector,
+        private FeedContentAnalyzerServiceInterface $contentAnalyzer,
     ) {
     }
 
@@ -26,12 +27,14 @@ final readonly class FeedValidationService implements FeedValidationServiceInter
 
         $title = $this->extractTitle($rawContent);
         $detectedLanguage = $this->languageDetector->detect($rawContent);
+        $hasFullContent = $this->contentAnalyzer->hasFullContent($items);
 
         return new FeedPreview(
             title: $title,
             itemCount: $items->count(),
             detectedLanguage: $detectedLanguage,
             feedUrl: $feedUrl,
+            hasFullContent: $hasFullContent,
         );
     }
 
