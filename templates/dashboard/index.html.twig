@@ -28,15 +28,16 @@
            hx-push-url="true"
            hx-indicator="#feed-loader"
            class="tab {{ currentCategory is null ? 'tab-active' : '' }}"
-           hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">All</a>
+           hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">All{% if unreadCounts is defined and unreadCounts and unreadCounts.total > 0 %} <span class="badge badge-sm badge-primary">{{ unreadCounts.total }}</span>{% endif %}</a>
         {% for category in categories %}
+            {% set cat_unread = (unreadCounts is defined and unreadCounts) ? unreadCounts.categories[category.slug] ?? 0 : 0 %}
             <a hx-get="{{ path('app_dashboard', {category: category.slug, source: currentSource}) }}"
                hx-target="#article-feed"
                hx-swap="innerHTML"
                hx-push-url="true"
                hx-indicator="#feed-loader"
                class="tab {{ currentCategory == category.slug ? 'tab-active' : '' }}"
-               hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">{{ category.name }}</a>
+               hx-on:click="this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('tab-active')); this.classList.add('tab-active')">{{ category.name }}{% if cat_unread > 0 %} <span class="badge badge-sm badge-primary">{{ cat_unread }}</span>{% endif %}</a>
         {% endfor %}
     </div>
 

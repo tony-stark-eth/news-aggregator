@@ -33,17 +33,27 @@ final readonly class ScoringService implements ScoringServiceInterface
 
     public function score(Article $article): float
     {
-        $categoryScore = $this->scoreCategoryWeight($article);
-        $recencyScore = $this->scoreRecency($article);
-        $sourceScore = $this->scoreSourceReliability($article);
-        $enrichmentScore = $this->scoreEnrichment($article);
+        $breakdown = $this->breakdown($article);
 
-        $combined = (self::WEIGHT_CATEGORY * $categoryScore)
-            + (self::WEIGHT_RECENCY * $recencyScore)
-            + (self::WEIGHT_SOURCE * $sourceScore)
-            + (self::WEIGHT_ENRICHMENT * $enrichmentScore);
+        $combined = (self::WEIGHT_CATEGORY * $breakdown['category'])
+            + (self::WEIGHT_RECENCY * $breakdown['recency'])
+            + (self::WEIGHT_SOURCE * $breakdown['source'])
+            + (self::WEIGHT_ENRICHMENT * $breakdown['enrichment']);
 
         return round(max(0.0, min(1.0, $combined)), 4);
+    }
+
+    /**
+     * @return array{recency: float, category: float, source: float, enrichment: float}
+     */
+    public function breakdown(Article $article): array
+    {
+        return [
+            'recency' => $this->scoreRecency($article),
+            'category' => $this->scoreCategoryWeight($article),
+            'source' => $this->scoreSourceReliability($article),
+            'enrichment' => $this->scoreEnrichment($article),
+        ];
     }
 
     private function scoreCategoryWeight(Article $article): float

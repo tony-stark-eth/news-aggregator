@@ -32,8 +32,12 @@
                 {% endif %}
             </div>
             {% if article.score %}
-                <div class="badge badge-sm {{ article.score > 0.7 ? 'badge-primary' : (article.score > 0.4 ? 'badge-secondary' : 'badge-ghost') }}">
-                    {{ (article.score * 100)|round }}%
+                {% set breakdown = score_breakdown(article) %}
+                <div class="{{ breakdown ? 'tooltip tooltip-left' : '' }}"
+                     {% if breakdown %}data-tip="Recency {{ breakdown.recency }}% | Category {{ breakdown.category }}% | Source {{ breakdown.source }}% | Enrichment {{ breakdown.enrichment }}%"{% endif %}>
+                    <div class="badge badge-sm {{ article.score > 0.7 ? 'badge-primary' : (article.score > 0.4 ? 'badge-secondary' : 'badge-ghost') }}">
+                        {{ (article.score * 100)|round }}%
+                    </div>
                 </div>
             {% endif %}
         </div>
@@ -44,6 +48,10 @@
             {% endif %}
             {% if article.enrichmentMethod %}
                 <span class="badge badge-ghost badge-sm">{{ article.enrichmentMethod.value == 'ai' ? '🤖 AI' : '📐 Rule' }}</span>
+            {% endif %}
+            {% set reading_minutes = article.contentText|reading_time %}
+            {% if reading_minutes %}
+                <span class="text-base-content/50">{{ reading_minutes }} min read</span>
             {% endif %}
             <time datetime="{{ article.publishedAt ? article.publishedAt|date('c') : article.fetchedAt|date('c') }}" class="text-base-content/50 timeago">
                 {{ article.publishedAt ? article.publishedAt|date('Y-m-d H:i') : article.fetchedAt|date('Y-m-d H:i') }}

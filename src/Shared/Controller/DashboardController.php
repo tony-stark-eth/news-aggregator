@@ -82,6 +82,11 @@ final class DashboardController
         $alertsToday = $this->notificationLogRepository->countSentSince($todayStart);
         $lastFetchedAt = $this->sourceRepository->findMostRecentFetchedAt();
 
+        // Unread counts per category (below htmx early-return to avoid running on infinite scroll)
+        $unreadCounts = $user instanceof User
+            ? $this->userArticleReadRepository->countUnreadByCategory($user)
+            : null;
+
         return $this->controller->render('dashboard/index.html.twig', [
             'articles' => $articles,
             'currentCategory' => $category,
@@ -95,6 +100,7 @@ final class DashboardController
             'page' => $page,
             'readArticleIds' => $readArticleIds,
             'unreadOnly' => $unreadOnly,
+            'unreadCounts' => $unreadCounts,
         ]);
     }
 

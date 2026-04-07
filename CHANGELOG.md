@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Article Card Enhancements
+- Reading time estimate on article cards — "3 min read" based on `ceil(wordCount / 200)`, gracefully hidden when no content text (#135)
+- Score explanation tooltip on score badge — DaisyUI tooltip showing Recency/Category/Source/Enrichment sub-score percentages (#137)
+- Unread count badges on category tabs — per-category and total unread counts displayed on dashboard tabs for logged-in users (#139)
+
 #### Post-Release Features
 - Fetch All button on sources page — dispatches FetchSourceMessage for all enabled sources via htmx, shows "Queued N sources" badge (#129)
 - Dashboard source filter — dropdown to filter articles by source, works alongside category and unread filters with htmx no-reload interaction (#130)

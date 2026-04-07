@@ -9,6 +9,7 @@ use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Shared\Controller\DashboardController;
 use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Repository\SourceRepositoryInterface;
+use App\User\Entity\User;
 use App\User\Repository\UserArticleReadRepositoryInterface;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -101,6 +102,7 @@ final class DashboardControllerTest extends TestCase
                     self::assertInstanceOf(\DateTimeImmutable::class, $params['lastFetchedAt']);
                     self::assertNull($params['currentSource']);
                     self::assertArrayHasKey('sources', $params);
+                    self::assertNull($params['unreadCounts']);
 
                     return true;
                 }),
@@ -201,6 +203,72 @@ final class DashboardControllerTest extends TestCase
         $request->headers->set('HX-Request', 'true');
 
         ($this->controller)($request, source: 7);
+    }
+
+    public function testDashboardPassesUnreadCountsForLoggedInUser(): void
+    {
+        $user = new User('test@example.com', 'hashed');
+        $this->articleRepository->method('findPaginated')->willReturn([]);
+        $this->controllerHelper->method('getUser')->willReturn($user);
+        $this->articleRepository->method('countSince')->willReturn(0);
+        $this->sourceRepository->method('countEnabled')->willReturn(1);
+        $this->sourceRepository->method('findEnabled')->willReturn([]);
+        $this->notificationLogRepository->method('countSentSince')->willReturn(0);
+        $this->sourceRepository->method('findMostRecentFetchedAt')->willReturn(null);
+        $this->categoryRepository->method('findAllOrderedByWeight')->willReturn([]);
+
+        $this->userArticleReadRepository->expects(self::once())
+            ->method('countUnreadByCategory')
+            ->with($user)
+            ->willReturn([
+                'total' => 15,
+                'categories' => [
+                    'tech' => 10,
+                    'science' => 5,
+                ],
+            ]);
+
+        $expectedResponse = new Response();
+        $this->controllerHelper->expects(self::once())
+            ->method('render')
+            ->with(
+                'dashboard/index.html.twig',
+                self::callback(static function (array $params): bool {
+                    self::assertArrayHasKey('unreadCounts', $params);
+                    self::assertSame([
+                        'total' => 15,
+                        'categories' => [
+                            'tech' => 10,
+                            'science' => 5,
+                        ],
+                    ], $params['unreadCounts']);
+
+                    return true;
+                }),
+            )
+            ->willReturn($expectedResponse);
+
+        $request = new Request();
+        ($this->controller)($request);
+    }
+
+    public function testHtmxRequestDoesNotQueryUnreadCounts(): void
+    {
+        $this->articleRepository->method('findPaginated')->willReturn([]);
+        $this->controllerHelper->method('getUser')->willReturn(null);
+
+        $this->userArticleReadRepository->expects(self::never())->method('countUnreadByCategory');
+
+        $expectedResponse = new Response();
+        $this->controllerHelper->expects(self::once())
+            ->method('render')
+            ->with('dashboard/_article_list.html.twig', self::anything())
+            ->willReturn($expectedResponse);
+
+        $request = new Request();
+        $request->headers->set('HX-Request', 'true');
+
+        ($this->controller)($request);
     }
 
     public function testHtmxRequestDoesNotQueryStats(): void
