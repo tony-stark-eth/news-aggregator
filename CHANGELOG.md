@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Post-Release Features
+- Dashboard stats row: added Alerts Today count and Last Fetch relative timestamp (#75)
 - Async two-phase enrichment — Phase 1 (sync) applies rule-based categorization/summarization/keywords/scoring, Phase 2 (async via `async_enrich` transport) runs full AI enrichment + translation; articles appear instantly and upgrade in-place (#114)
 - Mercure real-time updates — SSE push via built-in FrankenPHP/Caddy Mercure hub; "new articles" banner on dashboard, in-place article card updates when AI enrichment completes (#119)
 - htmx integration — replaced custom infinite scroll TypeScript with declarative `hx-trigger="revealed"` pagination; htmx SSE extension available for future use

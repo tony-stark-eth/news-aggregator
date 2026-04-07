@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Notification\Repository;
 
 use App\Notification\Entity\NotificationLog;
+use App\Notification\ValueObject\DeliveryStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -83,5 +84,18 @@ final class NotificationLogRepository extends ServiceEntityRepository implements
         }
 
         return $stats;
+    }
+
+    public function countSentSince(\DateTimeImmutable $since): int
+    {
+        /** @var int */
+        return $this->createQueryBuilder('l')
+            ->select('COUNT(l.id)')
+            ->where('l.deliveryStatus = :status')
+            ->andWhere('l.sentAt >= :since')
+            ->setParameter('status', DeliveryStatus::Sent)
+            ->setParameter('since', $since)
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 }

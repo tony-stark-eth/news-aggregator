@@ -29,6 +29,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-17}&charset=${POSTGRES_CHARSET:-utf8}
       APP_ENV: "${APP_ENV:-dev}"
+      APP_DEBUG: "0"
     command: ["php", "bin/console", "messenger:consume", "async", "scheduler_fetch", "--time-limit=3600", "--memory-limit=128M", "-vv"]
     depends_on:
       - php
@@ -41,6 +42,7 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-17}&charset=${POSTGRES_CHARSET:-utf8}
       APP_ENV: "${APP_ENV:-dev}"
+      APP_DEBUG: "0"
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY:-}"
       OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
       MERCURE_URL: "https://php/.well-known/mercure"

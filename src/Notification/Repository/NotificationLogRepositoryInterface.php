@@ -23,4 +23,6 @@ interface NotificationLogRepositoryInterface
      * @return array<int, array{count: int, lastTriggeredAt: \DateTimeImmutable|null}>
      */
     public function getMatchStatsByAlertRule(): array;
+
+    public function countSentSince(\DateTimeImmutable $since): int;
 }

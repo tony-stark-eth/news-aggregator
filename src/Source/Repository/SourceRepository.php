@@ -79,4 +79,16 @@ final class SourceRepository extends ServiceEntityRepository implements SourceRe
     {
         $this->getEntityManager()->flush();
     }
+
+    public function findMostRecentFetchedAt(): ?\DateTimeImmutable
+    {
+        /** @var string|null $result */
+        $result = $this->createQueryBuilder('s')
+            ->select('MAX(s.lastFetchedAt)')
+            ->where('s.enabled = true')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $result !== null ? new \DateTimeImmutable($result) : null;
+    }
 }
