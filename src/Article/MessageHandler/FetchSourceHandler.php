@@ -14,6 +14,7 @@ use App\Article\ValueObject\ArticleFingerprint;
 use App\Article\ValueObject\EnrichmentStatus;
 use App\Article\ValueObject\FetchResult;
 use App\Article\ValueObject\PersistItemResult;
+use App\Article\ValueObject\Url;
 use App\Enrichment\Service\RuleBasedEnrichmentServiceInterface;
 use App\Source\Entity\Source;
 use App\Source\Exception\FeedFetchException;
@@ -89,15 +90,16 @@ final readonly class FetchSourceHandler
         $newArticles = [];
 
         foreach ($items as $item) {
+            $sanitizedUrl = Url::sanitize($item->url);
             $fingerprint = $item->contentText !== null
                 ? ArticleFingerprint::fromContent($item->contentText)->value
                 : null;
 
-            if ($this->deduplication->isDuplicate($item->url, $item->title, $fingerprint)) {
+            if ($this->deduplication->isDuplicate($sanitizedUrl, $item->title, $fingerprint)) {
                 continue;
             }
 
-            $itemResult = $this->persistItem($item, $source, $sourceId, $now, $fingerprint);
+            $itemResult = $this->persistItem($item, $sanitizedUrl, $source, $sourceId, $now, $fingerprint);
             if (! $itemResult instanceof PersistItemResult) {
                 return new FetchResult($persisted, new ArticleCollection($newArticles), null);
             }
@@ -114,13 +116,14 @@ final readonly class FetchSourceHandler
 
     private function persistItem(
         FeedItem $item,
+        string $sanitizedUrl,
         Source $source,
         int $sourceId,
         \DateTimeImmutable $now,
         ?string $fingerprint,
     ): ?PersistItemResult {
         try {
-            $article = new Article($item->title, $item->url, $source, $now);
+            $article = new Article($item->title, $sanitizedUrl, $source, $now);
             $article->setContentRaw($item->contentRaw);
             $article->setContentText($item->contentText);
             $article->setPublishedAt($item->publishedAt);
@@ -135,7 +138,7 @@ final readonly class FetchSourceHandler
             return new PersistItemResult($article, $source);
         } catch (\Throwable $e) {
             $this->logger->debug('Skipped article "{url}": {error}', [
-                'url' => $item->url,
+                'url' => $sanitizedUrl,
                 'error' => $e->getMessage(),
             ]);
 

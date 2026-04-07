@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Full-text search returns no results after container rebuild — search index now rebuilds on container startup via entrypoint (#133)
+
 ### Added
+
+#### Privacy
+- Strip UTM and tracking query parameters (`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `fbclid`, `gclid`, `mc_cid`, `mc_eid`) from article URLs before storage (#138)
 
 #### Article Card Enhancements
 - Reading time estimate on article cards — "3 min read" based on `ceil(wordCount / 200)`, gracefully hidden when no content text (#135)

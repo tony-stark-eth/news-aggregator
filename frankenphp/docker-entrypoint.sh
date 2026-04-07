@@ -38,6 +38,12 @@ if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 		fi
 	fi
 
+	# Rebuild search index (Loupe data lives in a Docker volume, lost on rebuild)
+	if [ "$1" = 'frankenphp' ]; then
+		echo 'Rebuilding search index...'
+		php bin/console app:search-reindex --no-debug 2>&1 || echo 'Search reindex failed (non-fatal)'
+	fi
+
 	echo 'PHP app ready!'
 fi
 

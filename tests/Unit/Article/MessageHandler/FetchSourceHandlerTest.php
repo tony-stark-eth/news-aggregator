@@ -15,6 +15,7 @@ use App\Article\ValueObject\ArticleFingerprint;
 use App\Article\ValueObject\EnrichmentStatus;
 use App\Article\ValueObject\FetchResult;
 use App\Article\ValueObject\PersistItemResult;
+use App\Article\ValueObject\Url;
 use App\Enrichment\Service\RuleBasedEnrichmentServiceInterface;
 use App\Shared\Entity\Category;
 use App\Source\Entity\Source;
@@ -49,6 +50,7 @@ use Symfony\Component\Messenger\MessageBusInterface;
 #[UsesClass(FeedFetchException::class)]
 #[UsesClass(EnrichArticleMessage::class)]
 #[UsesClass(EnrichmentStatus::class)]
+#[UsesClass(Url::class)]
 final class FetchSourceHandlerTest extends TestCase
 {
     private MockClock $clock;
@@ -350,6 +352,79 @@ final class FetchSourceHandlerTest extends TestCase
         self::assertSame('Plain text', $article->getContentText());
         self::assertSame($publishedAt, $article->getPublishedAt());
         self::assertNotNull($article->getFingerprint());
+    }
+
+    public function testStripsTrackingParamsFromArticleUrl(): void
+    {
+        $articleRepository = $this->createMock(ArticleRepositoryInterface::class);
+
+        $fetcher = $this->createStub(FeedFetcherServiceInterface::class);
+        $fetcher->method('fetch')->willReturn('<rss>...</rss>');
+
+        $parser = $this->createStub(FeedParserServiceInterface::class);
+        $parser->method('parse')->willReturn(new FeedItemCollection([
+            new FeedItem(
+                'Tracked Article',
+                'https://example.com/article?utm_source=rss&utm_medium=feed&id=42',
+                null,
+                null,
+                null,
+            ),
+        ]));
+
+        $saved = [];
+        $articleRepository->expects(self::once())
+            ->method('save')
+            ->willReturnCallback(function (Article $article) use (&$saved): void {
+                $saved[] = $article;
+            });
+
+        $handler = $this->createHandler(
+            articleRepository: $articleRepository,
+            fetcher: $fetcher,
+            parser: $parser,
+        );
+
+        ($handler)(new FetchSourceMessage(1));
+
+        self::assertCount(1, $saved);
+        self::assertSame('https://example.com/article?id=42', $saved[0]->getUrl());
+    }
+
+    public function testDeduplicationUsesSanitizedUrl(): void
+    {
+        $dedup = $this->createMock(DeduplicationServiceInterface::class);
+
+        $fetcher = $this->createStub(FeedFetcherServiceInterface::class);
+        $fetcher->method('fetch')->willReturn('<rss>...</rss>');
+
+        $parser = $this->createStub(FeedParserServiceInterface::class);
+        $parser->method('parse')->willReturn(new FeedItemCollection([
+            new FeedItem(
+                'Article',
+                'https://example.com/article?utm_source=twitter&fbclid=abc123',
+                null,
+                null,
+                null,
+            ),
+        ]));
+
+        $dedup->expects(self::once())
+            ->method('isDuplicate')
+            ->with(
+                'https://example.com/article',
+                'Article',
+                null,
+            )
+            ->willReturn(false);
+
+        $handler = $this->createHandler(
+            fetcher: $fetcher,
+            parser: $parser,
+            dedup: $dedup,
+        );
+
+        ($handler)(new FetchSourceMessage(1));
     }
 
     private function createSource(): Source
