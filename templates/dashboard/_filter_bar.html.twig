@@ -1,17 +1,32 @@
 {% if unreadOnly %}
-    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null)}) }}"
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null), bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0}) }}"
        hx-target="#article-feed"
        hx-swap="innerHTML"
        hx-push-url="true"
        hx-indicator="#feed-loader"
        class="btn btn-sm btn-outline btn-active">Unread Only</a>
 {% else %}
-    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null), unreadOnly: 1}) }}"
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null), unreadOnly: 1, bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0}) }}"
        hx-target="#article-feed"
        hx-swap="innerHTML"
        hx-push-url="true"
        hx-indicator="#feed-loader"
        class="btn btn-sm btn-outline">Unread Only</a>
+{% endif %}
+{% if bookmarkedOnly|default(false) %}
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null), unreadOnly: unreadOnly ? 1 : 0}) }}"
+       hx-target="#article-feed"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       hx-indicator="#feed-loader"
+       class="btn btn-sm btn-outline btn-active">Bookmarked</a>
+{% else %}
+    <a hx-get="{{ path('app_dashboard', {category: currentCategory, source: currentSource|default(null), unreadOnly: unreadOnly ? 1 : 0, bookmarkedOnly: 1}) }}"
+       hx-target="#article-feed"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       hx-indicator="#feed-loader"
+       class="btn btn-sm btn-outline">Bookmarked</a>
 {% endif %}
 <button hx-post="{{ path('app_articles_read_all') }}"
         hx-target="#article-feed"

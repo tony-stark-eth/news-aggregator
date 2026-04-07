@@ -6,6 +6,7 @@ namespace App\Article\Repository;
 
 use App\Article\Entity\Article;
 use App\User\Entity\User;
+use App\User\Entity\UserArticleBookmark;
 use App\User\Entity\UserArticleRead;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -116,7 +117,7 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
     /**
      * @return list<Article>
      */
-    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit, ?int $sourceId = null): array
+    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit, ?int $sourceId = null, ?User $bookmarkedForUser = null): array
     {
         $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.category', 'c')
@@ -145,6 +146,19 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
 
             $qb->andWhere($qb->expr()->not($qb->expr()->exists($sub)))
                 ->setParameter('currentUser', $unreadForUser);
+        }
+
+        if ($bookmarkedForUser instanceof User) {
+            $bookmarkSub = $this->getEntityManager()
+                ->getRepository(UserArticleBookmark::class)
+                ->createQueryBuilder('b2')
+                ->select('1')
+                ->where('b2.article = a')
+                ->andWhere('b2.user = :bookmarkUser')
+                ->getDQL();
+
+            $qb->andWhere($qb->expr()->exists($bookmarkSub))
+                ->setParameter('bookmarkUser', $bookmarkedForUser);
         }
 
         /** @var list<Article> */

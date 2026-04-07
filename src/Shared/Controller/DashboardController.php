@@ -10,6 +10,7 @@ use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
+use App\User\Repository\UserArticleBookmarkRepositoryInterface;
 use App\User\Repository\UserArticleReadRepositoryInterface;
 use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
@@ -24,6 +25,7 @@ final class DashboardController
         private readonly ControllerHelper $controller,
         private readonly ArticleRepositoryInterface $articleRepository,
         private readonly UserArticleReadRepositoryInterface $userArticleReadRepository,
+        private readonly UserArticleBookmarkRepositoryInterface $userArticleBookmarkRepository,
         private readonly SourceRepositoryInterface $sourceRepository,
         private readonly CategoryRepositoryInterface $categoryRepository,
         private readonly NotificationLogRepositoryInterface $notificationLogRepository,
@@ -42,6 +44,8 @@ final class DashboardController
         bool $unreadOnly = false,
         #[MapQueryParameter]
         ?int $source = null,
+        #[MapQueryParameter]
+        bool $bookmarkedOnly = false,
     ): Response {
         $page = max(1, $page);
         $limit = 20;
@@ -54,10 +58,12 @@ final class DashboardController
             $page,
             $limit,
             $source,
+            $bookmarkedOnly && $user instanceof User ? $user : null,
         );
 
-        // Build read-state set for the current user
+        // Build read-state and bookmark-state sets for the current user
         $readArticleIds = $this->getReadArticleIds($articles);
+        $bookmarkedArticleIds = $this->getBookmarkedArticleIds($articles);
 
         $hasMore = \count($articles) >= $limit;
 
@@ -66,10 +72,12 @@ final class DashboardController
             return $this->controller->render('dashboard/_article_list.html.twig', [
                 'articles' => $articles,
                 'readArticleIds' => $readArticleIds,
+                'bookmarkedArticleIds' => $bookmarkedArticleIds,
                 'currentPage' => $page,
                 'currentCategory' => $category,
                 'currentSource' => $source,
                 'unreadOnly' => $unreadOnly,
+                'bookmarkedOnly' => $bookmarkedOnly,
                 'hasMore' => $hasMore,
             ]);
         }
@@ -99,7 +107,9 @@ final class DashboardController
             'lastFetchedAt' => $lastFetchedAt,
             'page' => $page,
             'readArticleIds' => $readArticleIds,
+            'bookmarkedArticleIds' => $bookmarkedArticleIds,
             'unreadOnly' => $unreadOnly,
+            'bookmarkedOnly' => $bookmarkedOnly,
             'unreadCounts' => $unreadCounts,
         ]);
     }
@@ -116,11 +126,34 @@ final class DashboardController
             return [];
         }
 
-        $articleIds = array_map(
+        return $this->userArticleReadRepository->findReadArticleIdsForUser($user, $this->extractArticleIds($articles));
+    }
+
+    /**
+     * @param list<Article> $articles
+     *
+     * @return array<int, true>
+     */
+    private function getBookmarkedArticleIds(array $articles): array
+    {
+        $user = $this->controller->getUser();
+        if (! $user instanceof User || $articles === []) {
+            return [];
+        }
+
+        return $this->userArticleBookmarkRepository->getBookmarkedArticleIds($user, $this->extractArticleIds($articles));
+    }
+
+    /**
+     * @param list<Article> $articles
+     *
+     * @return list<int>
+     */
+    private function extractArticleIds(array $articles): array
+    {
+        return array_map(
             static fn (Article $a): int => (int) $a->getId(),
             $articles,
         );
-
-        return $this->userArticleReadRepository->findReadArticleIdsForUser($user, $articleIds);
     }
 }
