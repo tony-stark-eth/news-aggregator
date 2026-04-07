@@ -29,4 +29,6 @@ interface SourceRepositoryInterface
     public function remove(Source $source, bool $flush = false): void;
 
     public function flush(): void;
+
+    public function findMostRecentFetchedAt(): ?\DateTimeImmutable;
 }

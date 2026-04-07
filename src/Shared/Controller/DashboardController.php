@@ -6,6 +6,7 @@ namespace App\Shared\Controller;
 
 use App\Article\Entity\Article;
 use App\Article\Repository\ArticleRepositoryInterface;
+use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Shared\Repository\CategoryRepositoryInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
@@ -25,6 +26,7 @@ final class DashboardController
         private readonly UserArticleReadRepositoryInterface $userArticleReadRepository,
         private readonly SourceRepositoryInterface $sourceRepository,
         private readonly CategoryRepositoryInterface $categoryRepository,
+        private readonly NotificationLogRepositoryInterface $notificationLogRepository,
         private readonly ClockInterface $clock,
     ) {
     }
@@ -72,8 +74,9 @@ final class DashboardController
         $now = $this->clock->now();
         $todayStart = $now->setTime(0, 0);
         $articlesToday = $this->articleRepository->countSince($todayStart);
-
         $activeSources = $this->sourceRepository->countEnabled();
+        $alertsToday = $this->notificationLogRepository->countSentSince($todayStart);
+        $lastFetchedAt = $this->sourceRepository->findMostRecentFetchedAt();
 
         return $this->controller->render('dashboard/index.html.twig', [
             'articles' => $articles,
@@ -81,6 +84,8 @@ final class DashboardController
             'categories' => $this->categoryRepository->findAllOrderedByWeight(),
             'articlesToday' => $articlesToday,
             'activeSources' => $activeSources,
+            'alertsToday' => $alertsToday,
+            'lastFetchedAt' => $lastFetchedAt,
             'page' => $page,
             'readArticleIds' => $readArticleIds,
             'unreadOnly' => $unreadOnly,

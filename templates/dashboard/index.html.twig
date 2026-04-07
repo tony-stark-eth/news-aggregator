@@ -7,6 +7,17 @@
     <div class="stats shadow mb-6 w-full">
         {% include 'components/_stat_widget.html.twig' with { label: 'Articles Today', value: articlesToday, color: 'primary' } %}
         {% include 'components/_stat_widget.html.twig' with { label: 'Active Sources', value: activeSources, color: 'secondary' } %}
+        {% include 'components/_stat_widget.html.twig' with { label: 'Alerts Today', value: alertsToday, color: 'accent' } %}
+        <div class="stat bg-base-100 rounded-lg shadow-sm">
+            <div class="stat-title">Last Fetch</div>
+            <div class="stat-value text-info">
+                {% if lastFetchedAt %}
+                    <time class="timeago" datetime="{{ lastFetchedAt|date('c') }}">{{ lastFetchedAt|date('Y-m-d H:i') }}</time>
+                {% else %}
+                    never
+                {% endif %}
+            </div>
+        </div>
     </div>
 
     {# Category tabs #}
