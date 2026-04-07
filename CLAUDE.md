@@ -209,7 +209,9 @@ Grep before Read. Never read a whole file to find one thing.
 ## Workflow Expectations
 
 - Run `make quality` after every code change — do not consider a task complete until it passes
-- Run `make test` before committing — all tests must pass
+- Run `make test-unit` during development — fast feedback, low token cost
+- Run `make test` once before final commit — includes integration/functional tests
+- Run `make infection` before submitting PR — catches mutation MSI failures early (saves ~20K tokens per CI fix round)
 - One issue per branch — do not bundle unrelated changes
 - Scope lock: when you find unrelated issues during work, log them in `docs/todo/` or create a GitHub issue — do not fix inline
 - Use `make sf c="make:entity"` to scaffold entities — never write entity + repository files manually
