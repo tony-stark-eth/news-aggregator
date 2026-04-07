@@ -33,6 +33,88 @@ final class FetchScheduleProviderTest extends TestCase
         self::assertCount(1, $messages);
     }
 
+    public function testScheduleUsesPerSourceIntervalWhenSet(): void
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $source->setFetchIntervalMinutes(45);
+
+        $ref = new \ReflectionProperty(Source::class, 'id');
+        $ref->setValue($source, 1);
+
+        $repo = $this->createStub(SourceRepositoryInterface::class);
+        $repo->method('findEnabled')->willReturn([$source]);
+
+        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 15);
+        $schedule = $provider->getSchedule();
+
+        $messages = $schedule->getRecurringMessages();
+        self::assertCount(1, $messages);
+    }
+
+    public function testScheduleFallsToCategoryIntervalWhenSourceHasNone(): void
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        // Category has fetchIntervalMinutes set via reflection
+        $catRef = new \ReflectionProperty(Category::class, 'fetchIntervalMinutes');
+        $catRef->setValue($category, 30);
+
+        $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        // source fetchIntervalMinutes is null by default
+
+        $ref = new \ReflectionProperty(Source::class, 'id');
+        $ref->setValue($source, 1);
+
+        $repo = $this->createStub(SourceRepositoryInterface::class);
+        $repo->method('findEnabled')->willReturn([$source]);
+
+        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 60);
+        $schedule = $provider->getSchedule();
+
+        $messages = $schedule->getRecurringMessages();
+        self::assertCount(1, $messages);
+    }
+
+    public function testScheduleUsesDefaultWhenSourceAndCategoryHaveNoInterval(): void
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+
+        $ref = new \ReflectionProperty(Source::class, 'id');
+        $ref->setValue($source, 1);
+
+        $repo = $this->createStub(SourceRepositoryInterface::class);
+        $repo->method('findEnabled')->willReturn([$source]);
+
+        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 60);
+        $schedule = $provider->getSchedule();
+
+        $messages = $schedule->getRecurringMessages();
+        self::assertCount(1, $messages);
+    }
+
+    public function testSourceIntervalTakesPrecedenceOverCategoryInterval(): void
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $catRef = new \ReflectionProperty(Category::class, 'fetchIntervalMinutes');
+        $catRef->setValue($category, 30);
+
+        $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $source->setFetchIntervalMinutes(10);
+
+        $ref = new \ReflectionProperty(Source::class, 'id');
+        $ref->setValue($source, 1);
+
+        $repo = $this->createStub(SourceRepositoryInterface::class);
+        $repo->method('findEnabled')->willReturn([$source]);
+
+        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 60);
+        $schedule = $provider->getSchedule();
+
+        $messages = $schedule->getRecurringMessages();
+        self::assertCount(1, $messages);
+    }
+
     public function testEmptyScheduleWhenNoSources(): void
     {
         $repo = $this->createStub(SourceRepositoryInterface::class);

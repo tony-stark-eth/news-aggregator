@@ -50,6 +50,9 @@ class Source
     #[ORM\Column(length: 5, nullable: true)]
     private ?string $language = null;
 
+    #[ORM\Column(type: Types::SMALLINT, nullable: true)]
+    private ?int $fetchIntervalMinutes = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -150,6 +153,16 @@ class Source
     public function setLanguage(?string $language): void
     {
         $this->language = $language;
+    }
+
+    public function getFetchIntervalMinutes(): ?int
+    {
+        return $this->fetchIntervalMinutes;
+    }
+
+    public function setFetchIntervalMinutes(?int $fetchIntervalMinutes): void
+    {
+        $this->fetchIntervalMinutes = $fetchIntervalMinutes;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

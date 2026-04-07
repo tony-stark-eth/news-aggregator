@@ -24,6 +24,7 @@
                         <th>Health</th>
                         <th>Errors</th>
                         <th>Last Fetched</th>
+                        <th>Interval</th>
                         <th>Enabled</th>
                         <th>Actions</th>
                     </tr>
@@ -52,6 +53,13 @@
                                 {% endif %}
                             </td>
                             <td>
+                                {% if source.fetchIntervalMinutes %}
+                                    <span class="badge badge-info badge-sm">{{ source.fetchIntervalMinutes }}m</span>
+                                {% else %}
+                                    <span class="text-base-content/30">default</span>
+                                {% endif %}
+                            </td>
+                            <td>
                                 {% if source.enabled %}
                                     <span class="badge badge-success badge-sm">yes</span>
                                 {% else %}
@@ -60,6 +68,13 @@
                             </td>
                             <td class="flex gap-1">
                                 <a href="{{ path('app_sources_edit', {id: source.id}) }}" class="btn btn-ghost btn-xs">Edit</a>
+                                <span id="fetch-btn-{{ source.id }}">
+                                    <button hx-post="{{ path('app_sources_fetch', {id: source.id}) }}"
+                                            hx-headers='{"X-CSRF-Token": "{{ csrf_token('trigger_fetch_source') }}"}'
+                                            hx-target="#fetch-btn-{{ source.id }}"
+                                            hx-swap="innerHTML"
+                                            class="btn btn-ghost btn-xs text-info">Fetch</button>
+                                </span>
                                 <button hx-post="{{ path('app_sources_delete', {id: source.id}) }}"
                                         hx-headers='{"X-CSRF-Token": "{{ csrf_token('delete_source') }}"}'
                                         hx-confirm="Delete this source?"

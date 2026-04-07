@@ -32,7 +32,8 @@ final class FetchScheduleProvider implements ScheduleProviderInterface
                 continue;
             }
 
-            $intervalMinutes = $source->getCategory()->getFetchIntervalMinutes()
+            $intervalMinutes = $source->getFetchIntervalMinutes()
+                ?? $source->getCategory()->getFetchIntervalMinutes()
                 ?? $this->defaultIntervalMinutes;
 
             $schedule->add(
