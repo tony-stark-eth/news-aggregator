@@ -23,9 +23,9 @@ use Symfony\Component\Mercure\Update;
 #[UsesClass(EnrichmentMethod::class)]
 final class MercurePublisherServiceTest extends TestCase
 {
-    public function testPublishArticleCreatedSendsUpdate(): void
+    public function testPublishArticleCreatedSendsUpdateWithAllPayloadFields(): void
     {
-        $article = $this->createArticle(1);
+        $article = $this->createFullArticle(1);
 
         $hub = $this->createMock(HubInterface::class);
         $hub->expects(self::once())
@@ -35,6 +35,17 @@ final class MercurePublisherServiceTest extends TestCase
                 self::assertSame('created', $data['type']);
                 self::assertSame(1, $data['articleId']);
                 self::assertSame('Test Article', $data['title']);
+                self::assertSame('A test summary', $data['summary']);
+                self::assertSame('Tech', $data['category']);
+                self::assertSame('#3B82F6', $data['categoryColor']);
+                self::assertSame(0.85, $data['score']);
+                self::assertSame(['php', 'symfony'], $data['keywords']);
+                self::assertSame([
+                    'de' => [
+                        'title' => 'Testartikel',
+                        'summary' => 'Testzusammenfassung',
+                    ],
+                ], $data['translations']);
 
                 return true;
             }));
@@ -43,9 +54,9 @@ final class MercurePublisherServiceTest extends TestCase
         $service->publishArticleCreated($article);
     }
 
-    public function testPublishEnrichmentCompleteSendsUpdate(): void
+    public function testPublishEnrichmentCompleteSendsUpdateWithAllPayloadFields(): void
     {
-        $article = $this->createArticle(2);
+        $article = $this->createFullArticle(2);
         $article->setEnrichmentStatus(EnrichmentStatus::Complete);
         $article->setEnrichmentMethod(EnrichmentMethod::Ai);
 
@@ -56,8 +67,20 @@ final class MercurePublisherServiceTest extends TestCase
                 $data = self::decodePayload($update);
                 self::assertSame('enriched', $data['type']);
                 self::assertSame(2, $data['articleId']);
+                self::assertSame('Test Article', $data['title']);
+                self::assertSame('A test summary', $data['summary']);
+                self::assertSame('Tech', $data['category']);
+                self::assertSame('#3B82F6', $data['categoryColor']);
                 self::assertSame('complete', $data['enrichmentStatus']);
                 self::assertSame('ai', $data['enrichmentMethod']);
+                self::assertSame(0.85, $data['score']);
+                self::assertSame(['php', 'symfony'], $data['keywords']);
+                self::assertSame([
+                    'de' => [
+                        'title' => 'Testartikel',
+                        'summary' => 'Testzusammenfassung',
+                    ],
+                ], $data['translations']);
 
                 return true;
             }));
@@ -159,6 +182,33 @@ final class MercurePublisherServiceTest extends TestCase
 
         $ref = new \ReflectionProperty(Article::class, 'id');
         $ref->setValue($article, $id);
+
+        return $article;
+    }
+
+    /**
+     * Creates an article with all payload-relevant fields populated,
+     * so ArrayItem mutations on buildArticlePayload are killed.
+     */
+    private function createFullArticle(int $id): Article
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $article = new Article('Test Article', 'https://example.com/' . $id, $source, new \DateTimeImmutable());
+
+        $ref = new \ReflectionProperty(Article::class, 'id');
+        $ref->setValue($article, $id);
+
+        $article->setCategory($category);
+        $article->setSummary('A test summary');
+        $article->setScore(0.85);
+        $article->setKeywords(['php', 'symfony']);
+        $article->setTranslations([
+            'de' => [
+                'title' => 'Testartikel',
+                'summary' => 'Testzusammenfassung',
+            ],
+        ]);
 
         return $article;
     }
