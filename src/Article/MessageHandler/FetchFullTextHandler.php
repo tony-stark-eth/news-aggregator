@@ -34,6 +34,7 @@ final readonly class FetchFullTextHandler
 
     public function __invoke(FetchFullTextMessage $message): void
     {
+        $correlationId = $message->correlationId;
         $article = $this->articleRepository->findById($message->articleId);
         if (! $article instanceof Article) {
             return;
@@ -44,28 +45,28 @@ final readonly class FetchFullTextHandler
         }
 
         if (! $this->fullTextEnabled) {
-            $this->skipArticle($article);
+            $this->skipArticle($article, $correlationId);
 
             return;
         }
 
         if (! $article->getSource()->isFullTextEnabled()) {
-            $this->skipArticle($article);
+            $this->skipArticle($article, $correlationId);
 
             return;
         }
 
-        $this->fetchAndExtract($article);
+        $this->fetchAndExtract($article, $correlationId);
     }
 
-    private function skipArticle(Article $article): void
+    private function skipArticle(Article $article, string $correlationId): void
     {
         $article->setFullTextStatus(FullTextStatus::Skipped);
         $this->articleRepository->flush();
-        $this->dispatchEnrich($article);
+        $this->dispatchEnrich($article, $correlationId);
     }
 
-    private function fetchAndExtract(Article $article): void
+    private function fetchAndExtract(Article $article, string $correlationId): void
     {
         try {
             $this->domainRateLimiter->waitForDomain($article->getUrl());
@@ -81,13 +82,15 @@ final readonly class FetchFullTextHandler
                 $this->logger->info('Full-text fetched for article {id}', [
                     'id' => $article->getId(),
                     'url' => $article->getUrl(),
+                    'correlation_id' => $correlationId,
                 ]);
             } else {
                 $article->setFullTextStatus(FullTextStatus::Failed);
 
-                $this->logger->debug('Full-text extraction failed for article {id}', [
+                $this->logger->warning('Full-text extraction failed for article {id}', [
                     'id' => $article->getId(),
                     'url' => $article->getUrl(),
+                    'correlation_id' => $correlationId,
                 ]);
             }
         } catch (\Throwable $e) {
@@ -97,18 +100,19 @@ final readonly class FetchFullTextHandler
                 'id' => $article->getId(),
                 'url' => $article->getUrl(),
                 'error' => $e->getMessage(),
+                'correlation_id' => $correlationId,
             ]);
         }
 
         $this->articleRepository->flush();
-        $this->dispatchEnrich($article);
+        $this->dispatchEnrich($article, $correlationId);
     }
 
-    private function dispatchEnrich(Article $article): void
+    private function dispatchEnrich(Article $article, string $correlationId): void
     {
         $articleId = $article->getId();
         if ($articleId !== null) {
-            $this->messageBus->dispatch(new EnrichArticleMessage($articleId));
+            $this->messageBus->dispatch(new EnrichArticleMessage($articleId, $correlationId));
         }
     }
 }

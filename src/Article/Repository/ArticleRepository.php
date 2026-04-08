@@ -222,6 +222,11 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
         $this->getEntityManager()->flush();
     }
 
+    public function isConnectionHealthy(): bool
+    {
+        return $this->getEntityManager()->isOpen();
+    }
+
     public function clear(): void
     {
         $this->getEntityManager()->clear();

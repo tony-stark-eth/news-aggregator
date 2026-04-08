@@ -60,5 +60,7 @@ interface ArticleRepositoryInterface
 
     public function flush(): void;
 
+    public function isConnectionHealthy(): bool;
+
     public function clear(): void;
 }

@@ -26,7 +26,6 @@ use App\Source\Service\FeedFetcherServiceInterface;
 use App\Source\Service\FeedItem;
 use App\Source\Service\FeedItemCollection;
 use App\Source\Service\FeedParserServiceInterface;
-use Doctrine\ORM\EntityManagerInterface;
 use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -40,7 +39,6 @@ final readonly class FetchSourceHandler
     public function __construct(
         private ArticleRepositoryInterface $articleRepository,
         private SourceRepositoryInterface $sourceRepository,
-        private EntityManagerInterface $entityManager,
         private FeedFetcherServiceInterface $feedFetcher,
         private FeedParserServiceInterface $feedParser,
         private DeduplicationServiceInterface $deduplication,
@@ -147,7 +145,7 @@ final readonly class FetchSourceHandler
                 'error' => $e->getMessage(),
             ]);
 
-            if (! $this->entityManager->isOpen()) {
+            if (! $this->articleRepository->isConnectionHealthy()) {
                 return null;
             }
 
@@ -165,11 +163,13 @@ final readonly class FetchSourceHandler
             return;
         }
 
+        $correlationId = bin2hex(random_bytes(16));
+
         if ($this->fullTextEnabled) {
             $article->setFullTextStatus(FullTextStatus::Pending);
-            $this->messageBus->dispatch(new FetchFullTextMessage($articleId));
+            $this->messageBus->dispatch(new FetchFullTextMessage($articleId, $correlationId));
         } else {
-            $this->messageBus->dispatch(new EnrichArticleMessage($articleId));
+            $this->messageBus->dispatch(new EnrichArticleMessage($articleId, $correlationId));
         }
     }
 

@@ -29,7 +29,6 @@ use App\Source\Service\FeedItem;
 use App\Source\Service\FeedItemCollection;
 use App\Source\Service\FeedParserServiceInterface;
 use App\Source\ValueObject\SourceHealth;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
@@ -547,13 +546,14 @@ final class FetchSourceHandlerTest extends TestCase
             );
         }
 
-        $em = $this->createStub(EntityManagerInterface::class);
-        $em->method('isOpen')->willReturn(true);
+        if (! $articleRepository instanceof ArticleRepositoryInterface) {
+            $articleRepository = $this->createStub(ArticleRepositoryInterface::class);
+            $articleRepository->method('isConnectionHealthy')->willReturn(true);
+        }
 
         return new FetchSourceHandler(
-            $articleRepository ?? $this->createStub(ArticleRepositoryInterface::class),
+            $articleRepository,
             $sourceRepository,
-            $em,
             $fetcher ?? $this->createStub(FeedFetcherServiceInterface::class),
             $parser ?? $this->createStub(FeedParserServiceInterface::class),
             $dedup,

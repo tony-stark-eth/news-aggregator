@@ -224,7 +224,7 @@ final class FetchFullTextHandlerTest extends TestCase
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())
-            ->method('debug')
+            ->method('warning')
             ->with(
                 self::stringContains('extraction failed'),
                 self::callback(static fn (array $ctx): bool => $ctx['id'] === 42 && $ctx['url'] === 'https://example.com/article'),

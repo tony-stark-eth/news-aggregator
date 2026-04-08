@@ -8,6 +8,7 @@ final readonly class FetchFullTextMessage
 {
     public function __construct(
         public int $articleId,
+        public string $correlationId = '',
     ) {
     }
 }
