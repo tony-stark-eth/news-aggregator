@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Dynamic Paid Model Usage During High Pipeline Load
+- Queue-aware model routing in `ModelFailoverPlatform` — automatically skips free models when enrichment queue is deep (#157)
+- Three routing modes: normal (queue < 20), accelerated (queue 20-49: primary free then paid), skip-free (queue >= 50: paid only)
+- New `QueueDepthService` queries messenger_messages table for real-time enrich queue depth
+- New env vars: `QUEUE_ACCELERATE_THRESHOLD` (default 20), `QUEUE_SKIP_FREE_THRESHOLD` (default 50)
+- Fully backward compatible — when no paid model configured or queue service unavailable, behavior unchanged
+
 #### Full-Text Article Fetch (Readability)
 - Three-phase enrichment pipeline: Phase 1 (sync rule-based) -> Phase 1.5 (async full-text fetch) -> Phase 2 (async AI enrichment) (#151)
 - `FetchFullTextHandler` fetches full article content from source websites using fivefilters/readability.php

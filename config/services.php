@@ -37,6 +37,7 @@ use App\Shared\Command\CleanupCommand;
 use App\Shared\Controller\SettingsController;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use App\Shared\Search\Service\SealArticleSearchService;
+use App\Shared\Service\QueueDepthServiceInterface;
 use App\Source\Command\SeedDataCommand;
 use App\Source\Scheduler\FetchScheduleProvider;
 use Symfony\AI\Platform\Bridge\Generic\CompletionsModel;
@@ -130,7 +131,10 @@ return static function (ContainerConfigurator $container): void {
             'qwen/qwen3.6-plus:free',
             'nvidia/nemotron-3-super-120b-a12b:free',
         ])
-        ->arg('$paidFallbackModel', '%env(string:OPENROUTER_PAID_FALLBACK_MODEL)%');
+        ->arg('$paidFallbackModel', '%env(string:OPENROUTER_PAID_FALLBACK_MODEL)%')
+        ->arg('$queueDepthService', service(QueueDepthServiceInterface::class))
+        ->arg('$queueAccelerateThreshold', '%env(int:QUEUE_ACCELERATE_THRESHOLD)%')
+        ->arg('$queueSkipFreeThreshold', '%env(int:QUEUE_SKIP_FREE_THRESHOLD)%');
 
     // All AI services use the failover-wrapped platform
     $services->set(AiCategorizationService::class)

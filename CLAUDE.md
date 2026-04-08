@@ -117,6 +117,7 @@ src/
 - **Mercure SSE**: Real-time push via built-in FrankenPHP/Caddy Mercure hub. `MercurePublisherService` publishes article creation and enrichment completion events. Frontend uses native `EventSource` API to update article cards in-place and show "new articles" banner.
 - **Primary model**: `openrouter/free` — auto-routes to best available free model, zero maintenance
 - **Fallback chain**: `ModelFailoverPlatform` (PlatformInterface decorator) chains free → minimax → glm → gpt-oss → qwen → nemotron → optional paid model
+- **Queue-aware routing**: When enrichment queue is deep, `ModelFailoverPlatform` skips free models to accelerate processing (configurable thresholds via `QUEUE_ACCELERATE_THRESHOLD` / `QUEUE_SKIP_FREE_THRESHOLD`)
 - **Paid fallback**: `OPENROUTER_PAID_FALLBACK_MODEL` env var appends a low-cost paid model (e.g. `google/gemini-2.5-flash-lite`) to the end of the failover chain. Empty by default — pure free tier unless configured.
 - **Rule-based fallback**: Always active — AI is an enhancement layer, not a dependency
 - **Quality gates**: `AiQualityGateService` — structured output validation, confidence >= 0.7, summary length heuristic
@@ -148,6 +149,8 @@ src/
 | `FULL_TEXT_FETCH_TIMEOUT` | HTTP timeout for full-text fetch (seconds) | `15` |
 | `FULL_TEXT_RATE_LIMIT_REQUESTS` | Max requests per domain in rate limit window | `2` |
 | `FULL_TEXT_RATE_LIMIT_INTERVAL` | Rate limit sliding window (seconds) | `5` |
+| `QUEUE_ACCELERATE_THRESHOLD` | Queue depth to start accelerating (try primary free then paid) | `20` |
+| `QUEUE_SKIP_FREE_THRESHOLD` | Queue depth to skip free models entirely (use paid only) | `50` |
 | `RETENTION_ARTICLES` | Article retention period | `90` |
 | `RETENTION_LOGS` | Notification/digest log retention | `30` |
 | `DATABASE_URL` | PostgreSQL DSN | (set in compose) |
