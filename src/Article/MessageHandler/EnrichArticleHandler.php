@@ -27,10 +27,12 @@ final readonly class EnrichArticleHandler
 
     public function __invoke(EnrichArticleMessage $message): void
     {
+        $correlationId = $message->correlationId;
         $article = $this->articleRepository->findById($message->articleId);
         if (! $article instanceof Article) {
             $this->logger->warning('EnrichArticleHandler: article {id} not found', [
                 'id' => $message->articleId,
+                'correlation_id' => $correlationId,
             ]);
 
             return;
@@ -39,6 +41,7 @@ final readonly class EnrichArticleHandler
         if ($this->isAlreadyComplete($article)) {
             $this->logger->debug('EnrichArticleHandler: article {id} already complete, skipping', [
                 'id' => $message->articleId,
+                'correlation_id' => $correlationId,
             ]);
 
             return;
@@ -55,6 +58,7 @@ final readonly class EnrichArticleHandler
 
         $this->logger->info('EnrichArticleHandler: enrichment complete for article {id}', [
             'id' => $message->articleId,
+            'correlation_id' => $correlationId,
         ]);
     }
 

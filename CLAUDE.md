@@ -86,8 +86,9 @@ src/
 ├── Article/         # Core: articles, scoring, deduplication, content fingerprinting
 │   ├── Repository/  # ArticleRepositoryInterface + Doctrine implementation
 │   ├── Mercure/     # MercurePublisherService (real + null impl), ArticleCreatedMercureSubscriber
-│   ├── Message/     # EnrichArticleMessage, RescoreArticlesMessage
-│   └── MessageHandler/ # FetchSourceHandler (Phase 1), EnrichArticleHandler (Phase 2)
+│   ├── Message/     # EnrichArticleMessage, FetchFullTextMessage, RescoreArticlesMessage
+│   ├── Service/     # ReadabilityExtractorService, ArticleContentFetcherService, DomainRateLimiterService
+│   └── MessageHandler/ # FetchSourceHandler (Phase 1), FetchFullTextHandler (Phase 1.5), EnrichArticleHandler (Phase 2)
 ├── Enrichment/      # Rule-based + AI categorization/summarization/keywords/translation (decorator pattern)
 ├── Source/          # Feed management, fetching (laminas-feed), health tracking
 │   └── Repository/  # SourceRepositoryInterface + Doctrine implementation
@@ -112,7 +113,7 @@ src/
 
 ## AI Integration
 
-- **Two-phase enrichment**: Phase 1 (sync in FetchSourceHandler) applies rule-based categorization, summarization, keywords, scoring. Phase 2 (async via `async_enrich` transport) runs full AI enrichment + translation. Articles appear instantly with rule-based data and upgrade in-place when AI completes.
+- **Three-phase enrichment**: Phase 1 (sync in FetchSourceHandler) applies rule-based categorization, summarization, keywords, scoring. Phase 1.5 (async via `async_fulltext` transport) fetches full article content using Readability.php with per-domain rate limiting. Phase 2 (async via `async_enrich` transport) runs full AI enrichment + translation. Articles appear instantly with rule-based data, get full-text content, then upgrade in-place when AI completes. Full-text fetch failures never block the pipeline.
 - **Mercure SSE**: Real-time push via built-in FrankenPHP/Caddy Mercure hub. `MercurePublisherService` publishes article creation and enrichment completion events. Frontend uses native `EventSource` API to update article cards in-place and show "new articles" banner.
 - **Primary model**: `openrouter/free` — auto-routes to best available free model, zero maintenance
 - **Fallback chain**: `ModelFailoverPlatform` (PlatformInterface decorator) chains free → minimax → glm → gpt-oss → qwen → nemotron → optional paid model
@@ -143,6 +144,10 @@ src/
 | `MERCURE_URL` | Internal Mercure hub URL (for publishing) | `https://php/.well-known/mercure` |
 | `MERCURE_PUBLIC_URL` | Public Mercure hub URL (for browser SSE) | `https://localhost:8443/.well-known/mercure` |
 | `MERCURE_JWT_SECRET` | JWT secret for Mercure publishing | `!ChangeThisMercureHubJWTSecretKey!` |
+| `FULL_TEXT_FETCH_ENABLED` | Enable full-text article fetching | `true` |
+| `FULL_TEXT_FETCH_TIMEOUT` | HTTP timeout for full-text fetch (seconds) | `15` |
+| `FULL_TEXT_RATE_LIMIT_REQUESTS` | Max requests per domain in rate limit window | `2` |
+| `FULL_TEXT_RATE_LIMIT_INTERVAL` | Rate limit sliding window (seconds) | `5` |
 | `RETENTION_ARTICLES` | Article retention period | `90` |
 | `RETENTION_LOGS` | Notification/digest log retention | `30` |
 | `DATABASE_URL` | PostgreSQL DSN | (set in compose) |

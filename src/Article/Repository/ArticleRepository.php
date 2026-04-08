@@ -222,6 +222,39 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
         $this->getEntityManager()->flush();
     }
 
+    public function getPipelineStats(): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        /** @var array{pending_fulltext: int|string, pending_enrichment: int|string, failed_fulltext: int|string}|false $result */
+        $result = $conn->executeQuery("
+            SELECT
+                COUNT(*) FILTER (WHERE full_text_status = 'pending') AS pending_fulltext,
+                COUNT(*) FILTER (WHERE enrichment_status = 'pending') AS pending_enrichment,
+                COUNT(*) FILTER (WHERE full_text_status = 'failed') AS failed_fulltext
+            FROM article
+        ")->fetchAssociative();
+
+        if ($result === false) {
+            return [
+                'pending_fulltext' => 0,
+                'pending_enrichment' => 0,
+                'failed_fulltext' => 0,
+            ];
+        }
+
+        return [
+            'pending_fulltext' => (int) $result['pending_fulltext'],
+            'pending_enrichment' => (int) $result['pending_enrichment'],
+            'failed_fulltext' => (int) $result['failed_fulltext'],
+        ];
+    }
+
+    public function isConnectionHealthy(): bool
+    {
+        return $this->getEntityManager()->isOpen();
+    }
+
     public function clear(): void
     {
         $this->getEntityManager()->clear();

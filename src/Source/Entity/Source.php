@@ -53,6 +53,9 @@ class Source
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     private ?int $fetchIntervalMinutes = null;
 
+    #[ORM\Column]
+    private bool $fullTextEnabled = true;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -163,6 +166,16 @@ class Source
     public function setFetchIntervalMinutes(?int $fetchIntervalMinutes): void
     {
         $this->fetchIntervalMinutes = $fetchIntervalMinutes;
+    }
+
+    public function isFullTextEnabled(): bool
+    {
+        return $this->fullTextEnabled;
+    }
+
+    public function setFullTextEnabled(bool $fullTextEnabled): void
+    {
+        $this->fullTextEnabled = $fullTextEnabled;
     }
 
     public function getCreatedAt(): \DateTimeImmutable

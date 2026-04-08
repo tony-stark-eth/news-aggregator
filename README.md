@@ -94,6 +94,10 @@ Copy `.env.example` to `.env.local` and adjust:
 | `NOTIFIER_CHATTER_DSN` | Notification transport DSN | see below |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | How often to fetch feeds | `60` |
 | `DISPLAY_LANGUAGES` | Comma-separated display languages | `en` |
+| `FULL_TEXT_FETCH_ENABLED` | Enable full-text article fetching | `true` |
+| `FULL_TEXT_FETCH_TIMEOUT` | HTTP timeout for full-text fetch (seconds) | `15` |
+| `FULL_TEXT_RATE_LIMIT_REQUESTS` | Max requests per domain in rate limit window | `2` |
+| `FULL_TEXT_RATE_LIMIT_INTERVAL` | Rate limit sliding window (seconds) | `5` |
 | `RETENTION_ARTICLES` | Article retention period | `90` |
 | `RETENTION_LOGS` | Notification/digest log retention | `30` |
 

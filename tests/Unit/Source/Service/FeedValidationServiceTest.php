@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Source\Service;
 
 use App\Source\Exception\FeedFetchException;
 use App\Source\Exception\InvalidFeedUrlException;
+use App\Source\Service\FeedContentAnalyzerServiceInterface;
 use App\Source\Service\FeedFetcherServiceInterface;
 use App\Source\Service\FeedItem;
 use App\Source\Service\FeedItemCollection;
@@ -60,7 +61,8 @@ final class FeedValidationServiceTest extends TestCase
             ->with(self::SAMPLE_RSS)
             ->willReturn('en');
 
-        $service = new FeedValidationService($fetcher, $parser, $languageDetector);
+        $contentAnalyzer = $this->createStub(FeedContentAnalyzerServiceInterface::class);
+        $service = new FeedValidationService($fetcher, $parser, $languageDetector, $contentAnalyzer);
         $preview = $service->validate(self::VALID_URL);
 
         self::assertSame('Test Feed', $preview->title);
@@ -86,7 +88,8 @@ final class FeedValidationServiceTest extends TestCase
             ->method('detect')
             ->willReturn(null);
 
-        $service = new FeedValidationService($fetcher, $parser, $languageDetector);
+        $contentAnalyzer = $this->createStub(FeedContentAnalyzerServiceInterface::class);
+        $service = new FeedValidationService($fetcher, $parser, $languageDetector, $contentAnalyzer);
         $preview = $service->validate(self::VALID_URL);
 
         self::assertNull($preview->detectedLanguage);
@@ -99,7 +102,8 @@ final class FeedValidationServiceTest extends TestCase
         $parser = $this->createStub(FeedParserServiceInterface::class);
         $languageDetector = $this->createStub(FeedLanguageDetectorInterface::class);
 
-        $service = new FeedValidationService($fetcher, $parser, $languageDetector);
+        $contentAnalyzer = $this->createStub(FeedContentAnalyzerServiceInterface::class);
+        $service = new FeedValidationService($fetcher, $parser, $languageDetector, $contentAnalyzer);
 
         $this->expectException(InvalidFeedUrlException::class);
         $service->validate('not-a-url');
@@ -115,7 +119,8 @@ final class FeedValidationServiceTest extends TestCase
         $parser = $this->createStub(FeedParserServiceInterface::class);
         $languageDetector = $this->createStub(FeedLanguageDetectorInterface::class);
 
-        $service = new FeedValidationService($fetcher, $parser, $languageDetector);
+        $contentAnalyzer = $this->createStub(FeedContentAnalyzerServiceInterface::class);
+        $service = new FeedValidationService($fetcher, $parser, $languageDetector, $contentAnalyzer);
 
         $this->expectException(FeedFetchException::class);
         $service->validate(self::VALID_URL);
@@ -150,7 +155,8 @@ final class FeedValidationServiceTest extends TestCase
 
         $languageDetector = $this->createStub(FeedLanguageDetectorInterface::class);
 
-        $service = new FeedValidationService($fetcher, $parser, $languageDetector);
+        $contentAnalyzer = $this->createStub(FeedContentAnalyzerServiceInterface::class);
+        $service = new FeedValidationService($fetcher, $parser, $languageDetector, $contentAnalyzer);
         $preview = $service->validate(self::VALID_URL);
 
         self::assertSame('Ars Technica', $preview->title);

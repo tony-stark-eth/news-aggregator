@@ -45,6 +45,8 @@
                 {% endif %}
             </div>
         </div>
+        {# Inline reader area — populated by htmx on "Read" click #}
+        <div class="article-content-area" id="article-content-{{ article.id }}"></div>
         <div class="flex flex-wrap items-center gap-2 mt-2 text-xs">
             <span class="badge badge-outline badge-sm">{{ article.source.name }}</span>
             {% if article.category %}
@@ -60,6 +62,16 @@
             <time datetime="{{ article.publishedAt ? article.publishedAt|date('c') : article.fetchedAt|date('c') }}" class="text-base-content/50 timeago">
                 {{ article.publishedAt ? article.publishedAt|date('Y-m-d H:i') : article.fetchedAt|date('Y-m-d H:i') }}
             </time>
+            {% if article.contentFullHtml or article.contentFullText %}
+                <button class="btn btn-xs btn-ghost text-info"
+                        hx-get="{{ path('app_article_content', {id: article.id}) }}"
+                        hx-target="#article-content-{{ article.id }}"
+                        hx-swap="innerHTML"
+                        hx-on:click="if(this.dataset.expanded === 'true') { document.getElementById('article-content-{{ article.id }}').innerHTML = ''; this.dataset.expanded = 'false'; this.textContent = 'Read'; return false; } this.dataset.expanded = 'true'; this.textContent = 'Collapse';"
+                        data-expanded="false">
+                    Read
+                </button>
+            {% endif %}
         </div>
     </div>
 </div>
