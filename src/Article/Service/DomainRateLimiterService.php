@@ -19,7 +19,8 @@ final readonly class DomainRateLimiterService implements DomainRateLimiterServic
     {
         $domain = $this->extractDomain($url);
         $limiter = $this->rateLimiterFactory->create($domain);
-        $limiter->consume()->ensureAccepted();
+        $reservation = $limiter->reserve();
+        $reservation->wait();
     }
 
     private function extractDomain(string $url): string

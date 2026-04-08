@@ -10,19 +10,17 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\RateLimiter\LimiterInterface;
 use Symfony\Component\RateLimiter\RateLimit;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\RateLimiter\Reservation;
 
 #[CoversClass(DomainRateLimiterService::class)]
 final class DomainRateLimiterServiceTest extends TestCase
 {
-    public function testConsumesTokenForDomain(): void
+    public function testReservesAndWaitsForDomain(): void
     {
-        $rateLimit = $this->createMock(RateLimit::class);
-        $rateLimit->expects(self::once())->method('ensureAccepted');
-
         $limiter = $this->createMock(LimiterInterface::class);
         $limiter->expects(self::once())
-            ->method('consume')
-            ->willReturn($rateLimit);
+            ->method('reserve')
+            ->willReturn($this->createReservation());
 
         $factory = $this->createMock(RateLimiterFactoryInterface::class);
         $factory->expects(self::once())
@@ -36,10 +34,8 @@ final class DomainRateLimiterServiceTest extends TestCase
 
     public function testExtractsDomainFromUrl(): void
     {
-        $rateLimit = $this->createStub(RateLimit::class);
-
         $limiter = $this->createStub(LimiterInterface::class);
-        $limiter->method('consume')->willReturn($rateLimit);
+        $limiter->method('reserve')->willReturn($this->createReservation());
 
         $factory = $this->createMock(RateLimiterFactoryInterface::class);
         $factory->expects(self::once())
@@ -53,10 +49,8 @@ final class DomainRateLimiterServiceTest extends TestCase
 
     public function testUsesUnknownForInvalidUrl(): void
     {
-        $rateLimit = $this->createStub(RateLimit::class);
-
         $limiter = $this->createStub(LimiterInterface::class);
-        $limiter->method('consume')->willReturn($rateLimit);
+        $limiter->method('reserve')->willReturn($this->createReservation());
 
         $factory = $this->createMock(RateLimiterFactoryInterface::class);
         $factory->expects(self::once())
@@ -66,5 +60,13 @@ final class DomainRateLimiterServiceTest extends TestCase
 
         $service = new DomainRateLimiterService($factory);
         $service->waitForDomain('not-a-valid-url');
+    }
+
+    private function createReservation(): Reservation
+    {
+        // timeToAct = now (no wait needed), with a stub RateLimit
+        $rateLimit = $this->createStub(RateLimit::class);
+
+        return new Reservation(microtime(true), $rateLimit);
     }
 }

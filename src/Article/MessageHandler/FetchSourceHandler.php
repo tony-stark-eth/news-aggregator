@@ -134,6 +134,9 @@ final readonly class FetchSourceHandler
 
             $this->enrichment->enrich($article, $item, $source);
             $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+            if ($this->fullTextEnabled) {
+                $article->setFullTextStatus(FullTextStatus::Pending);
+            }
             $this->articleRepository->save($article, flush: true);
 
             $this->dispatchEnrichMessage($article);
@@ -166,7 +169,6 @@ final readonly class FetchSourceHandler
         $correlationId = bin2hex(random_bytes(16));
 
         if ($this->fullTextEnabled) {
-            $article->setFullTextStatus(FullTextStatus::Pending);
             $this->messageBus->dispatch(new FetchFullTextMessage($articleId, $correlationId));
         } else {
             $this->messageBus->dispatch(new EnrichArticleMessage($articleId, $correlationId));
