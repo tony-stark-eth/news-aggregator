@@ -63,12 +63,12 @@
                 {{ article.publishedAt ? article.publishedAt|date('Y-m-d H:i') : article.fetchedAt|date('Y-m-d H:i') }}
             </time>
             {% if article.contentFullHtml or article.contentFullText %}
-                <button class="btn btn-xs btn-ghost text-info"
+                <button class="btn btn-xs btn-ghost text-info article-read-toggle"
                         hx-get="{{ path('app_article_content', {id: article.id}) }}"
                         hx-target="#article-content-{{ article.id }}"
                         hx-swap="innerHTML"
-                        hx-on:click="if(this.dataset.expanded === 'true') { document.getElementById('article-content-{{ article.id }}').innerHTML = ''; this.dataset.expanded = 'false'; this.textContent = 'Read'; return false; } this.dataset.expanded = 'true'; this.textContent = 'Collapse';"
-                        data-expanded="false">
+                        data-expanded="false"
+                        hx-on::before-request="if(this.dataset.expanded === 'true') { document.getElementById('article-content-{{ article.id }}').innerHTML = ''; this.dataset.expanded = 'false'; this.textContent = 'Read'; event.preventDefault(); return; } this.dataset.expanded = 'true'; this.textContent = 'Collapse';">
                     Read
                 </button>
             {% endif %}
