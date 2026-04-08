@@ -95,6 +95,8 @@ final class DashboardController
             ? $this->userArticleReadRepository->countUnreadByCategory($user)
             : null;
 
+        $pipelineStats = $this->articleRepository->getPipelineStats();
+
         return $this->controller->render('dashboard/index.html.twig', [
             'articles' => $articles,
             'currentCategory' => $category,
@@ -105,6 +107,7 @@ final class DashboardController
             'activeSources' => $activeSources,
             'alertsToday' => $alertsToday,
             'lastFetchedAt' => $lastFetchedAt,
+            'pipelineStats' => $pipelineStats,
             'page' => $page,
             'readArticleIds' => $readArticleIds,
             'bookmarkedArticleIds' => $bookmarkedArticleIds,

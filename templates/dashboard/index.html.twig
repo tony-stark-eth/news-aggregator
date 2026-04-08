@@ -20,6 +20,23 @@
         </div>
     </div>
 
+    {# Pipeline status — shows pending/failed counts so user knows why articles are "Rule" #}
+    {% if pipelineStats is defined and pipelineStats and (pipelineStats.pending_fulltext > 0 or pipelineStats.pending_enrichment > 0 or pipelineStats.failed_fulltext > 0) %}
+        <div class="alert alert-info alert-sm mb-4 py-2 text-sm">
+            <span>Pipeline:
+                {% if pipelineStats.pending_fulltext > 0 %}
+                    {{ pipelineStats.pending_fulltext }} fetching content
+                {% endif %}
+                {% if pipelineStats.pending_enrichment > 0 %}
+                    {{ pipelineStats.pending_fulltext > 0 ? ' · ' : '' }}{{ pipelineStats.pending_enrichment }} awaiting AI enrichment
+                {% endif %}
+                {% if pipelineStats.failed_fulltext > 0 %}
+                    {{ (pipelineStats.pending_fulltext > 0 or pipelineStats.pending_enrichment > 0) ? ' · ' : '' }}<span class="text-warning">{{ pipelineStats.failed_fulltext }} content fetch failed</span>
+                {% endif %}
+            </span>
+        </div>
+    {% endif %}
+
     {# Category tabs #}
     <div id="category-tabs" class="tabs tabs-boxed mb-4 overflow-x-auto flex-nowrap">
         <a hx-get="{{ path('app_dashboard', {source: currentSource}) }}"

@@ -60,6 +60,11 @@ interface ArticleRepositoryInterface
 
     public function flush(): void;
 
+    /**
+     * @return array{pending_fulltext: int, pending_enrichment: int, failed_fulltext: int}
+     */
+    public function getPipelineStats(): array;
+
     public function isConnectionHealthy(): bool;
 
     public function clear(): void;
