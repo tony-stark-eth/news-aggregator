@@ -56,6 +56,18 @@ class Source
     #[ORM\Column]
     private bool $fullTextEnabled = true;
 
+    #[ORM\Column(type: Types::DATETIME_IMMUTABLE, nullable: true)]
+    private ?\DateTimeImmutable $lastErrorAt = null;
+
+    #[ORM\Column]
+    private int $successCount = 0;
+
+    #[ORM\Column]
+    private int $failureCount = 0;
+
+    #[ORM\Column(nullable: true)]
+    private ?float $reliabilityWeight = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $createdAt;
 
@@ -183,18 +195,57 @@ class Source
         return $this->createdAt;
     }
 
+    public function getLastErrorAt(): ?\DateTimeImmutable
+    {
+        return $this->lastErrorAt;
+    }
+
+    public function getSuccessCount(): int
+    {
+        return $this->successCount;
+    }
+
+    public function getFailureCount(): int
+    {
+        return $this->failureCount;
+    }
+
+    public function getReliabilityWeight(): ?float
+    {
+        return $this->reliabilityWeight;
+    }
+
+    public function setReliabilityWeight(?float $reliabilityWeight): void
+    {
+        $this->reliabilityWeight = $reliabilityWeight;
+    }
+
+    public function getSuccessRate(): ?float
+    {
+        $total = $this->successCount + $this->failureCount;
+
+        if ($total === 0) {
+            return null;
+        }
+
+        return round($this->successCount / $total * 100, 1);
+    }
+
     public function recordSuccess(\DateTimeImmutable $fetchedAt): void
     {
         $this->errorCount = 0;
         $this->lastErrorMessage = null;
         $this->healthStatus = SourceHealth::Healthy;
         $this->lastFetchedAt = $fetchedAt;
+        $this->successCount++;
     }
 
-    public function recordFailure(string $errorMessage): void
+    public function recordFailure(string $errorMessage, \DateTimeImmutable $failedAt): void
     {
         $this->errorCount++;
         $this->lastErrorMessage = $errorMessage;
+        $this->lastErrorAt = $failedAt;
+        $this->failureCount++;
 
         $this->healthStatus = match (true) {
             $this->errorCount >= 5 => SourceHealth::Disabled,

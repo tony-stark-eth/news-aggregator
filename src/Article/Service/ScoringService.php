@@ -24,6 +24,8 @@ final readonly class ScoringService implements ScoringServiceInterface
 
     private const int RECENCY_HALF_LIFE_HOURS = 12;
 
+    private const float DEFAULT_RELIABILITY_WEIGHT = 0.7;
+
     private const int RECENCY_MAX_AGE_HOURS = 168; // 7 days
 
     public function __construct(
@@ -87,14 +89,17 @@ final readonly class ScoringService implements ScoringServiceInterface
 
     private function scoreSourceReliability(Article $article): float
     {
-        $health = $article->getSource()->getHealthStatus();
+        $source = $article->getSource();
+        $reliabilityWeight = $source->getReliabilityWeight() ?? self::DEFAULT_RELIABILITY_WEIGHT;
 
-        return match ($health) {
+        $healthMultiplier = match ($source->getHealthStatus()) {
             SourceHealth::Healthy => 1.0,
             SourceHealth::Degraded => 0.7,
             SourceHealth::Failing => 0.4,
             SourceHealth::Disabled => 0.1,
         };
+
+        return round($reliabilityWeight * $healthMultiplier, 4);
     }
 
     private function scoreEnrichment(Article $article): float

@@ -50,10 +50,7 @@ final class CreateSourceController
     {
         $name = trim((string) $request->request->get('name'));
         $feedUrl = trim((string) $request->request->get('feed_url'));
-        $siteUrl = trim((string) $request->request->get('site_url'));
         $categoryId = (int) $request->request->get('category_id');
-        $language = trim((string) $request->request->get('language'));
-        $fetchInterval = trim((string) $request->request->get('fetch_interval_minutes'));
         $enabled = $request->request->getBoolean('enabled');
         $fullTextEnabled = $request->request->getBoolean('full_text_enabled');
 
@@ -74,26 +71,50 @@ final class CreateSourceController
         $source->setEnabled($enabled);
         $source->setFullTextEnabled($fullTextEnabled);
 
-        if ($siteUrl !== '') {
-            $source->setSiteUrl($siteUrl);
-        }
-
-        if ($language !== '') {
-            $source->setLanguage($language);
-        }
-
-        if ($fetchInterval !== '') {
-            $intervalValue = (int) $fetchInterval;
-            if ($intervalValue >= 5 && $intervalValue <= 1440) {
-                $source->setFetchIntervalMinutes($intervalValue);
-            }
-        }
+        $this->applyOptionalFields($request, $source);
 
         $this->sourceRepository->save($source, flush: true);
 
         $this->controller->addFlash('success', 'Source created.');
 
         return new RedirectResponse($this->urlGenerator->generate('app_sources'));
+    }
+
+    private function applyOptionalFields(Request $request, Source $source): void
+    {
+        $siteUrl = trim((string) $request->request->get('site_url'));
+        $language = trim((string) $request->request->get('language'));
+
+        $source->setSiteUrl($siteUrl !== '' ? $siteUrl : null);
+        $source->setLanguage($language !== '' ? $language : null);
+        $source->setFetchIntervalMinutes(
+            $this->parseFetchInterval(trim((string) $request->request->get('fetch_interval_minutes'))),
+        );
+        $source->setReliabilityWeight(
+            $this->parseReliabilityWeight(trim((string) $request->request->get('reliability_weight'))),
+        );
+    }
+
+    private function parseFetchInterval(string $input): ?int
+    {
+        if ($input === '') {
+            return null;
+        }
+
+        $value = (int) $input;
+
+        return ($value >= 5 && $value <= 1440) ? $value : null;
+    }
+
+    private function parseReliabilityWeight(string $input): ?float
+    {
+        if ($input === '') {
+            return null;
+        }
+
+        $value = (float) $input;
+
+        return ($value >= 0.0 && $value <= 1.0) ? $value : null;
     }
 
     private function renderForm(): Response

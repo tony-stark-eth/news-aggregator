@@ -89,9 +89,9 @@ final class SourceRepositoryTest extends KernelTestCase
             $category,
             new \DateTimeImmutable('2026-04-04 12:00:00'),
         );
-        $source->recordFailure('timeout');
-        $source->recordFailure('timeout');
-        $source->recordFailure('timeout');
+        $source->recordFailure('timeout', new \DateTimeImmutable('2026-04-04 12:00:00'));
+        $source->recordFailure('timeout', new \DateTimeImmutable('2026-04-04 13:00:00'));
+        $source->recordFailure('timeout', new \DateTimeImmutable('2026-04-04 14:00:00'));
         $this->em->persist($source);
         $this->em->flush();
 

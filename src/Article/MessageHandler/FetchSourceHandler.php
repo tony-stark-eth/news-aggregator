@@ -77,7 +77,7 @@ final readonly class FetchSourceHandler
                 ]);
             }
         } catch (FeedFetchException $e) {
-            $source->recordFailure($e->getMessage());
+            $source->recordFailure($e->getMessage(), $this->clock->now());
             $this->sourceRepository->flush();
 
             $this->logger->warning('Feed fetch failed for {source}: {error}', [

@@ -69,7 +69,7 @@ final class FetchSourceHandlerTest extends TestCase
     public function testHandlesFetchAndPersistsArticles(): void
     {
         // Put source into degraded state so recordSuccess() is observable
-        $this->source->recordFailure('previous error');
+        $this->source->recordFailure('previous error', new \DateTimeImmutable('2026-04-04 12:00:00'));
         self::assertSame(SourceHealth::Degraded, $this->source->getHealthStatus());
 
         $articleRepository = $this->createMock(ArticleRepositoryInterface::class);

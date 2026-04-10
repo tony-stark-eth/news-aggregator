@@ -121,6 +121,9 @@ final class EditSourceController
 
         $source->setFetchIntervalMinutes($this->parseFetchInterval($fetchInterval));
 
+        $reliabilityWeight = trim((string) $request->request->get('reliability_weight'));
+        $source->setReliabilityWeight($this->parseReliabilityWeight($reliabilityWeight));
+
         $this->sourceRepository->save($source, flush: true);
 
         $this->controller->addFlash('success', 'Source updated.');
@@ -137,6 +140,17 @@ final class EditSourceController
         $value = (int) $input;
 
         return ($value >= 5 && $value <= 1440) ? $value : null;
+    }
+
+    private function parseReliabilityWeight(string $input): ?float
+    {
+        if ($input === '') {
+            return null;
+        }
+
+        $value = (float) $input;
+
+        return ($value >= 0.0 && $value <= 1.0) ? $value : null;
     }
 
     private function renderForm(Source $source): Response

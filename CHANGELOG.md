@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Source Health History (#141)
+- `lastErrorAt`, `successCount`, `failureCount` fields on Source entity for fetch history tracking
+- Success rate display on sources page (e.g. "95% (19/20)") with color-coded badges
+- Expandable error detail per source showing last error message and timestamp
+- `recordSuccess()` and `recordFailure()` now track rolling counters
+
+#### Per-Source Reliability Weight (#78)
+- `reliabilityWeight` (float, 0.0-1.0) field on Source entity — configurable trust level per source
+- Affects article scoring via `ScoringService` — score = `healthMultiplier * reliabilityWeight`
+- Default weight 0.7 when not configured (null)
+- Editable via source create/edit forms with validation
+- Displayed in sources table
+
 #### Alert Rule Toggle (#98)
 - htmx-powered enable/disable toggle button on alert rules list page
 - No page reload required — inline badge swap on click

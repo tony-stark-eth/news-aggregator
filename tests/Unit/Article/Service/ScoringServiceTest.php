@@ -126,6 +126,7 @@ final class ScoringServiceTest extends TestCase
     {
         $category = new Category('Tech', 'tech', 10, '#3B82F6');
         $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $source->setReliabilityWeight(1.0);
         $article = new Article(
             'Test',
             'https://example.com/uncategorized',
@@ -190,6 +191,7 @@ final class ScoringServiceTest extends TestCase
     {
         $category = new Category('Tech', 'tech', 10, '#3B82F6');
         $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $source->setReliabilityWeight(1.0);
         $article = new Article(
             'Test',
             'https://example.com/no-published',
@@ -264,6 +266,7 @@ final class ScoringServiceTest extends TestCase
         // combined = 0.3*0.5 + 0.4*1.0 + 0.2*1.0 + 0.1*0.3 = 0.15+0.40+0.20+0.03 = 0.78
         $category = new Category('Tech', 'tech', 10, '#3B82F6');
         $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $source->setReliabilityWeight(1.0);
         $article = new Article(
             'Test',
             'https://example.com/uncategorized-2',
@@ -589,6 +592,7 @@ final class ScoringServiceTest extends TestCase
         // This kills the Coalesce mutant
         $category = new Category('Tech', 'tech', 10, '#3B82F6');
         $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
+        $source->setReliabilityWeight(1.0);
 
         $article = new Article(
             'Test',
@@ -656,6 +660,7 @@ final class ScoringServiceTest extends TestCase
     public function testBreakdownWithNullCategory(): void
     {
         $source = new Source('Test', 'https://example.com/feed', new Category('Tech', 'tech', 5, '#3B82F6'), new \DateTimeImmutable());
+        $source->setReliabilityWeight(1.0);
         $article = new Article(
             'Test',
             'https://example.com/no-cat-' . random_int(1, 99999),
@@ -670,11 +675,93 @@ final class ScoringServiceTest extends TestCase
         self::assertSame(0.5, $breakdown['category']);
     }
 
+    public function testReliabilityWeightAffectsSourceScore(): void
+    {
+        // reliabilityWeight=1.0, healthy → source score = 1.0 * 1.0 = 1.0
+        // category 10/10=1.0, recency now=1.0, AI=1.0
+        // 0.3*1.0 + 0.4*1.0 + 0.2*1.0 + 0.1*1.0 = 1.0
+        $highTrust = $this->createArticle(
+            categoryWeight: 10,
+            publishedAt: '2026-04-04 12:00:00',
+            enrichment: EnrichmentMethod::Ai,
+            health: SourceHealth::Healthy,
+            reliabilityWeight: 1.0,
+        );
+
+        self::assertSame(1.0, $this->service->score($highTrust));
+    }
+
+    public function testLowReliabilityWeightReducesScore(): void
+    {
+        // reliabilityWeight=0.5, healthy → source score = 0.5 * 1.0 = 0.5
+        // category 10/10=1.0, recency now=1.0, AI=1.0
+        // 0.3*1.0 + 0.4*1.0 + 0.2*0.5 + 0.1*1.0 = 0.3+0.4+0.1+0.1 = 0.9
+        $lowTrust = $this->createArticle(
+            categoryWeight: 10,
+            publishedAt: '2026-04-04 12:00:00',
+            enrichment: EnrichmentMethod::Ai,
+            health: SourceHealth::Healthy,
+            reliabilityWeight: 0.5,
+        );
+
+        self::assertSame(0.9, $this->service->score($lowTrust));
+    }
+
+    public function testNullReliabilityWeightUsesDefault(): void
+    {
+        // null → default 0.7, healthy → source score = 0.7 * 1.0 = 0.7
+        // category 10/10=1.0, recency now=1.0, AI=1.0
+        // 0.3*1.0 + 0.4*1.0 + 0.2*0.7 + 0.1*1.0 = 0.3+0.4+0.14+0.1 = 0.94
+        $defaultTrust = $this->createArticle(
+            categoryWeight: 10,
+            publishedAt: '2026-04-04 12:00:00',
+            enrichment: EnrichmentMethod::Ai,
+            health: SourceHealth::Healthy,
+            reliabilityWeight: null,
+        );
+
+        self::assertSame(0.94, $this->service->score($defaultTrust));
+    }
+
+    public function testReliabilityWeightCombinesWithHealthStatus(): void
+    {
+        // reliabilityWeight=0.8, degraded (0.7) → source score = 0.8 * 0.7 = 0.56
+        // category 10/10=1.0, recency now=1.0, AI=1.0
+        // 0.3*1.0 + 0.4*1.0 + 0.2*0.56 + 0.1*1.0 = 0.3+0.4+0.112+0.1 = 0.912
+        // round(0.912, 4) = 0.912
+        $article = $this->createArticle(
+            categoryWeight: 10,
+            publishedAt: '2026-04-04 12:00:00',
+            enrichment: EnrichmentMethod::Ai,
+            health: SourceHealth::Degraded,
+            reliabilityWeight: 0.8,
+        );
+
+        self::assertSame(0.912, $this->service->score($article));
+    }
+
+    public function testZeroReliabilityWeightMinimizesSourceComponent(): void
+    {
+        // reliabilityWeight=0.0, healthy → source score = 0.0 * 1.0 = 0.0
+        // category 10/10=1.0, recency now=1.0, AI=1.0
+        // 0.3*1.0 + 0.4*1.0 + 0.2*0.0 + 0.1*1.0 = 0.3+0.4+0+0.1 = 0.8
+        $article = $this->createArticle(
+            categoryWeight: 10,
+            publishedAt: '2026-04-04 12:00:00',
+            enrichment: EnrichmentMethod::Ai,
+            health: SourceHealth::Healthy,
+            reliabilityWeight: 0.0,
+        );
+
+        self::assertSame(0.8, $this->service->score($article));
+    }
+
     private function createArticle(
         int $categoryWeight = 10,
         string $publishedAt = '2026-04-04 11:00:00',
         ?EnrichmentMethod $enrichment = EnrichmentMethod::RuleBased,
         SourceHealth $health = SourceHealth::Healthy,
+        ?float $reliabilityWeight = 1.0,
     ): Article {
         $category = new Category('Tech', 'tech', $categoryWeight, '#3B82F6');
         $source = new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());
@@ -682,6 +769,8 @@ final class ScoringServiceTest extends TestCase
         // Use reflection to set health status since there's no public setter
         $healthProp = new \ReflectionProperty(Source::class, 'healthStatus');
         $healthProp->setValue($source, $health);
+
+        $source->setReliabilityWeight($reliabilityWeight);
 
         $article = new Article(
             'Test Article',

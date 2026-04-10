@@ -33,7 +33,8 @@
                         <th>Name</th>
                         <th>Category</th>
                         <th>Health</th>
-                        <th>Errors</th>
+                        <th>Success Rate</th>
+                        <th>Reliability</th>
                         <th>Last Fetched</th>
                         <th>Interval</th>
                         <th>Enabled</th>
@@ -52,8 +53,38 @@
                                     {{ source.category.name }}
                                 </span>
                             </td>
-                            <td>{% include 'components/_source_health_badge.html.twig' with { health: source.healthStatus.value } %}</td>
-                            <td>{{ source.errorCount }}</td>
+                            <td>
+                                {% include 'components/_source_health_badge.html.twig' with { health: source.healthStatus.value } %}
+                                {% if source.lastErrorMessage %}
+                                    <div class="collapse collapse-arrow bg-base-200 mt-1">
+                                        <input type="checkbox" class="min-h-0" />
+                                        <div class="collapse-title min-h-0 py-1 px-2 text-xs text-error">
+                                            Last error{% if source.lastErrorAt %} <time datetime="{{ source.lastErrorAt|date('c') }}" class="timeago">{{ source.lastErrorAt|date('Y-m-d H:i') }}</time>{% endif %}
+                                        </div>
+                                        <div class="collapse-content px-2">
+                                            <p class="text-xs text-base-content/70 break-all">{{ source.lastErrorMessage }}</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set rate = source.successRate %}
+                                {% if rate is not null %}
+                                    {% set total = source.successCount + source.failureCount %}
+                                    <span class="badge badge-sm {% if rate >= 90 %}badge-success{% elseif rate >= 70 %}badge-warning{% else %}badge-error{% endif %}">
+                                        {{ rate }}% ({{ source.successCount }}/{{ total }})
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-ghost badge-sm">no data</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if source.reliabilityWeight is not null %}
+                                    <span class="badge badge-info badge-sm">{{ source.reliabilityWeight }}</span>
+                                {% else %}
+                                    <span class="text-base-content/30">default</span>
+                                {% endif %}
+                            </td>
                             <td>
                                 {% if source.lastFetchedAt %}
                                     <time datetime="{{ source.lastFetchedAt|date('c') }}" class="timeago">{{ source.lastFetchedAt|date('Y-m-d H:i') }}</time>
