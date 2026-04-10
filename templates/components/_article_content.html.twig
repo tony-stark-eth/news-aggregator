@@ -1,17 +1,23 @@
 {# Inline reader view — loaded via htmx into .article-content-area #}
 <div class="mt-3 border-t border-base-300 pt-3">
-    {% if article.contentFullHtml %}
-        <div class="prose prose-sm max-w-none">
-            {{ article.contentFullHtml|raw }}
+    <div class="bg-base-200 rounded-lg p-4">
+        {# Sticky collapse button — always reachable while scrolling through long articles #}
+        <div class="flex justify-end sticky top-0 z-10 mb-2">
+            <button class="btn btn-xs btn-ghost text-info inline-reader-collapse" type="button">Collapse</button>
         </div>
-    {% elseif article.contentFullText %}
-        <div class="prose prose-sm max-w-none whitespace-pre-wrap">
-            {{ article.contentFullText }}
+        {% if article.contentFullHtml %}
+            <div class="prose prose-base max-w-none">
+                {{ article.contentFullHtml|raw }}
+            </div>
+        {% elseif article.contentFullText %}
+            <div class="prose prose-base max-w-none whitespace-pre-wrap">
+                {{ article.contentFullText }}
+            </div>
+        {% else %}
+            <p class="text-sm text-base-content/50 italic">Full content not available. <a href="{{ article.url }}" target="_blank" rel="noopener" class="link">Read on source →</a></p>
+        {% endif %}
+        <div class="mt-3 flex gap-2">
+            <a href="{{ article.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline">Open original →</a>
         </div>
-    {% else %}
-        <p class="text-sm text-base-content/50 italic">Full content not available. <a href="{{ article.url }}" target="_blank" rel="noopener" class="link">Read on source →</a></p>
-    {% endif %}
-    <div class="mt-3 flex gap-2">
-        <a href="{{ article.url }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline">Open original →</a>
     </div>
 </div>
