@@ -23,6 +23,7 @@ use App\Enrichment\ValueObject\EnrichmentResult;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\Entity\Category;
 use App\Shared\Repository\CategoryRepositoryInterface;
+use App\Shared\Service\SettingsServiceInterface;
 use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\Entity\Source;
 use App\Source\Service\FeedItem;
@@ -108,9 +109,12 @@ final class BatchEnrichmentPipelineTest extends TestCase
             $logger,
         );
 
+        $settingsService = $this->createStub(SettingsServiceInterface::class);
+        $settingsService->method('getDisplayLanguages')->willReturn('en,de');
+
         $articleTranslation = new ArticleTranslationService(
             $batchTranslation,
-            'en,de',
+            $settingsService,
         );
 
         $enrichmentService = new ArticleEnrichmentService(

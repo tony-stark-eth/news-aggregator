@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Source\Scheduler;
 
 use App\Shared\Entity\Category;
+use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Entity\Source;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\Source\Scheduler\FetchScheduleProvider;
@@ -26,7 +27,7 @@ final class FetchScheduleProviderTest extends TestCase
         $repo = $this->createStub(SourceRepositoryInterface::class);
         $repo->method('findEnabled')->willReturn([$source]);
 
-        $provider = new FetchScheduleProvider($repo);
+        $provider = new FetchScheduleProvider($repo, $this->createSettingsService(15));
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();
@@ -45,7 +46,7 @@ final class FetchScheduleProviderTest extends TestCase
         $repo = $this->createStub(SourceRepositoryInterface::class);
         $repo->method('findEnabled')->willReturn([$source]);
 
-        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 15);
+        $provider = new FetchScheduleProvider($repo, $this->createSettingsService(15));
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();
@@ -68,7 +69,7 @@ final class FetchScheduleProviderTest extends TestCase
         $repo = $this->createStub(SourceRepositoryInterface::class);
         $repo->method('findEnabled')->willReturn([$source]);
 
-        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 60);
+        $provider = new FetchScheduleProvider($repo, $this->createSettingsService(60));
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();
@@ -86,7 +87,7 @@ final class FetchScheduleProviderTest extends TestCase
         $repo = $this->createStub(SourceRepositoryInterface::class);
         $repo->method('findEnabled')->willReturn([$source]);
 
-        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 60);
+        $provider = new FetchScheduleProvider($repo, $this->createSettingsService(60));
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();
@@ -108,7 +109,7 @@ final class FetchScheduleProviderTest extends TestCase
         $repo = $this->createStub(SourceRepositoryInterface::class);
         $repo->method('findEnabled')->willReturn([$source]);
 
-        $provider = new FetchScheduleProvider($repo, defaultIntervalMinutes: 60);
+        $provider = new FetchScheduleProvider($repo, $this->createSettingsService(60));
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();
@@ -120,10 +121,18 @@ final class FetchScheduleProviderTest extends TestCase
         $repo = $this->createStub(SourceRepositoryInterface::class);
         $repo->method('findEnabled')->willReturn([]);
 
-        $provider = new FetchScheduleProvider($repo);
+        $provider = new FetchScheduleProvider($repo, $this->createSettingsService(15));
         $schedule = $provider->getSchedule();
 
         $messages = $schedule->getRecurringMessages();
         self::assertCount(0, $messages);
+    }
+
+    private function createSettingsService(int $defaultInterval): SettingsServiceInterface
+    {
+        $settings = $this->createStub(SettingsServiceInterface::class);
+        $settings->method('getFetchDefaultInterval')->willReturn($defaultInterval);
+
+        return $settings;
     }
 }

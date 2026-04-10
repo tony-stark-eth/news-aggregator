@@ -9,6 +9,7 @@ use App\Article\ValueObject\Url;
 use App\Enrichment\Service\ArticleTranslationService;
 use App\Enrichment\Service\BatchTranslationServiceInterface;
 use App\Enrichment\ValueObject\BatchTranslationResult;
+use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Entity\Source;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
@@ -42,7 +43,8 @@ final class ArticleTranslationServiceTest extends TestCase
                 },
             );
 
-        $service = new ArticleTranslationService($batch, 'en,de,fr');
+        $settings = $this->createSettingsService('en,de,fr');
+        $service = new ArticleTranslationService($batch, $settings);
 
         $article = $this->createArticle('Headline', 'Summary text', ['KW1']);
         $source = $this->createSource('en');
@@ -66,7 +68,8 @@ final class ArticleTranslationServiceTest extends TestCase
         $batch->expects(self::once())->method('translateBatch')
             ->willReturn(new BatchTranslationResult('DE Title', 'DE Summary', [], true));
 
-        $service = new ArticleTranslationService($batch, 'en,de');
+        $settings = $this->createSettingsService('en,de');
+        $service = new ArticleTranslationService($batch, $settings);
 
         $article = $this->createArticle('Title', 'Summary', []);
         $source = $this->createSource('en');
@@ -86,7 +89,8 @@ final class ArticleTranslationServiceTest extends TestCase
             new BatchTranslationResult('English Title', 'English Summary', [], true),
         );
 
-        $service = new ArticleTranslationService($batch, 'en');
+        $settings = $this->createSettingsService('en');
+        $service = new ArticleTranslationService($batch, $settings);
 
         $article = $this->createArticle('German Title', 'German Summary', []);
         $source = $this->createSource('de');
@@ -103,7 +107,8 @@ final class ArticleTranslationServiceTest extends TestCase
         $batch = $this->createMock(BatchTranslationServiceInterface::class);
         $batch->expects(self::never())->method('translateBatch');
 
-        $service = new ArticleTranslationService($batch, 'en');
+        $settings = $this->createSettingsService('en');
+        $service = new ArticleTranslationService($batch, $settings);
 
         $article = $this->createArticle('English Title', 'English Summary', []);
         $source = $this->createSource('en');
@@ -120,7 +125,8 @@ final class ArticleTranslationServiceTest extends TestCase
             new BatchTranslationResult('Translated', null, [], true),
         );
 
-        $service = new ArticleTranslationService($batch, 'en,de');
+        $settings = $this->createSettingsService('en,de');
+        $service = new ArticleTranslationService($batch, $settings);
 
         $article = $this->createArticle('Original', 'Original Summary', []);
         $source = $this->createSource('en');
@@ -136,7 +142,8 @@ final class ArticleTranslationServiceTest extends TestCase
         $batch = $this->createMock(BatchTranslationServiceInterface::class);
         $batch->expects(self::never())->method('translateBatch');
 
-        $service = new ArticleTranslationService($batch, 'en');
+        $settings = $this->createSettingsService('en');
+        $service = new ArticleTranslationService($batch, $settings);
 
         $article = $this->createArticle('Title', null, []);
         $source = $this->createSource(null);
@@ -167,5 +174,13 @@ final class ArticleTranslationServiceTest extends TestCase
         $source->method('getLanguage')->willReturn($language);
 
         return $source;
+    }
+
+    private function createSettingsService(string $displayLanguages): SettingsServiceInterface
+    {
+        $settings = $this->createStub(SettingsServiceInterface::class);
+        $settings->method('getDisplayLanguages')->willReturn($displayLanguages);
+
+        return $settings;
     }
 }

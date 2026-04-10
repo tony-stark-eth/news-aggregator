@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Configurable Display Settings (#142)
+- `Setting` entity with key-value storage for runtime configuration overrides
+- `SettingsService` with hybrid architecture: DB overrides take precedence over env var defaults
+- Editable settings form on `/settings` page with htmx inline save feedback
+- Override indicators (badge showing "overridden" vs "default" per setting)
+- Configurable: display languages, fetch interval, article retention, log retention
+- Consumers (`ArticleTranslationService`, `FetchScheduleProvider`, `CleanupCommand`) now read from `SettingsServiceInterface` — changes take effect immediately without container restart
+- CSRF-protected save endpoint
+
 #### Source Health History (#141)
 - `lastErrorAt`, `successCount`, `failureCount` fields on Source entity for fetch history tracking
 - Success rate display on sources page (e.g. "95% (19/20)") with color-coded badges

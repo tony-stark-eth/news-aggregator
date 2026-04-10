@@ -102,12 +102,13 @@ src/
 └── Shared/
     ├── AI/          # ModelFailoverPlatform, ModelDiscoveryService, ModelQualityTracker
     ├── Search/      # SEAL + Loupe full-text search (zero infrastructure)
-    ├── Entity/      # Category (shared lookup)
-    ├── Repository/  # CategoryRepositoryInterface + Doctrine implementation
+    ├── Entity/      # Category (shared lookup), Setting (key-value config overrides)
+    ├── Repository/  # CategoryRepositoryInterface, SettingRepositoryInterface + Doctrine implementations
+    ├── Service/     # SettingsService (hybrid env-var defaults + DB overrides), QueueDepthService
     ├── ValueObject/ # EnrichmentMethod (cross-domain)
     ├── Scheduler/   # MaintenanceScheduleProvider (daily reindex + cleanup)
     ├── Command/     # app:cleanup, app:search-reindex, app:check-sources, app:process-digests
-    ├── Controller/  # DashboardController, HealthController
+    ├── Controller/  # DashboardController, HealthController, SettingsController
     └── Twig/        # Extensions, NavigationExtension
 ```
 
@@ -140,8 +141,8 @@ src/
 | `OPENROUTER_BLOCKED_MODELS` | Comma-separated blocked model IDs | (empty) |
 | `OPENROUTER_PAID_FALLBACK_MODEL` | Paid model appended to failover chain (e.g. `google/gemini-2.5-flash-lite`) | (empty) |
 | `NOTIFIER_CHATTER_DSN` | Notifier transport DSN | (optional — matches logged as `skipped` without it) |
-| `FETCH_DEFAULT_INTERVAL_MINUTES` | Default fetch interval | `60` |
-| `DISPLAY_LANGUAGES` | Comma-separated display languages (e.g. `en,de,fr`) | `en` |
+| `FETCH_DEFAULT_INTERVAL_MINUTES` | Default fetch interval (overridable via Settings UI) | `60` |
+| `DISPLAY_LANGUAGES` | Comma-separated display languages (overridable via Settings UI) | `en` |
 | `MERCURE_URL` | Internal Mercure hub URL (for publishing) | `https://php/.well-known/mercure` |
 | `MERCURE_PUBLIC_URL` | Public Mercure hub URL (for browser SSE) | `https://localhost:8443/.well-known/mercure` |
 | `MERCURE_JWT_SECRET` | JWT secret for Mercure publishing | `!ChangeThisMercureHubJWTSecretKey!` |
@@ -151,8 +152,8 @@ src/
 | `FULL_TEXT_RATE_LIMIT_INTERVAL` | Rate limit sliding window (seconds) | `5` |
 | `QUEUE_ACCELERATE_THRESHOLD` | Queue depth to start accelerating (try primary free then paid) | `20` |
 | `QUEUE_SKIP_FREE_THRESHOLD` | Queue depth to skip free models entirely (use paid only) | `50` |
-| `RETENTION_ARTICLES` | Article retention period | `90` |
-| `RETENTION_LOGS` | Notification/digest log retention | `30` |
+| `RETENTION_ARTICLES` | Article retention period (overridable via Settings UI) | `90` |
+| `RETENTION_LOGS` | Notification/digest log retention (overridable via Settings UI) | `30` |
 | `DATABASE_URL` | PostgreSQL DSN | (set in compose) |
 
 ## Guidelines

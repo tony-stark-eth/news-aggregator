@@ -40,13 +40,93 @@
             </div>
         </div>
 
-        <div class="card bg-base-100 shadow-sm">
+        <form class="card bg-base-100 shadow-sm"
+              hx-post="{{ path('app_settings_save') }}"
+              hx-target="#save-result"
+              hx-swap="innerHTML"
+        >
             <div class="card-body">
-                <h3 class="card-title text-base">Data Retention</h3>
-                <p class="text-sm">Articles: {{ retentionArticles }} days</p>
-                <p class="text-sm">Logs: {{ retentionLogs }} days</p>
+                <h3 class="card-title text-base">Display Settings</h3>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token('settings_save') }}">
+
+                <div class="form-control">
+                    <label class="label" for="setting-display-languages">
+                        <span class="label-text">Display Languages</span>
+                        {% if settings.display_languages.isOverridden %}
+                            <span class="badge badge-info badge-xs">overridden</span>
+                        {% else %}
+                            <span class="badge badge-ghost badge-xs">default</span>
+                        {% endif %}
+                    </label>
+                    <input type="text" id="setting-display-languages" name="display_languages"
+                           value="{{ settings.display_languages.value }}"
+                           class="input input-bordered input-sm"
+                           placeholder="en,de,fr">
+                    <label class="label">
+                        <span class="label-text-alt text-base-content/50">Comma-separated language codes (e.g. en,de,fr)</span>
+                    </label>
+                </div>
+
+                <div class="form-control">
+                    <label class="label" for="setting-fetch-interval">
+                        <span class="label-text">Fetch Interval (minutes)</span>
+                        {% if settings.fetch_default_interval.isOverridden %}
+                            <span class="badge badge-info badge-xs">overridden</span>
+                        {% else %}
+                            <span class="badge badge-ghost badge-xs">default</span>
+                        {% endif %}
+                    </label>
+                    <input type="number" id="setting-fetch-interval" name="fetch_default_interval"
+                           value="{{ settings.fetch_default_interval.value }}"
+                           class="input input-bordered input-sm"
+                           min="1" max="1440">
+                    <label class="label">
+                        <span class="label-text-alt text-base-content/50">Default interval between source fetches</span>
+                    </label>
+                </div>
+
+                <div class="form-control">
+                    <label class="label" for="setting-retention-articles">
+                        <span class="label-text">Article Retention (days)</span>
+                        {% if settings.retention_articles.isOverridden %}
+                            <span class="badge badge-info badge-xs">overridden</span>
+                        {% else %}
+                            <span class="badge badge-ghost badge-xs">default</span>
+                        {% endif %}
+                    </label>
+                    <input type="number" id="setting-retention-articles" name="retention_articles"
+                           value="{{ settings.retention_articles.value }}"
+                           class="input input-bordered input-sm"
+                           min="1" max="365">
+                    <label class="label">
+                        <span class="label-text-alt text-base-content/50">Days to keep articles before cleanup</span>
+                    </label>
+                </div>
+
+                <div class="form-control">
+                    <label class="label" for="setting-retention-logs">
+                        <span class="label-text">Log Retention (days)</span>
+                        {% if settings.retention_logs.isOverridden %}
+                            <span class="badge badge-info badge-xs">overridden</span>
+                        {% else %}
+                            <span class="badge badge-ghost badge-xs">default</span>
+                        {% endif %}
+                    </label>
+                    <input type="number" id="setting-retention-logs" name="retention_logs"
+                           value="{{ settings.retention_logs.value }}"
+                           class="input input-bordered input-sm"
+                           min="1" max="365">
+                    <label class="label">
+                        <span class="label-text-alt text-base-content/50">Days to keep notification and digest logs</span>
+                    </label>
+                </div>
+
+                <div class="card-actions mt-2 flex items-center gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
+                    <span id="save-result"></span>
+                </div>
             </div>
-        </div>
+        </form>
 
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body">

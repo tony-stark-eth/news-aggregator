@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Shared\Command;
 
+use App\Shared\Service\SettingsServiceInterface;
 use Doctrine\DBAL\Connection;
 use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -21,8 +22,7 @@ final class CleanupCommand extends Command
     public function __construct(
         private readonly Connection $connection,
         private readonly ClockInterface $clock,
-        private readonly int $retentionArticleDays = 90,
-        private readonly int $retentionLogDays = 30,
+        private readonly SettingsServiceInterface $settingsService,
     ) {
         parent::__construct();
     }
@@ -31,7 +31,10 @@ final class CleanupCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $articleCutoff = $this->clock->now()->modify(sprintf('-%d days', $this->retentionArticleDays));
+        $retentionArticleDays = $this->settingsService->getRetentionArticles();
+        $retentionLogDays = $this->settingsService->getRetentionLogs();
+
+        $articleCutoff = $this->clock->now()->modify(sprintf('-%d days', $retentionArticleDays));
 
         // Delete old user_article_read entries first (FK constraint)
         $readDeleted = $this->connection->executeStatement(
@@ -51,7 +54,7 @@ final class CleanupCommand extends Command
         );
         $io->info(sprintf('Deleted %d old articles.', (int) $articleDeleted));
 
-        $logCutoff = $this->clock->now()->modify(sprintf('-%d days', $this->retentionLogDays));
+        $logCutoff = $this->clock->now()->modify(sprintf('-%d days', $retentionLogDays));
 
         // Delete old notification logs
         $notificationLogDeleted = $this->connection->executeStatement(
@@ -73,8 +76,8 @@ final class CleanupCommand extends Command
 
         $io->success(sprintf(
             'Cleanup complete. Retention: %d days articles, %d days logs.',
-            $this->retentionArticleDays,
-            $this->retentionLogDays,
+            $retentionArticleDays,
+            $retentionLogDays,
         ));
 
         return Command::SUCCESS;

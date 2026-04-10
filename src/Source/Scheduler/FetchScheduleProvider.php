@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Source\Scheduler;
 
+use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Message\FetchSourceMessage;
 use App\Source\Repository\SourceRepositoryInterface;
 use Symfony\Component\Scheduler\Attribute\AsSchedule;
@@ -16,13 +17,14 @@ final class FetchScheduleProvider implements ScheduleProviderInterface
 {
     public function __construct(
         private readonly SourceRepositoryInterface $sourceRepository,
-        private readonly int $defaultIntervalMinutes = 15,
+        private readonly SettingsServiceInterface $settingsService,
     ) {
     }
 
     public function getSchedule(): Schedule
     {
         $schedule = new Schedule();
+        $defaultIntervalMinutes = $this->settingsService->getFetchDefaultInterval();
 
         $sources = $this->sourceRepository->findEnabled();
 
@@ -34,7 +36,7 @@ final class FetchScheduleProvider implements ScheduleProviderInterface
 
             $intervalMinutes = $source->getFetchIntervalMinutes()
                 ?? $source->getCategory()->getFetchIntervalMinutes()
-                ?? $this->defaultIntervalMinutes;
+                ?? $defaultIntervalMinutes;
 
             $schedule->add(
                 RecurringMessage::every(sprintf('%d minutes', $intervalMinutes), new FetchSourceMessage($id)),

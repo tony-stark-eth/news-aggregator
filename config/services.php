@@ -33,15 +33,15 @@ use App\Notification\Service\NotificationDispatchService;
 use App\Shared\AI\Command\AiSmokeTestCommand;
 use App\Shared\AI\Platform\ModelFailoverPlatform;
 use App\Shared\AI\Service\ModelDiscoveryService;
-use App\Shared\Command\CleanupCommand;
 use App\Shared\Controller\AiStatsController;
 use App\Shared\Controller\SettingsController;
 use App\Shared\Controller\TestNotificationController;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use App\Shared\Search\Service\SealArticleSearchService;
 use App\Shared\Service\QueueDepthServiceInterface;
+use App\Shared\Service\SettingsService;
+use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Command\SeedDataCommand;
-use App\Source\Scheduler\FetchScheduleProvider;
 use Symfony\AI\Platform\Bridge\Generic\CompletionsModel;
 use Symfony\AI\Platform\Bridge\OpenRouter\ModelCatalog;
 use Symfony\AI\Platform\Capability;
@@ -198,21 +198,19 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$blockedModels', '%env(string:OPENROUTER_BLOCKED_MODELS)%')
         ->arg('$paidFallbackModel', '%env(string:OPENROUTER_PAID_FALLBACK_MODEL)%');
 
-    // Wire retention env vars for CleanupCommand
-    $services->set(CleanupCommand::class)
-        ->arg('$retentionArticleDays', '%env(int:RETENTION_ARTICLES)%')
-        ->arg('$retentionLogDays', '%env(int:RETENTION_LOGS)%');
+    // SettingsService: hybrid env-var defaults + DB overrides
+    $services->set(SettingsService::class)
+        ->arg('$displayLanguages', '%env(string:DISPLAY_LANGUAGES)%')
+        ->arg('$fetchDefaultInterval', '%env(int:FETCH_DEFAULT_INTERVAL_MINUTES)%')
+        ->arg('$retentionArticles', '%env(int:RETENTION_ARTICLES)%')
+        ->arg('$retentionLogs', '%env(int:RETENTION_LOGS)%');
 
-    // Wire default fetch interval for FetchScheduleProvider
-    $services->set(FetchScheduleProvider::class)
-        ->arg('$defaultIntervalMinutes', '%env(int:FETCH_DEFAULT_INTERVAL_MINUTES)%');
+    $services->alias(SettingsServiceInterface::class, SettingsService::class);
 
     // Wire env vars for SettingsController
     $services->set(SettingsController::class)
         ->arg('$openrouterApiKey', '%env(default::OPENROUTER_API_KEY)%')
-        ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%')
-        ->arg('$retentionArticles', '%env(int:RETENTION_ARTICLES)%')
-        ->arg('$retentionLogs', '%env(int:RETENTION_LOGS)%');
+        ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%');
 
     // Wire notifier DSN for TestNotificationController (to detect null transport)
     $services->set(TestNotificationController::class)
@@ -221,10 +219,6 @@ return static function (ContainerConfigurator $container): void {
     // Wire notifier DSN for NotificationDispatchService (to detect null transport)
     $services->set(NotificationDispatchService::class)
         ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%');
-
-    // Wire DISPLAY_LANGUAGES env var for ArticleTranslationService
-    $services->set(ArticleTranslationService::class)
-        ->arg('$displayLanguages', '%env(string:DISPLAY_LANGUAGES)%');
 
     // Mercure publisher: real implementation when Hub is available
     $services->alias(MercurePublisherServiceInterface::class, MercurePublisherService::class);

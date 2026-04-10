@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Shared\Command;
 
 use App\Shared\Command\CleanupCommand;
+use App\Shared\Service\SettingsServiceInterface;
 use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -29,7 +30,7 @@ final class CleanupCommandTest extends TestCase
     {
         $this->connection->method('executeStatement')->willReturn(5);
 
-        $command = new CleanupCommand($this->connection, $this->clock, 90, 30);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(90, 30));
         $tester = new CommandTester($command);
 
         $tester->execute([]);
@@ -46,7 +47,7 @@ final class CleanupCommandTest extends TestCase
             ->method('executeStatement')
             ->willReturn(0);
 
-        $command = new CleanupCommand($this->connection, $this->clock, 90, 30);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(90, 30));
         $tester = new CommandTester($command);
 
         $tester->execute([]);
@@ -65,7 +66,7 @@ final class CleanupCommandTest extends TestCase
                 return 0;
             });
 
-        $command = new CleanupCommand($this->connection, $this->clock, 90, 30);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(90, 30));
         $tester = new CommandTester($command);
         $tester->execute([]);
 
@@ -91,7 +92,7 @@ final class CleanupCommandTest extends TestCase
                 return 0;
             });
 
-        $command = new CleanupCommand($this->connection, $this->clock, 90, 30);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(90, 30));
         $tester = new CommandTester($command);
         $tester->execute([]);
 
@@ -116,7 +117,7 @@ final class CleanupCommandTest extends TestCase
                 return 0;
             });
 
-        $command = new CleanupCommand($this->connection, $this->clock, 90, 30);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(90, 30));
         $tester = new CommandTester($command);
         $tester->execute([]);
 
@@ -136,7 +137,7 @@ final class CleanupCommandTest extends TestCase
                 return $counts[$callIndex++];
             });
 
-        $command = new CleanupCommand($this->connection, $this->clock, 90, 30);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(90, 30));
         $tester = new CommandTester($command);
         $tester->execute([]);
 
@@ -151,7 +152,7 @@ final class CleanupCommandTest extends TestCase
     {
         $this->connection->method('executeStatement')->willReturn(0);
 
-        $command = new CleanupCommand($this->connection, $this->clock, 180, 60);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(180, 60));
         $tester = new CommandTester($command);
         $tester->execute([]);
 
@@ -164,10 +165,19 @@ final class CleanupCommandTest extends TestCase
     {
         $this->connection->method('executeStatement')->willReturn(0);
 
-        $command = new CleanupCommand($this->connection, $this->clock);
+        $command = new CleanupCommand($this->connection, $this->clock, $this->createSettingsService(90, 30));
         $tester = new CommandTester($command);
         $tester->execute([]);
 
         self::assertSame(0, $tester->getStatusCode());
+    }
+
+    private function createSettingsService(int $retentionArticles, int $retentionLogs): SettingsServiceInterface
+    {
+        $settings = $this->createStub(SettingsServiceInterface::class);
+        $settings->method('getRetentionArticles')->willReturn($retentionArticles);
+        $settings->method('getRetentionLogs')->willReturn($retentionLogs);
+
+        return $settings;
     }
 }

@@ -5,29 +5,21 @@ declare(strict_types=1);
 namespace App\Enrichment\Service;
 
 use App\Article\Entity\Article;
+use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Entity\Source;
 
 final readonly class ArticleTranslationService implements ArticleTranslationServiceInterface
 {
-    /**
-     * @var list<string>
-     */
-    private array $parsedDisplayLanguages;
-
     public function __construct(
         private BatchTranslationServiceInterface $batchTranslation,
-        private string $displayLanguages = 'en',
+        private SettingsServiceInterface $settingsService,
     ) {
-        $this->parsedDisplayLanguages = array_values(
-            array_filter(
-                array_map(trim(...), explode(',', $this->displayLanguages)),
-                static fn (string $lang): bool => $lang !== '',
-            ),
-        );
     }
 
     public function applyTranslations(Article $article, Source $source): void
     {
+        $parsedDisplayLanguages = $this->parseDisplayLanguages();
+
         $sourceLanguage = $source->getLanguage() ?? 'en';
         $originalTitle = $article->getTitle();
         $originalSummary = $article->getSummary();
@@ -43,7 +35,7 @@ final readonly class ArticleTranslationService implements ArticleTranslationServ
             'keywords' => $originalKeywords,
         ];
 
-        foreach ($this->parsedDisplayLanguages as $targetLang) {
+        foreach ($parsedDisplayLanguages as $targetLang) {
             if ($targetLang === $sourceLanguage) {
                 continue;
             }
@@ -65,12 +57,25 @@ final readonly class ArticleTranslationService implements ArticleTranslationServ
 
         $article->setTranslations($translations);
 
-        $primaryLang = $this->parsedDisplayLanguages[0] ?? 'en';
+        $primaryLang = $parsedDisplayLanguages[0] ?? 'en';
         if ($primaryLang !== $sourceLanguage && isset($translations[$primaryLang])) {
             $article->setTitle($translations[$primaryLang]['title']);
             if ($translations[$primaryLang]['summary'] !== null) {
                 $article->setSummary($translations[$primaryLang]['summary']);
             }
         }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function parseDisplayLanguages(): array
+    {
+        return array_values(
+            array_filter(
+                array_map(trim(...), explode(',', $this->settingsService->getDisplayLanguages())),
+                static fn (string $lang): bool => $lang !== '',
+            ),
+        );
     }
 }
