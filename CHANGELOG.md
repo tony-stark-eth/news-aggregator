@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Health Check Endpoint
+- GET `/health` endpoint for container orchestration — returns 200 `{"status":"ok"}` when database is reachable, 503 with error message otherwise (#153)
+- No authentication required — added to public access firewall
+
 #### Dynamic Paid Model Usage During High Pipeline Load
 - Queue-aware model routing in `ModelFailoverPlatform` — automatically skips free models when enrichment queue is deep (#157)
 - Three routing modes: normal (queue < 20), accelerated (queue 20-49: primary free then paid), skip-free (queue >= 50: paid only)
