@@ -95,6 +95,9 @@ class Article
     #[ORM\Column(length: 20, nullable: true, enumType: FullTextStatus::class)]
     private ?FullTextStatus $fullTextStatus = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $embedding = null;
+
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $fetchedAt;
 
@@ -342,6 +345,16 @@ class Article
     public function setFullTextStatus(?FullTextStatus $fullTextStatus): void
     {
         $this->fullTextStatus = $fullTextStatus;
+    }
+
+    public function getEmbedding(): ?string
+    {
+        return $this->embedding;
+    }
+
+    public function setEmbedding(?string $embedding): void
+    {
+        $this->embedding = $embedding;
     }
 
     public function getFetchedAt(): \DateTimeImmutable

@@ -39,7 +39,7 @@ services:
         condition: service_healthy
 
   database:
-    image: postgres:${POSTGRES_VERSION:-17}-alpine
+    image: pgvector/pgvector:pg${POSTGRES_VERSION:-17}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-app}
