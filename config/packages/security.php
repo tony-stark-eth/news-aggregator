@@ -41,6 +41,10 @@ return static function (ContainerConfigurator $container): void {
         // Note: Only the *first* matching rule is applied
         'access_control' => [
             [
+                'path' => '^/health$',
+                'roles' => 'PUBLIC_ACCESS',
+            ],
+            [
                 'path' => '^/login',
                 'roles' => 'PUBLIC_ACCESS',
             ],

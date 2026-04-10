@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Health Check Endpoint
+- GET `/health` endpoint for container orchestration — returns 200 `{"status":"ok"}` when database is reachable, 503 with error message otherwise (#153)
+- No authentication required — added to public access firewall
+
 #### Test Notification from Settings Page (#102)
 - "Send Test Notification" button on the settings page (htmx-powered, inline success/failure feedback)
 - Handles missing transport (`null://null` or empty DSN) with a warning badge
