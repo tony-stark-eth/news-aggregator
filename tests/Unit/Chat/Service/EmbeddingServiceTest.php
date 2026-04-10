@@ -6,8 +6,10 @@ namespace App\Tests\Unit\Chat\Service;
 
 use App\Chat\Service\EmbeddingService;
 use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
 use App\Shared\AI\ValueObject\ModelIdCollection;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
@@ -18,6 +20,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 #[CoversClass(EmbeddingService::class)]
 #[UsesClass(ModelId::class)]
 #[UsesClass(ModelIdCollection::class)]
+#[UsesClass(ModelQualityCategory::class)]
 final class EmbeddingServiceTest extends TestCase
 {
     public function testEmbedReturnsVectorOnSuccess(): void
@@ -34,6 +37,10 @@ final class EmbeddingServiceTest extends TestCase
             new ModelIdCollection([new ModelId('test-model')]),
         );
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordAcceptance')
+            ->with('test-model', ModelQualityCategory::Embedding);
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('debug')
             ->with(
@@ -41,7 +48,7 @@ final class EmbeddingServiceTest extends TestCase
                 self::callback(static fn (array $ctx): bool => $ctx['model'] === 'test-model' && $ctx['dimensions'] === 3),
             );
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
         $result = $service->embed('test text');
 
         self::assertSame($expectedEmbedding, $result);
@@ -51,10 +58,14 @@ final class EmbeddingServiceTest extends TestCase
     {
         $httpClient = new MockHttpClient();
         $discovery = $this->createStub(ModelDiscoveryServiceInterface::class);
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::never())->method('recordAcceptance');
+        $tracker->expects(self::never())->method('recordRejection');
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::never())->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
 
         self::assertNull($service->embed(''));
     }
@@ -63,10 +74,14 @@ final class EmbeddingServiceTest extends TestCase
     {
         $httpClient = new MockHttpClient();
         $discovery = $this->createStub(ModelDiscoveryServiceInterface::class);
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::never())->method('recordAcceptance');
+        $tracker->expects(self::never())->method('recordRejection');
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::never())->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
 
         self::assertNull($service->embed('   '));
     }
@@ -77,11 +92,15 @@ final class EmbeddingServiceTest extends TestCase
         $discovery = $this->createStub(ModelDiscoveryServiceInterface::class);
         $discovery->method('discoverEmbeddingModels')->willReturn(new ModelIdCollection());
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::never())->method('recordAcceptance');
+        $tracker->expects(self::never())->method('recordRejection');
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('warning')
             ->with('No embedding models available');
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
 
         self::assertNull($service->embed('some text'));
     }
@@ -106,6 +125,12 @@ final class EmbeddingServiceTest extends TestCase
             new ModelIdCollection([new ModelId('failing-model'), new ModelId('working-model')]),
         );
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordRejection')
+            ->with('failing-model', ModelQualityCategory::Embedding);
+        $tracker->expects(self::once())->method('recordAcceptance')
+            ->with('working-model', ModelQualityCategory::Embedding);
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('warning')
             ->with(
@@ -118,7 +143,7 @@ final class EmbeddingServiceTest extends TestCase
                 self::callback(static fn (array $ctx): bool => $ctx['model'] === 'working-model' && $ctx['dimensions'] === 2),
             );
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
         $result = $service->embed('test text');
 
         self::assertSame($expectedEmbedding, $result);
@@ -141,11 +166,14 @@ final class EmbeddingServiceTest extends TestCase
             new ModelIdCollection([new ModelId('model-1'), new ModelId('model-2')]),
         );
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::exactly(2))->method('recordRejection');
+
         $logger = $this->createMock(LoggerInterface::class);
-        // Two failure warnings + one "all failed" warning
+        // Two per-model failure warnings + one "all failed" warning
         $logger->expects(self::exactly(3))->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
 
         self::assertNull($service->embed('test text'));
     }
@@ -163,6 +191,10 @@ final class EmbeddingServiceTest extends TestCase
             new ModelIdCollection([new ModelId('test-model')]),
         );
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordRejection')
+            ->with('test-model', ModelQualityCategory::Embedding);
+
         /** @var list<string> $warningMessages */
         $warningMessages = [];
         $logger = $this->createMock(LoggerInterface::class);
@@ -171,10 +203,10 @@ final class EmbeddingServiceTest extends TestCase
                 $warningMessages[] = $message;
             });
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
 
         self::assertNull($service->embed('test text'));
-        self::assertStringContainsString('Empty embedding response', $warningMessages[0]);
+        self::assertStringContainsString('Embedding request failed', $warningMessages[0]);
         self::assertStringContainsString('All embedding models failed', $warningMessages[1]);
     }
 
@@ -189,10 +221,14 @@ final class EmbeddingServiceTest extends TestCase
             new ModelIdCollection([new ModelId('test-model')]),
         );
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordRejection')
+            ->with('test-model', ModelQualityCategory::Embedding);
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::atLeastOnce())->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
 
         self::assertNull($service->embed('test text'));
     }

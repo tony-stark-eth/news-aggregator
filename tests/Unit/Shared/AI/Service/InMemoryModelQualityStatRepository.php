@@ -18,7 +18,14 @@ final class InMemoryModelQualityStatRepository implements ModelQualityStatReposi
 
     public function findByModelId(string $modelId): ?ModelQualityStat
     {
-        return $this->stats[$modelId] ?? null;
+        return $this->findByModelIdAndCategory($modelId, 'enrichment');
+    }
+
+    public function findByModelIdAndCategory(string $modelId, string $category): ?ModelQualityStat
+    {
+        $key = $category . ':' . $modelId;
+
+        return $this->stats[$key] ?? null;
     }
 
     /**
@@ -29,9 +36,21 @@ final class InMemoryModelQualityStatRepository implements ModelQualityStatReposi
         return array_values($this->stats);
     }
 
+    /**
+     * @return list<ModelQualityStat>
+     */
+    public function findByCategory(string $category): array
+    {
+        return array_values(array_filter(
+            $this->stats,
+            static fn (ModelQualityStat $stat): bool => $stat->getCategory() === $category,
+        ));
+    }
+
     public function save(ModelQualityStat $stat, bool $flush = false): void
     {
-        $this->stats[$stat->getModelId()] = $stat;
+        $key = $stat->getCategory() . ':' . $stat->getModelId();
+        $this->stats[$key] = $stat;
         $this->saveCount++;
     }
 

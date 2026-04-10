@@ -6,6 +6,7 @@ namespace App\Shared\Controller;
 
 use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -31,7 +32,9 @@ final class AiStatsController
             : [];
 
         return $this->controller->render('stats/ai.html.twig', [
-            'stats' => $this->qualityTracker->getAllStats(),
+            'enrichmentStats' => $this->qualityTracker->getStatsByCategory(ModelQualityCategory::Enrichment),
+            'chatStats' => $this->qualityTracker->getStatsByCategory(ModelQualityCategory::Chat),
+            'embeddingStats' => $this->qualityTracker->getStatsByCategory(ModelQualityCategory::Embedding),
             'freeModels' => $this->modelDiscovery->discoverFreeModels(),
             'primaryModel' => self::PRIMARY_MODEL,
             'blockedModels' => $blockedList,

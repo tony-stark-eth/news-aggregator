@@ -134,7 +134,7 @@ src/
 - **Alert fixtures**: YAML-based alert rule definitions, loadable via `app:load-alert-rules`
 - **Keyword-first**: Alert rules always run keyword matching first; AI evaluation only on keyword matches (~10-20 calls/day)
 - **Auto-reindex**: Doctrine listener indexes articles on persist/update; daily full reindex via maintenance scheduler
-- **Model stats**: `app:ai-stats` command shows model quality metrics
+- **Model quality tracking**: `ModelQualityTracker` records accept/reject per model across three categories (`enrichment`, `chat`, `embedding`). Chat and embedding services auto-instrument. `app:ai-model-stats` and `/stats/ai` show per-category quality tables.
 - **Blocked models**: `OPENROUTER_BLOCKED_MODELS` env var (comma-separated) for persistent manual overrides
 
 ## Key Environment Variables

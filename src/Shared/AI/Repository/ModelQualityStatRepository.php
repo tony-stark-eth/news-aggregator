@@ -22,6 +22,15 @@ final class ModelQualityStatRepository extends ServiceEntityRepository implement
     {
         return $this->findOneBy([
             'modelId' => $modelId,
+            'category' => 'enrichment',
+        ]);
+    }
+
+    public function findByModelIdAndCategory(string $modelId, string $category): ?ModelQualityStat
+    {
+        return $this->findOneBy([
+            'modelId' => $modelId,
+            'category' => $category,
         ]);
     }
 
@@ -32,6 +41,17 @@ final class ModelQualityStatRepository extends ServiceEntityRepository implement
     {
         /** @var list<ModelQualityStat> */
         return parent::findAll();
+    }
+
+    /**
+     * @return list<ModelQualityStat>
+     */
+    public function findByCategory(string $category): array
+    {
+        /** @var list<ModelQualityStat> */
+        return $this->findBy([
+            'category' => $category,
+        ]);
     }
 
     public function save(ModelQualityStat $stat, bool $flush = false): void

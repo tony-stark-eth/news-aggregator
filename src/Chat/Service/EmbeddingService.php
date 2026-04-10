@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Chat\Service;
 
 use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -14,6 +16,7 @@ final readonly class EmbeddingService implements EmbeddingServiceInterface
     public function __construct(
         private HttpClientInterface $httpClient,
         private ModelDiscoveryServiceInterface $modelDiscovery,
+        private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
     ) {
     }
@@ -64,13 +67,12 @@ final readonly class EmbeddingService implements EmbeddingServiceInterface
 
             $embedding = $data['data'][0]['embedding'] ?? null;
             if (! \is_array($embedding) || $embedding === []) {
-                $this->logger->warning('Empty embedding response from {model}', [
-                    'model' => $model->value,
-                ]);
+                $this->recordFailure($model->value, 'Empty embedding response');
 
                 return null;
             }
 
+            $this->qualityTracker->recordAcceptance($model->value, ModelQualityCategory::Embedding);
             $this->logger->debug('Generated embedding via {model} ({dimensions}d)', [
                 'model' => $model->value,
                 'dimensions' => \count($embedding),
@@ -78,12 +80,18 @@ final readonly class EmbeddingService implements EmbeddingServiceInterface
 
             return $embedding;
         } catch (\Throwable $e) {
-            $this->logger->warning('Embedding request failed for {model}: {error}', [
-                'model' => $model->value,
-                'error' => $e->getMessage(),
-            ]);
+            $this->recordFailure($model->value, $e->getMessage());
 
             return null;
         }
+    }
+
+    private function recordFailure(string $modelId, string $reason): void
+    {
+        $this->qualityTracker->recordRejection($modelId, ModelQualityCategory::Embedding);
+        $this->logger->warning('Embedding request failed for {model}: {error}', [
+            'model' => $modelId,
+            'error' => $reason,
+        ]);
     }
 }
