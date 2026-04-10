@@ -57,6 +57,7 @@ final class MercurePublisherServiceTest extends TestCase
     public function testPublishEnrichmentCompleteSendsUpdateWithAllPayloadFields(): void
     {
         $article = $this->createFullArticle(2);
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
         $article->setEnrichmentStatus(EnrichmentStatus::Complete);
         $article->setEnrichmentMethod(EnrichmentMethod::Ai);
 

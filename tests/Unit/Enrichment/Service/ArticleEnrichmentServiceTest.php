@@ -41,7 +41,7 @@ final class ArticleEnrichmentServiceTest extends TestCase
         $translation->expects(self::once())->method('applyTranslations');
 
         $scoring = $this->createStub(ScoringServiceInterface::class);
-        $scoring->method('score')->willReturn(42.0);
+        $scoring->method('score')->willReturn(0.42);
 
         $category = new Category('Technology', 'tech', 1, '#000');
         $categoryRepo = $this->createStub(CategoryRepositoryInterface::class);
@@ -59,7 +59,7 @@ final class ArticleEnrichmentServiceTest extends TestCase
         self::assertSame($category, $article->getCategory());
         self::assertSame('A summary of the article.', $article->getSummary());
         self::assertSame(['Google', 'AI'], $article->getKeywords());
-        self::assertSame(42.0, $article->getScore());
+        self::assertSame(0.42, $article->getScore());
     }
 
     public function testFallsBackToSourceCategoryWhenSlugNotFound(): void
