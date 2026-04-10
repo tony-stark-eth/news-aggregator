@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+{% block title %}Import OPML — News Aggregator{% endblock %}
+{% block body %}
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Import OPML</h1>
+        <a href="{{ path('app_sources') }}" class="btn btn-ghost btn-sm">Back to Sources</a>
+    </div>
+
+    <div class="max-w-lg">
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <p class="text-base-content/70 mb-4">
+                    Upload an OPML file to import feed sources. Duplicate feeds (same URL) will be skipped.
+                </p>
+
+                {% if error is defined and error %}
+                    <div class="alert alert-error mb-4">
+                        <span>{{ error }}</span>
+                    </div>
+                {% endif %}
+
+                <form method="POST"
+                      action="{{ path('app_sources_import_opml_post') }}"
+                      enctype="multipart/form-data"
+                      hx-post="{{ path('app_sources_import_opml_post') }}"
+                      hx-target="#import-result"
+                      hx-swap="innerHTML"
+                      hx-encoding="multipart/form-data">
+                    <div class="form-control mb-4">
+                        <label class="label" for="opml_file">
+                            <span class="label-text">OPML File</span>
+                        </label>
+                        <input type="file"
+                               id="opml_file"
+                               name="opml_file"
+                               accept=".opml,.xml"
+                               class="file-input file-input-bordered w-full"
+                               required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <span class="htmx-indicator loading loading-spinner loading-xs"></span>
+                        Import
+                    </button>
+                </form>
+
+                <div id="import-result" class="mt-4"></div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

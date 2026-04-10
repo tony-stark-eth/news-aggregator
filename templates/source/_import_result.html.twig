@@ -1,0 +1,47 @@
+{% if result.importedCount > 0 %}
+    <div class="alert alert-success mb-3">
+        <span>Imported {{ result.importedCount }} source{{ result.importedCount != 1 ? 's' : '' }}.</span>
+    </div>
+{% endif %}
+
+{% if result.skippedCount > 0 %}
+    <div class="alert alert-warning mb-3">
+        <span>Skipped {{ result.skippedCount }} duplicate{{ result.skippedCount != 1 ? 's' : '' }}.</span>
+    </div>
+{% endif %}
+
+{% if result.importedCount == 0 and result.skippedCount == 0 %}
+    <div class="alert alert-info mb-3">
+        <span>No feeds found in the OPML file.</span>
+    </div>
+{% endif %}
+
+{% if result.importedNames is not empty %}
+    <details class="collapse collapse-arrow bg-base-200 mb-2">
+        <summary class="collapse-title font-medium">Imported feeds</summary>
+        <div class="collapse-content">
+            <ul class="list-disc list-inside text-sm">
+                {% for name in result.importedNames %}
+                    <li>{{ name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </details>
+{% endif %}
+
+{% if result.skippedNames is not empty %}
+    <details class="collapse collapse-arrow bg-base-200 mb-2">
+        <summary class="collapse-title font-medium">Skipped duplicates</summary>
+        <div class="collapse-content">
+            <ul class="list-disc list-inside text-sm">
+                {% for name in result.skippedNames %}
+                    <li>{{ name }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </details>
+{% endif %}
+
+{% if result.importedCount > 0 %}
+    <a href="{{ path('app_sources') }}" class="btn btn-primary btn-sm mt-2">View Sources</a>
+{% endif %}

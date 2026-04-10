@@ -40,4 +40,11 @@ final class FeedUrlTest extends TestCase
 
         new FeedUrl('ftp://example.com/feed.xml');
     }
+
+    public function testInvalidUrlWithValidSchemeThrows(): void
+    {
+        $this->expectException(InvalidFeedUrlException::class);
+
+        new FeedUrl('http://a b');
+    }
 }
