@@ -33,6 +33,23 @@
 - **AI as decorator**: Rule-based services implement the interface. AI services wrap them and fall back to rule-based on failure.
 - **Interface-first**: All service boundaries defined by interface. Concrete implementations wired via Symfony DI.
 
+## Cross-Context Entity FK Strategy (ADR)
+
+**Decision**: Bounded contexts reference each other via direct Doctrine `ManyToOne` associations, not by ID-only references.
+
+**Affected relationships**:
+- `NotificationLog` → `Article` (Notification → Article context)
+- `AlertRule` → `User` (Notification → User context)
+- `DigestConfig` → `User` (Digest → User context)
+- `UserArticleRead` → `Article` (User → Article context)
+- `UserArticleBookmark` → `Article` (User → Article context)
+
+**Rationale**: This is a modular monolith with a single PostgreSQL database. Direct FK associations provide referential integrity, cascade deletes, and efficient joins — all critical for a self-hosted single-DB application. The ORM coupling is an acceptable trade-off.
+
+**When to revisit**: If bounded contexts are ever split into separate services (microservices), these FK relationships must be replaced with ID-only references + eventual consistency patterns (event-driven sync, API calls). This is not planned and would be a major architectural change.
+
+**Status**: Accepted. No action needed.
+
 ## Environment Variables
 
 | Variable | Purpose | Default |
