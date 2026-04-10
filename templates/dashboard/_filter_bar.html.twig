@@ -34,4 +34,6 @@
         hx-indicator="#feed-loader"
         hx-headers='{"X-CSRF-Token": "{{ csrf_token('mark_all_read') }}"}'
         class="btn btn-sm btn-ghost">Mark All Read</button>
-<input id="article-filter" type="text" placeholder="Filter articles..." class="input input-bordered input-sm flex-1" />
+<span class="border-l border-base-300 pl-3 flex-1">
+    <input id="article-filter" type="text" placeholder="Filter this page..." class="input input-bordered input-sm w-full" />
+</span>
