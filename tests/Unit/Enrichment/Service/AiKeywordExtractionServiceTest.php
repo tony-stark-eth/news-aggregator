@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Enrichment\Service;
 
 use App\Enrichment\Service\AiKeywordExtractionService;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
+use App\Enrichment\Service\KeywordFilterService;
 use App\Enrichment\Service\RuleBasedKeywordExtractionService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -23,7 +24,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -53,7 +55,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             $logger,
         );
 
@@ -83,7 +86,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             $logger,
         );
 
@@ -97,64 +101,68 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
     public function testTrimsKeywords(): void
     {
-        $platform = new InMemoryPlatform(' Google ,  AI , Cloud ');
+        $platform = new InMemoryPlatform(' Google ,  Azure , Cloud ');
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
         $keywords = $service->extract('Test title', 'Test content');
 
-        self::assertSame(['Google', 'AI', 'Cloud'], $keywords);
+        self::assertSame(['Google', 'Azure', 'Cloud'], $keywords);
     }
 
     public function testLimitsToMaxKeywords(): void
     {
-        $platform = new InMemoryPlatform('A, B, C, D, E, F, G, H, I, J');
+        $platform = new InMemoryPlatform('Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf, Hotel');
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
         $keywords = $service->extract('Test', 'Content');
 
-        self::assertCount(8, $keywords);
-        self::assertSame(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], $keywords);
+        self::assertCount(5, $keywords);
+        self::assertSame(['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'], $keywords);
     }
 
     public function testFiltersEmptyKeywordsAfterTrim(): void
     {
-        $platform = new InMemoryPlatform('Google, , , AI');
+        $platform = new InMemoryPlatform('Google, , , Azure');
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
         $keywords = $service->extract('Test', 'Content');
 
-        self::assertSame(['Google', 'AI'], $keywords);
+        self::assertSame(['Google', 'Azure'], $keywords);
     }
 
     public function testFiltersKeywordsOver100Chars(): void
     {
         $longKeyword = str_repeat('x', 101);
-        $platform = new InMemoryPlatform("Google, {$longKeyword}, AI");
+        $platform = new InMemoryPlatform("Google, {$longKeyword}, Azure");
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
         $keywords = $service->extract('Test', 'Content');
 
-        self::assertSame(['Google', 'AI'], $keywords);
+        self::assertSame(['Google', 'Azure'], $keywords);
     }
 
     public function testKeywordExactly100CharsIsAccepted(): void
@@ -164,7 +172,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -186,6 +195,7 @@ final class AiKeywordExtractionServiceTest extends TestCase
         $service = new AiKeywordExtractionService(
             $platform,
             $fallback,
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -200,7 +210,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -218,7 +229,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -238,7 +250,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -258,7 +271,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -272,34 +286,36 @@ final class AiKeywordExtractionServiceTest extends TestCase
     {
         // 101 multibyte chars -> mb_strlen = 101 > 100 -> rejected
         $keyword101mb = str_repeat('日', 101);
-        $platform = new InMemoryPlatform("Google, {$keyword101mb}, AI");
+        $platform = new InMemoryPlatform("Google, {$keyword101mb}, Azure");
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
         $keywords = $service->extract('Test', 'Content');
 
-        self::assertSame(['Google', 'AI'], $keywords);
+        self::assertSame(['Google', 'Azure'], $keywords);
     }
 
     public function testArraySliceReturnsExactlyMaxKeywords(): void
     {
-        // Verify array_slice with MAX_KEYWORDS=8 (kills ArrayItemRemoval on array_slice)
-        $platform = new InMemoryPlatform('A, B, C, D, E, F, G, H, I');
+        // Verify keyword filter limits to 5 keywords max
+        $platform = new InMemoryPlatform('Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf');
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
         $keywords = $service->extract('Test', 'Content');
 
-        self::assertSame(['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'], $keywords);
-        self::assertNotContains('I', $keywords);
+        self::assertSame(['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'], $keywords);
+        self::assertNotContains('Foxtrot', $keywords);
     }
 
     public function testTrimCalledOnEachKeyword(): void
@@ -309,7 +325,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -329,7 +346,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -352,7 +370,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -367,22 +386,18 @@ final class AiKeywordExtractionServiceTest extends TestCase
         // Then parseKeywords would process the whitespace-padded string
         // " Google, AI " → split by comma → [" Google", " AI "]
         // trim() inside parseKeywords handles individual keywords, but outer trim handles newlines
-        $platform = new InMemoryPlatform("\n  Google, AI  \n");
+        $platform = new InMemoryPlatform("\n  Google, Azure  \n");
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
         $keywords = $service->extract('Title', 'Content');
 
-        // With outer trim: "Google, AI" → parseKeywords trims each → ['Google', 'AI']
-        // Without outer trim: "\n  Google, AI  \n" → split by comma → ["\n  Google", " AI  \n"]
-        // parseKeywords trim each → ['Google', 'AI'] → same result!
-        // Outer trim is actually redundant with inner trim in parseKeywords.
-        // This mutation is equivalent.
-        self::assertSame(['Google', 'AI'], $keywords);
+        self::assertSame(['Google', 'Azure'], $keywords);
     }
 
     public function testTrimOnResponseKillsUnwrapTrim(): void
@@ -397,7 +412,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 
@@ -422,7 +438,8 @@ final class AiKeywordExtractionServiceTest extends TestCase
 
         $service = new AiKeywordExtractionService(
             $platform,
-            new RuleBasedKeywordExtractionService(),
+            new RuleBasedKeywordExtractionService(new KeywordFilterService()),
+            new KeywordFilterService(),
             new NullLogger(),
         );
 

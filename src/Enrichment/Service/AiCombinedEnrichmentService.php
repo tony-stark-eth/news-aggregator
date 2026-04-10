@@ -19,8 +19,6 @@ final readonly class AiCombinedEnrichmentService implements CombinedEnrichmentSe
 
     private const int CONTENT_TRUNCATION = 2000;
 
-    private const int MAX_KEYWORDS = 8;
-
     private const string PROMPT_TEMPLATE = <<<'PROMPT'
 Analyze the following news article and return a JSON object with exactly these fields:
 - "category": one of [politics, business, tech, science, sports, entertainment, health, world]
@@ -41,6 +39,7 @@ PROMPT;
         private AiQualityGateServiceInterface $qualityGate,
         private ModelQualityTrackerInterface $qualityTracker,
         private AiTextCleanupServiceInterface $textCleanup,
+        private KeywordFilterService $keywordFilter,
         private LoggerInterface $logger,
     ) {
     }
@@ -181,7 +180,7 @@ PROMPT;
             }
         }
 
-        return array_slice($keywords, 0, self::MAX_KEYWORDS);
+        return $this->keywordFilter->filter($keywords);
     }
 
     /**

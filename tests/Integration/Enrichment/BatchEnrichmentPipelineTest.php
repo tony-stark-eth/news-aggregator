@@ -14,6 +14,7 @@ use App\Enrichment\Service\ArticleEnrichmentService;
 use App\Enrichment\Service\ArticleTranslationService;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
+use App\Enrichment\Service\KeywordFilterService;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\Service\TranslationServiceInterface;
 use App\Enrichment\ValueObject\BatchTranslationResult;
@@ -91,6 +92,7 @@ final class BatchEnrichmentPipelineTest extends TestCase
             $qualityGate,
             $qualityTracker,
             $textCleanup,
+            new KeywordFilterService(),
             $logger,
         );
 
@@ -197,6 +199,7 @@ final class BatchEnrichmentPipelineTest extends TestCase
             $qualityGate,
             $qualityTracker,
             $textCleanup,
+            new KeywordFilterService(),
             $logger,
         );
 

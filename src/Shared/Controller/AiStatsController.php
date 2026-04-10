@@ -12,19 +12,30 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class AiStatsController
 {
+    private const string PRIMARY_MODEL = 'openrouter/free';
+
     public function __construct(
         private readonly ControllerHelper $controller,
         private readonly ModelQualityTrackerInterface $qualityTracker,
         private readonly ModelDiscoveryServiceInterface $modelDiscovery,
+        private readonly string $blockedModels = '',
+        private readonly string $paidFallbackModel = '',
     ) {
     }
 
     #[Route('/stats/ai', name: 'app_ai_stats')]
     public function __invoke(): Response
     {
+        $blockedList = $this->blockedModels !== ''
+            ? array_map('trim', explode(',', $this->blockedModels))
+            : [];
+
         return $this->controller->render('stats/ai.html.twig', [
             'stats' => $this->qualityTracker->getAllStats(),
             'freeModels' => $this->modelDiscovery->discoverFreeModels(),
+            'primaryModel' => self::PRIMARY_MODEL,
+            'blockedModels' => $blockedList,
+            'paidFallbackModel' => $this->paidFallbackModel,
         ]);
     }
 }

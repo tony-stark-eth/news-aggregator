@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Alert Rule Toggle (#98)
+- htmx-powered enable/disable toggle button on alert rules list page
+- No page reload required — inline badge swap on click
+- CSRF-protected POST endpoint at `/alerts/{id}/toggle`
+
+#### Notification Log Filters (#101)
+- Filter dropdowns for alert rule and delivery status on notification log page
+- htmx-powered filtering with URL push state
+- `findRecent()` repository method now accepts optional `alertRuleId` and `status` parameters
+
+#### AI Stats: Active Model and Blocked Models (#103)
+- Dashboard cards showing primary model, paid fallback model, and blocked models list
+- Blocked models displayed as red badges for quick visibility
+
+### Changed
+
+#### Keyword Tag Quality Filter (#140)
+- New `KeywordFilterService` removes short tokens (< 3 chars), common stop words (EN/DE), and limits to 5 keywords max
+- Applied to AI combined enrichment, AI keyword extraction, and rule-based keyword extraction
+- Stop words: the, a, an, in, on, at, for, and, or, but, with, der, die, das, von, und, fur, ist, ein, eine, wer, wie, was, zu
+
+#### Typed Rate Limit Exception (#155)
+- Replaced `str_contains($e->getMessage(), 'Rate limit')` with `RateLimitExceededException` catch in `ModelFailoverPlatform`
+- Uses Symfony AI Platform's typed exception instead of fragile string matching
+
 #### Health Check Endpoint
 - GET `/health` endpoint for container orchestration — returns 200 `{"status":"ok"}` when database is reachable, 503 with error message otherwise (#153)
 - No authentication required — added to public access firewall

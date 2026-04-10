@@ -5,13 +5,14 @@ declare(strict_types=1);
 namespace App\Notification\Repository;
 
 use App\Notification\Entity\NotificationLog;
+use App\Notification\ValueObject\DeliveryStatus;
 
 interface NotificationLogRepositoryInterface
 {
     /**
      * @return list<NotificationLog>
      */
-    public function findRecent(int $limit): array;
+    public function findRecent(int $limit, ?int $alertRuleId = null, ?DeliveryStatus $status = null): array;
 
     public function existsRecentForRule(int $ruleId, \DateTimeImmutable $since): bool;
 

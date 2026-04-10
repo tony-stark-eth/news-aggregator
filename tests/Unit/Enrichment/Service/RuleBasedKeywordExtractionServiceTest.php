@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Enrichment\Service;
 
+use App\Enrichment\Service\KeywordFilterService;
 use App\Enrichment\Service\RuleBasedKeywordExtractionService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -15,7 +16,7 @@ final class RuleBasedKeywordExtractionServiceTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->service = new RuleBasedKeywordExtractionService();
+        $this->service = new RuleBasedKeywordExtractionService(new KeywordFilterService());
     }
 
     public function testExtractsMultiWordProperNouns(): void
@@ -54,14 +55,14 @@ final class RuleBasedKeywordExtractionServiceTest extends TestCase
         }
     }
 
-    public function testReturnsMaxEightKeywords(): void
+    public function testReturnsMaxFiveKeywordsAfterFilter(): void
     {
         $keywords = $this->service->extract(
             'Apple Google Microsoft Amazon Meta Tesla Nvidia Intel Samsung',
             'Apple Google Microsoft Amazon Meta Tesla Nvidia Intel Samsung Sony.',
         );
 
-        self::assertLessThanOrEqual(8, \count($keywords));
+        self::assertLessThanOrEqual(5, \count($keywords));
     }
 
     public function testHandlesNullContent(): void
@@ -108,13 +109,13 @@ final class RuleBasedKeywordExtractionServiceTest extends TestCase
 
     public function testExactlyMaxKeywordsReturned(): void
     {
-        // 9 unique proper nouns -> should return exactly 8
+        // 9 unique proper nouns -> should return exactly 5 (filter limits to 5)
         $keywords = $this->service->extract(
             'Apple Google Microsoft Amazon Meta Tesla Nvidia Intel Samsung',
             '',
         );
 
-        self::assertSame(8, \count($keywords));
+        self::assertSame(5, \count($keywords));
     }
 
     public function testFilterMultiWordStartingWithStopWord(): void

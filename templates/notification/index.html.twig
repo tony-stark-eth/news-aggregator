@@ -3,46 +3,31 @@
 {% block body %}
     <h1 class="text-2xl font-bold mb-6">Notification Log</h1>
 
-    {% if logs is empty %}
-        {% include 'components/_empty_state.html.twig' with {
-            message: 'No alert matches logged yet.'
-        } %}
-    {% else %}
-        <div class="overflow-x-auto">
-            <table class="table table-zebra">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Alert Rule</th>
-                        <th>Article</th>
-                        <th>Type</th>
-                        <th>Severity</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for log in logs %}
-                        <tr>
-                            <td><time datetime="{{ log.sentAt|date('c') }}" class="timeago">{{ log.sentAt|date('Y-m-d H:i') }}</time></td>
-                            <td>{{ log.alertRule.name }}</td>
-                            <td class="max-w-xs truncate">
-                                <a href="{{ log.article.url }}" target="_blank" rel="noopener" class="link link-hover">{{ log.article.title }}</a>
-                            </td>
-                            <td><span class="badge badge-outline badge-sm">{{ log.matchType }}</span></td>
-                            <td>{{ log.aiSeverity ?? '-' }}</td>
-                            <td>
-                                {% if log.deliveryStatus.value == 'sent' %}
-                                    <span class="badge badge-success badge-sm">sent</span>
-                                {% elseif log.deliveryStatus.value == 'skipped' %}
-                                    <span class="badge badge-ghost badge-sm">skipped</span>
-                                {% else %}
-                                    <span class="badge badge-error badge-sm">failed</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% endif %}
+    <div class="flex gap-4 mb-6">
+        <select name="rule" class="select select-bordered select-sm"
+                hx-get="{{ path('app_notifications') }}"
+                hx-target="#log-table"
+                hx-include="[name='status']"
+                hx-push-url="true">
+            <option value="">All Rules</option>
+            {% for alertRule in alertRules %}
+                <option value="{{ alertRule.id }}" {{ ruleFilter == alertRule.id ? 'selected' }}>{{ alertRule.name }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="status" class="select select-bordered select-sm"
+                hx-get="{{ path('app_notifications') }}"
+                hx-target="#log-table"
+                hx-include="[name='rule']"
+                hx-push-url="true">
+            <option value="">All Statuses</option>
+            <option value="sent" {{ statusFilter == 'sent' ? 'selected' }}>Sent</option>
+            <option value="skipped" {{ statusFilter == 'skipped' ? 'selected' }}>Skipped</option>
+            <option value="failed" {{ statusFilter == 'failed' ? 'selected' }}>Failed</option>
+        </select>
+    </div>
+
+    <div id="log-table">
+        {% include 'notification/_log_table.html.twig' %}
+    </div>
 {% endblock %}

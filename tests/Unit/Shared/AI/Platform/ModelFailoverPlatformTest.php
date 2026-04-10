@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\AI\Platform\Exception\RateLimitExceededException;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Test\InMemoryPlatform;
 
@@ -73,11 +74,11 @@ final class ModelFailoverPlatformTest extends TestCase
         self::assertSame('free response', $result->asText());
     }
 
-    public function testRateLimitBreaksChainIncludingPaidFallback(): void
+    public function testRateLimitExceptionBreaksChainIncludingPaidFallback(): void
     {
         $innerPlatform = $this->createMock(PlatformInterface::class);
         $innerPlatform->expects(self::once())->method('invoke')
-            ->willThrowException(new \RuntimeException('Rate limit exceeded'));
+            ->willThrowException(new RateLimitExceededException());
 
         $logger = $this->createMock(LoggerInterface::class);
 
@@ -88,9 +89,32 @@ final class ModelFailoverPlatformTest extends TestCase
             $logger,
         );
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Rate limit');
+        $this->expectException(RateLimitExceededException::class);
         $platform->invoke('openrouter/free', 'test prompt');
+    }
+
+    public function testNonRateLimitExceptionContinuesChain(): void
+    {
+        $innerPlatform = $this->createMock(PlatformInterface::class);
+        $innerPlatform->expects(self::exactly(3))->method('invoke')
+            ->willReturnOnConsecutiveCalls(
+                self::throwException(new \RuntimeException('Some error with Rate limit in message')),
+                self::throwException(new \RuntimeException('Another error')),
+                new InMemoryPlatform('paid response')->invoke('paid/model', 'test'),
+            );
+
+        $logger = $this->createMock(LoggerInterface::class);
+
+        $platform = new ModelFailoverPlatform(
+            $innerPlatform,
+            ['free/model-a'],
+            'paid/model',
+            $logger,
+        );
+
+        $result = $platform->invoke('openrouter/free', 'test prompt');
+
+        self::assertSame('paid response', $result->asText());
     }
 
     // --- Queue-aware routing tests ---

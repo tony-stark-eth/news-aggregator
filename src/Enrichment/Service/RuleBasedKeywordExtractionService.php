@@ -29,13 +29,20 @@ final readonly class RuleBasedKeywordExtractionService implements KeywordExtract
         'Indeed', 'Perhaps', 'Certainly', 'Likely', 'Recently',
     ];
 
+    public function __construct(
+        private KeywordFilterService $keywordFilter,
+    ) {
+    }
+
     public function extract(string $title, ?string $contentText): array
     {
         $text = $title . ' ' . ($contentText ?? '');
         $properNouns = $this->extractProperNouns($text);
         $unique = array_values(array_unique($properNouns));
 
-        return \array_slice($unique, 0, self::MAX_KEYWORDS);
+        $capped = \array_slice($unique, 0, self::MAX_KEYWORDS);
+
+        return $this->keywordFilter->filter($capped);
     }
 
     /**

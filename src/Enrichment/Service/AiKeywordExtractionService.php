@@ -13,8 +13,6 @@ final readonly class AiKeywordExtractionService implements KeywordExtractionServ
 {
     private const string MODEL = 'openrouter/free';
 
-    private const int MAX_KEYWORDS = 8;
-
     private const string PROMPT_TEMPLATE = <<<'PROMPT'
 Extract 3-5 key entities (people, organizations, places, topics) from this article. Return ONLY a comma-separated list.
 
@@ -25,6 +23,7 @@ PROMPT;
     public function __construct(
         private PlatformInterface $platform,
         private KeywordExtractionServiceInterface $ruleBasedFallback,
+        private KeywordFilterService $keywordFilter,
         private LoggerInterface $logger,
     ) {
     }
@@ -76,6 +75,6 @@ PROMPT;
             }
         }
 
-        return \array_slice($keywords, 0, self::MAX_KEYWORDS);
+        return $this->keywordFilter->filter($keywords);
     }
 }

@@ -40,11 +40,7 @@
                             </td>
                             <td>{{ rule.cooldownMinutes }}m</td>
                             <td>
-                                {% if rule.enabled %}
-                                    <span class="badge badge-success badge-sm">yes</span>
-                                {% else %}
-                                    <span class="badge badge-ghost badge-sm">no</span>
-                                {% endif %}
+                                {% include 'alert/_toggle_badge.html.twig' with { rule: rule } %}
                             </td>
                             <td>
                                 {% set stats = matchStats[rule.id] ?? null %}

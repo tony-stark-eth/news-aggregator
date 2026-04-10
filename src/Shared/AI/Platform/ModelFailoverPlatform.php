@@ -7,6 +7,7 @@ namespace App\Shared\AI\Platform;
 use App\Shared\Service\QueueDepthServiceInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
+use Symfony\AI\Platform\Exception\RateLimitExceededException;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Result\DeferredResult;
@@ -74,7 +75,7 @@ final class ModelFailoverPlatform implements PlatformInterface
                 ]);
 
                 // Rate limiting affects the entire provider — don't waste time trying other models
-                if (str_contains($e->getMessage(), 'Rate limit')) {
+                if ($e instanceof RateLimitExceededException) {
                     break;
                 }
             }

@@ -9,6 +9,7 @@ use App\Enrichment\Service\AiQualityGateServiceInterface;
 use App\Enrichment\Service\AiTextCleanupService;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
+use App\Enrichment\Service\KeywordFilterService;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\ValueObject\CombinedEnrichmentResult;
 use App\Enrichment\ValueObject\EnrichmentResult;
@@ -34,7 +35,7 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
         $json = json_encode([
             'category' => 'tech',
             'summary' => 'Google announced a new AI model for developers.',
-            'keywords' => ['Google', 'AI', 'developers'],
+            'keywords' => ['Google', 'Azure', 'developers'],
         ], JSON_THROW_ON_ERROR);
 
         $platform = new InMemoryPlatform($json);
@@ -49,7 +50,7 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
 
         self::assertSame('tech', $result->categorySlug);
         self::assertSame('Google announced a new AI model for developers.', $result->summary);
-        self::assertSame(['Google', 'AI', 'developers'], $result->keywords);
+        self::assertSame(['Google', 'Azure', 'developers'], $result->keywords);
         self::assertSame(EnrichmentMethod::Ai, $result->method);
         self::assertSame('openrouter/free', $result->modelUsed);
     }
@@ -59,7 +60,7 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
         $json = "```json\n" . json_encode([
             'category' => 'tech',
             'summary' => 'A concise summary of the article content.',
-            'keywords' => ['Google', 'AI'],
+            'keywords' => ['Google', 'Azure'],
         ], JSON_THROW_ON_ERROR) . "\n```";
 
         $platform = new InMemoryPlatform($json);
@@ -352,7 +353,7 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
         $json = json_encode([
             'category' => 'tech',
             'summary' => 'A valid summary that passes all quality checks.',
-            'keywords' => ['  Google  ', '  AI  '],
+            'keywords' => ['  Google  ', '  Azure  '],
         ], JSON_THROW_ON_ERROR);
 
         $platform = new InMemoryPlatform($json);
@@ -360,7 +361,7 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
 
         $result = $service->enrich('Title', 'Content');
 
-        self::assertSame(['Google', 'AI'], $result->keywords);
+        self::assertSame(['Google', 'Azure'], $result->keywords);
     }
 
     public function testEmptyKeywordsAfterTrimAreRejected(): void
@@ -421,11 +422,11 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
 
     public function testKeywordsAreCappedAtMaxKeywords(): void
     {
-        // Mutation #48: UnwrapArraySlice — array_slice is needed when > MAX_KEYWORDS
+        // Keyword filter limits to 5 max keywords
         $json = json_encode([
             'category' => 'tech',
             'summary' => 'A valid summary that passes all quality checks.',
-            'keywords' => ['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K8', 'K9', 'K10'],
+            'keywords' => ['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel'],
         ], JSON_THROW_ON_ERROR);
 
         $platform = new InMemoryPlatform($json);
@@ -433,9 +434,8 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
 
         $result = $service->enrich('Title', 'Content');
 
-        // MAX_KEYWORDS = 8
-        self::assertCount(8, $result->keywords);
-        self::assertSame(['K1', 'K2', 'K3', 'K4', 'K5', 'K6', 'K7', 'K8'], $result->keywords);
+        self::assertCount(5, $result->keywords);
+        self::assertSame(['Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo'], $result->keywords);
     }
 
     public function testTrimOnRawResponse(): void
@@ -883,6 +883,7 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
             $qualityGate,
             $tracker ?? $this->createStub(ModelQualityTrackerInterface::class),
             new AiTextCleanupService(),
+            new KeywordFilterService(),
             $logger ?? $this->createStub(LoggerInterface::class),
         );
     }
@@ -915,6 +916,7 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
             $qualityGate,
             $this->createStub(ModelQualityTrackerInterface::class),
             new AiTextCleanupService(),
+            new KeywordFilterService(),
             $this->createStub(LoggerInterface::class),
         );
     }

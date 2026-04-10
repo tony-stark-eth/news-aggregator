@@ -3,6 +3,37 @@
 {% block body %}
     <h1 class="text-2xl font-bold mb-6">AI Model Statistics</h1>
 
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="card bg-base-200 shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="text-sm font-semibold text-base-content/70">Primary Model</h3>
+                <p class="font-mono text-sm">{{ primaryModel }}</p>
+            </div>
+        </div>
+
+        <div class="card bg-base-200 shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="text-sm font-semibold text-base-content/70">Paid Fallback</h3>
+                <p class="font-mono text-sm">{{ paidFallbackModel ?: 'Not configured' }}</p>
+            </div>
+        </div>
+
+        <div class="card bg-base-200 shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="text-sm font-semibold text-base-content/70">Blocked Models</h3>
+                {% if blockedModels is empty %}
+                    <p class="text-sm text-base-content/50">None</p>
+                {% else %}
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        {% for model in blockedModels %}
+                            <span class="badge badge-error badge-sm font-mono">{{ model }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     {% if stats is empty %}
         <div class="alert alert-info mb-6">No model quality data yet. Stats populate after AI enrichment runs.</div>
     {% else %}

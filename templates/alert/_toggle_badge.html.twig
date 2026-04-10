@@ -1,0 +1,12 @@
+<button hx-post="{{ path('app_alerts_toggle', {id: rule.id}) }}"
+        hx-headers='{"X-CSRF-Token": "{{ csrf_token('toggle_alert_rule') }}"}'
+        hx-target="this"
+        hx-swap="outerHTML"
+        class="btn btn-ghost btn-xs"
+        title="Click to {{ rule.enabled ? 'disable' : 'enable' }}">
+    {% if rule.enabled %}
+        <span class="badge badge-success badge-sm">yes</span>
+    {% else %}
+        <span class="badge badge-ghost badge-sm">no</span>
+    {% endif %}
+</button>

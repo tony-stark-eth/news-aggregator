@@ -34,6 +34,7 @@ use App\Shared\AI\Command\AiSmokeTestCommand;
 use App\Shared\AI\Platform\ModelFailoverPlatform;
 use App\Shared\AI\Service\ModelDiscoveryService;
 use App\Shared\Command\CleanupCommand;
+use App\Shared\Controller\AiStatsController;
 use App\Shared\Controller\SettingsController;
 use App\Shared\Controller\TestNotificationController;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
@@ -191,6 +192,11 @@ return static function (ContainerConfigurator $container): void {
     // Wire OPENROUTER_BLOCKED_MODELS env var for ModelDiscoveryService
     $services->set(ModelDiscoveryService::class)
         ->arg('$blockedModels', '%env(string:OPENROUTER_BLOCKED_MODELS)%');
+
+    // Wire AI stats controller with blocked models and paid fallback model
+    $services->set(AiStatsController::class)
+        ->arg('$blockedModels', '%env(string:OPENROUTER_BLOCKED_MODELS)%')
+        ->arg('$paidFallbackModel', '%env(string:OPENROUTER_PAID_FALLBACK_MODEL)%');
 
     // Wire retention env vars for CleanupCommand
     $services->set(CleanupCommand::class)

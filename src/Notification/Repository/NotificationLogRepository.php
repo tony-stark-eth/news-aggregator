@@ -22,14 +22,24 @@ final class NotificationLogRepository extends ServiceEntityRepository implements
     /**
      * @return list<NotificationLog>
      */
-    public function findRecent(int $limit): array
+    public function findRecent(int $limit, ?int $alertRuleId = null, ?DeliveryStatus $status = null): array
     {
-        /** @var list<NotificationLog> */
-        return $this->createQueryBuilder('l')
+        $qb = $this->createQueryBuilder('l')
             ->orderBy('l.sentAt', 'DESC')
-            ->setMaxResults($limit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($limit);
+
+        if ($alertRuleId !== null) {
+            $qb->andWhere('l.alertRule = :ruleId')
+                ->setParameter('ruleId', $alertRuleId);
+        }
+
+        if ($status instanceof DeliveryStatus) {
+            $qb->andWhere('l.deliveryStatus = :status')
+                ->setParameter('status', $status);
+        }
+
+        /** @var list<NotificationLog> */
+        return $qb->getQuery()->getResult();
     }
 
     public function existsRecentForRule(int $ruleId, \DateTimeImmutable $since): bool
