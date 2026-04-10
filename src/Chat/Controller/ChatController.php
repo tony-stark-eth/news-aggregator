@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Chat\Controller;
 
 use App\Chat\Service\ArticleChatServiceInterface;
+use App\Chat\Service\StreamingChatServiceInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class ChatController
@@ -17,6 +19,7 @@ final class ChatController
     public function __construct(
         private readonly ControllerHelper $controller,
         private readonly ArticleChatServiceInterface $chatService,
+        private readonly StreamingChatServiceInterface $streamingService,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -37,10 +40,8 @@ final class ChatController
             ], Response::HTTP_BAD_REQUEST);
         }
 
-        /** @var string $rawMessage */
-        $rawMessage = $data['message'] ?? '';
-        $userMessage = trim($rawMessage);
-        if ($userMessage === '') {
+        $userMessage = $this->extractMessage($data);
+        if ($userMessage === null) {
             return new JsonResponse([
                 'error' => 'Message is required',
             ], Response::HTTP_BAD_REQUEST);
@@ -65,6 +66,59 @@ final class ChatController
             'citedArticleIds' => $response->citedArticleIds,
             'conversationId' => $response->conversationId,
         ]);
+    }
+
+    #[Route('/chat/stream', name: 'app_chat_stream', methods: ['POST'])]
+    public function stream(Request $request): Response
+    {
+        $data = $this->decodeRequest($request);
+        if ($data === null) {
+            return new JsonResponse([
+                'error' => 'Invalid JSON request body',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $userMessage = $this->extractMessage($data);
+        if ($userMessage === null) {
+            return new JsonResponse([
+                'error' => 'Message is required',
+            ], Response::HTTP_BAD_REQUEST);
+        }
+
+        $conversationId = $this->resolveConversationId($data, $request);
+
+        return $this->createStreamedResponse($userMessage, $conversationId);
+    }
+
+    private function createStreamedResponse(string $userMessage, string $conversationId): StreamedResponse
+    {
+        $response = new StreamedResponse(function () use ($userMessage, $conversationId): void {
+            foreach ($this->streamingService->stream($userMessage, $conversationId) as $chunk) {
+                echo $chunk;
+                if (\ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            }
+        });
+
+        $response->headers->set('Content-Type', 'text/event-stream');
+        $response->headers->set('Cache-Control', 'no-cache');
+        $response->headers->set('X-Accel-Buffering', 'no');
+
+        return $response;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function extractMessage(array $data): ?string
+    {
+        /** @var string $rawMessage */
+        $rawMessage = $data['message'] ?? '';
+        $userMessage = trim($rawMessage);
+
+        return $userMessage === '' ? null : $userMessage;
     }
 
     /**

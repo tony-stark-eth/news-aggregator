@@ -3,28 +3,31 @@
 {% block title %}Chat - News Assistant{% endblock %}
 
 {% block body %}
-<div class="max-w-3xl mx-auto">
-    <div class="flex items-center justify-between mb-4">
+<div class="flex flex-col h-[calc(100vh-8rem)] max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-2">
         <h1 class="text-2xl font-bold">News Assistant</h1>
         <button id="chat-new" class="btn btn-outline btn-sm">New Conversation</button>
     </div>
 
-    <div id="chat-messages" class="bg-base-200 rounded-box p-4 min-h-[400px] max-h-[60vh] overflow-y-auto mb-4 space-y-4">
-        <div class="text-base-content/50 text-center py-8">
-            Ask me anything about your news articles.
+    <div id="chat-messages" class="flex-1 bg-base-200 rounded-box p-4 overflow-y-auto mb-4 space-y-4">
+        <div id="chat-empty" class="text-base-content/50 text-center py-16">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+            <p class="text-lg font-medium">Ask me anything about your news articles.</p>
+            <p class="text-sm mt-1">I can search, summarize, and compare articles from your feeds.</p>
         </div>
     </div>
 
-    <form id="chat-form" class="flex gap-2">
-        <input type="text" id="chat-input" name="message"
-            placeholder="Ask about your articles..."
-            class="input input-bordered flex-1"
-            autocomplete="off" required>
-        <button type="submit" id="chat-submit" class="btn btn-primary">
+    <form id="chat-form" class="flex gap-2 pb-2">
+        <textarea id="chat-input" name="message"
+            placeholder="Ask about your articles... (Shift+Enter for new line)"
+            class="textarea textarea-bordered flex-1 min-h-[48px] max-h-[120px] resize-none leading-normal"
+            rows="1" autocomplete="off" required></textarea>
+        <button type="submit" id="chat-submit" class="btn btn-primary self-end">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
             </svg>
-            Send
         </button>
     </form>
 </div>
@@ -32,82 +35,217 @@
 <script>
 (function() {
     const messagesEl = document.getElementById('chat-messages');
+    const emptyEl = document.getElementById('chat-empty');
     const form = document.getElementById('chat-form');
     const input = document.getElementById('chat-input');
     const submitBtn = document.getElementById('chat-submit');
     const newBtn = document.getElementById('chat-new');
     let conversationId = null;
+    let isStreaming = false;
 
-    function addMessage(role, content) {
-        // Remove placeholder if present
-        const placeholder = messagesEl.querySelector('.text-center');
-        if (placeholder) placeholder.remove();
+    function autoResizeInput() {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+    }
+    input.addEventListener('input', autoResizeInput);
 
-        const wrapper = document.createElement('div');
-        wrapper.className = role === 'user'
-            ? 'chat chat-end'
-            : 'chat chat-start';
-
-        const bubble = document.createElement('div');
-        bubble.className = role === 'user'
-            ? 'chat-bubble chat-bubble-primary'
-            : 'chat-bubble chat-bubble-secondary';
-        bubble.textContent = content;
-
-        wrapper.appendChild(bubble);
-        messagesEl.appendChild(wrapper);
+    function scrollToBottom() {
         messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
+    function hideEmpty() {
+        if (emptyEl) emptyEl.style.display = 'none';
+    }
+
+    function showEmpty() {
+        if (emptyEl) emptyEl.style.display = '';
+    }
+
+    function createBubble(role, content) {
+        hideEmpty();
+        const wrapper = document.createElement('div');
+        wrapper.className = role === 'user' ? 'chat chat-end' : 'chat chat-start';
+
+        const header = document.createElement('div');
+        header.className = 'chat-header text-xs opacity-60 mb-0.5';
+        header.textContent = role === 'user' ? 'You' : 'Assistant';
+
+        const bubble = document.createElement('div');
+        bubble.className = role === 'user'
+            ? 'chat-bubble chat-bubble-primary whitespace-pre-wrap'
+            : 'chat-bubble chat-bubble-secondary whitespace-pre-wrap';
+
+        if (content) bubble.textContent = content;
+
+        wrapper.appendChild(header);
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+        scrollToBottom();
+        return { wrapper, bubble };
+    }
+
+    function createTypingIndicator() {
+        const { wrapper, bubble } = createBubble('assistant', '');
+        bubble.innerHTML = '<span class="loading loading-dots loading-sm"></span>';
+        wrapper.id = 'typing-indicator';
+        return wrapper;
+    }
+
+    function removeTypingIndicator() {
+        const el = document.getElementById('typing-indicator');
+        if (el) el.remove();
+    }
+
+    function renderCitedArticles(articles, parentWrapper) {
+        if (!articles || articles.length === 0) return;
+
+        const container = document.createElement('div');
+        container.className = 'mt-2 space-y-1';
+
+        const label = document.createElement('div');
+        label.className = 'text-xs opacity-50 mb-1';
+        label.textContent = 'Sources:';
+        container.appendChild(label);
+
+        articles.forEach(function(article) {
+            const card = document.createElement('a');
+            card.href = article.url;
+            card.target = '_blank';
+            card.rel = 'noopener';
+            card.className = 'block p-2 bg-base-100 rounded-lg hover:bg-base-300 transition-colors text-sm';
+
+            const title = document.createElement('div');
+            title.className = 'font-medium text-xs link link-hover truncate';
+            title.textContent = article.title;
+            card.appendChild(title);
+
+            if (article.summary) {
+                const summary = document.createElement('div');
+                summary.className = 'text-xs opacity-60 line-clamp-2 mt-0.5';
+                summary.textContent = article.summary;
+                card.appendChild(summary);
+            }
+
+            container.appendChild(card);
+        });
+
+        parentWrapper.appendChild(container);
+    }
+
     function setLoading(loading) {
+        isStreaming = loading;
         submitBtn.disabled = loading;
-        input.disabled = loading;
         if (loading) {
             submitBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>';
         } else {
-            submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg> Send';
+            submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>';
         }
     }
 
-    form.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const message = input.value.trim();
-        if (!message) return;
-
-        addMessage('user', message);
-        input.value = '';
+    async function sendMessage(message) {
+        createBubble('user', message);
         setLoading(true);
+        createTypingIndicator();
+
+        const body = { message: message };
+        if (conversationId) body.conversationId = conversationId;
 
         try {
-            const body = { message: message };
-            if (conversationId) body.conversationId = conversationId;
-
-            const response = await fetch('/chat/message', {
+            const response = await fetch('/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
             });
 
-            const data = await response.json();
-            if (response.ok) {
-                conversationId = data.conversationId;
-                addMessage('assistant', data.answer);
-            } else {
-                addMessage('assistant', 'Error: ' + (data.error || 'Something went wrong'));
+            if (!response.ok) {
+                removeTypingIndicator();
+                const errData = await response.json().catch(function() { return {}; });
+                createBubble('assistant', 'Error: ' + (errData.error || 'Something went wrong'));
+                setLoading(false);
+                return;
             }
+
+            removeTypingIndicator();
+            const { wrapper, bubble } = createBubble('assistant', '');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let fullText = '';
+            let citedArticles = [];
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (line.startsWith('event: ')) {
+                        const event = line.slice(7);
+                        const dataLine = lines[i + 1];
+                        if (dataLine && dataLine.startsWith('data: ')) {
+                            const data = JSON.parse(dataLine.slice(6));
+                            i++;
+
+                            if (event === 'token') {
+                                fullText += data.text;
+                                bubble.textContent = fullText;
+                                scrollToBottom();
+                            } else if (event === 'done') {
+                                conversationId = data.conversationId;
+                                citedArticles = data.citedArticles || [];
+                            } else if (event === 'error') {
+                                bubble.textContent = 'Error: ' + (data.message || 'Stream failed');
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (fullText === '') {
+                bubble.textContent = 'No response received.';
+            }
+
+            renderCitedArticles(citedArticles, wrapper);
         } catch (err) {
-            addMessage('assistant', 'Error: Failed to send message. Please try again.');
+            removeTypingIndicator();
+            createBubble('assistant', 'Error: Connection failed. Please try again.');
         } finally {
             setLoading(false);
             input.focus();
         }
+    }
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const message = input.value.trim();
+        if (!message || isStreaming) return;
+        input.value = '';
+        autoResizeInput();
+        sendMessage(message);
+    });
+
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            form.dispatchEvent(new Event('submit'));
+        }
     });
 
     newBtn.addEventListener('click', function() {
+        if (isStreaming) return;
         conversationId = null;
-        messagesEl.innerHTML = '<div class="text-base-content/50 text-center py-8">Ask me anything about your news articles.</div>';
+        messagesEl.innerHTML = '';
+        messagesEl.appendChild(emptyEl);
+        showEmpty();
         input.focus();
     });
+
+    input.focus();
 })();
 </script>
 {% endblock %}

@@ -9,6 +9,10 @@ use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
 use App\Chat\Service\ArticleChatService;
 use App\Chat\Service\ArticleChatServiceInterface;
+use App\Chat\Service\ChatModelResolver;
+use App\Chat\Service\ChatModelResolverInterface;
+use App\Chat\Service\StreamingChatService;
+use App\Chat\Service\StreamingChatServiceInterface;
 use App\Chat\Store\ConversationMessageStore;
 use App\Chat\Store\ConversationMessageStoreInterface;
 use App\Chat\Tool\ArticleSearchTool;
@@ -248,6 +252,15 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$toolbox', service('chat.toolbox'));
 
     $services->alias(ArticleChatServiceInterface::class, ArticleChatService::class);
+
+    // Chat: model resolver extracts model selection logic
+    $services->alias(ChatModelResolverInterface::class, ChatModelResolver::class);
+
+    // Chat: streaming service uses platform directly (bypasses Agent for real SSE streaming)
+    $services->set(StreamingChatService::class)
+        ->arg('$platform', service('ai.platform.openrouter'));
+
+    $services->alias(StreamingChatServiceInterface::class, StreamingChatService::class);
 
     // Chat: ConversationMessageStore uses DBAL connection
     $services->set(ConversationMessageStore::class)
