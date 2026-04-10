@@ -6,6 +6,8 @@
     <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-bold">Feed Sources</h1>
         <div class="flex gap-2">
+            <a href="{{ path('app_sources_export_opml') }}" class="btn btn-ghost btn-sm">Export OPML</a>
+            <a href="{{ path('app_sources_import_opml') }}" class="btn btn-ghost btn-sm">Import OPML</a>
             <span id="fetch-all-btn">
                 <button hx-post="{{ path('app_sources_fetch_all') }}"
                         hx-headers='{"X-CSRF-Token": "{{ csrf_token('fetch_all_sources') }}"}'

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### OPML Import and Export
+- Export all sources as OPML 2.0 XML via `GET /sources/export.opml` with `Content-Disposition: attachment` (#77)
+- Import OPML files via `GET/POST /sources/import` with file upload form and htmx inline results
+- Sources grouped by category in export; categories auto-created on import when not found
+- Duplicate detection: sources with matching feed URLs are skipped during import
+- Export/Import links added to the sources index page
+
 #### Dynamic Paid Model Usage During High Pipeline Load
 - Queue-aware model routing in `ModelFailoverPlatform` — automatically skips free models when enrichment queue is deep (#157)
 - Three routing modes: normal (queue < 20), accelerated (queue 20-49: primary free then paid), skip-free (queue >= 50: paid only)
