@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="night">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design 3 — Dark Blue</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --accent-rgb: 59,130,246;
+      --accent-light: rgba(59,130,246,0.9);
+      --accent-mid: rgba(59,130,246,0.5);
+      --accent-dim: rgba(59,130,246,0.15);
+      --accent-border: rgba(59,130,246,0.2);
+    }
+    .editorial-card {
+      background: linear-gradient(135deg, oklch(var(--b1)) 0%, oklch(var(--b1) / 0.92) 100%);
+      border: 1px solid oklch(var(--b3) / 0.55);
+      border-radius: 12px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .editorial-card:hover {
+      box-shadow: 0 4px 24px oklch(var(--p) / 0.08), 0 1px 4px oklch(0 0 0 / 0.25);
+      border-color: oklch(var(--b3) / 0.85);
+    }
+    .editorial-card.expanded {
+      border-color: oklch(var(--p) / 0.35);
+      box-shadow: 0 0 0 1px oklch(var(--p) / 0.12), 0 4px 32px oklch(var(--p) / 0.1);
+    }
+    .score-glow { position: relative; width: 10px; height: 10px; border-radius: 50%; }
+    .score-glow::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 1.5px solid currentColor; opacity: 0.25; }
+    .cat-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.01em; }
+    .sidebar-section-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(var(--bc) / 0.28); padding: 0 0.75rem; margin: 0.75rem 0 0.25rem; }
+    .stat-card { background: linear-gradient(135deg, oklch(var(--b1)) 0%, oklch(var(--b2) / 0.55) 100%); border: 1px solid oklch(var(--b3) / 0.45); border-radius: 10px; padding: 1rem 1.25rem; }
+    .reader-editorial { background: oklch(var(--b2) / 0.45); border-radius: 8px; font-size: 0.875rem; line-height: 1.75; color: oklch(var(--bc) / 0.78); }
+    .article-read { opacity: 0.48; }
+    .tag-pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 500; }
+  </style>
+</head>
+<body class="min-h-screen bg-base-200">
+
+<!-- NAVBAR -->
+<div class="navbar bg-base-100 sticky top-0 z-50 border-b border-base-300/25" style="box-shadow: 0 1px 14px oklch(0 0 0 / 0.18);">
+  <div class="navbar-start gap-2">
+    <button class="btn btn-ghost btn-sm btn-square">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <a class="text-lg font-bold tracking-tight">
+      <span class="text-primary">News</span><span class="text-base-content/80"> Aggregator</span>
+    </a>
+  </div>
+  <div class="navbar-center hidden md:flex">
+    <div class="relative">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-base-content/30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input type="text" placeholder="Search all articles (full-text)…" class="input input-sm input-bordered w-80 pl-9 pr-14 bg-base-200 border-base-300/40 focus:outline-none focus:border-primary/40 rounded-lg">
+      <kbd class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-base-content/25 font-mono bg-base-300/30 px-1 rounded">/</kbd>
+    </div>
+  </div>
+  <div class="navbar-end gap-1">
+    <button class="btn btn-ghost btn-sm gap-1 font-normal rounded-lg text-sm">EN <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-40" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></button>
+    <button class="btn btn-ghost btn-circle btn-sm">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+    </button>
+    <div class="w-8 h-8 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 flex items-center justify-center">
+      <span class="text-xs font-semibold text-primary">D</span>
+    </div>
+  </div>
+</div>
+
+<div class="flex">
+  <!-- SIDEBAR -->
+  <aside class="hidden lg:block bg-base-100 min-h-[calc(100vh-4rem)] border-r border-base-300/20 py-3 relative" style="width: 13rem;">
+    <div class="sidebar-section-label">Main</div>
+    <nav class="px-2 flex flex-col gap-0.5">
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium text-primary bg-primary/10">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg>
+        Dashboard
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-base-content/58 hover:text-base-content hover:bg-base-200/60 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"/></svg>
+        Sources
+        <span class="ml-auto text-xs bg-base-300/40 text-base-content/40 rounded-full px-1.5">18</span>
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-base-content/58 hover:text-base-content hover:bg-base-200/60 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Alert Rules
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-base-content/58 hover:text-base-content hover:bg-base-200/60 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Digests
+      </a>
+    </nav>
+    <div class="sidebar-section-label mt-2">System</div>
+    <nav class="px-2 flex flex-col gap-0.5">
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-base-content/38 hover:text-base-content/60 hover:bg-base-200/40 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        AI Stats
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm text-base-content/38 hover:text-base-content/60 hover:bg-base-200/40 transition-all">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+        Settings
+      </a>
+    </nav>
+    <div class="absolute bottom-4 left-0 right-0 px-3">
+      <div class="bg-base-200/50 rounded-xl p-2.5 text-xs">
+        <div class="flex items-center gap-1.5 text-base-content/48 mb-1">
+          <div class="w-1.5 h-1.5 rounded-full bg-info/60 animate-pulse"></div>
+          Pipeline active
+        </div>
+        <div class="text-base-content/28 text-xs">8 fetching · 8 enriching</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="flex-1 p-5 min-w-0">
+    <!-- STATS ROW -->
+    <div class="grid grid-cols-4 gap-3 mb-6">
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg bg-primary/15 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+          </div>
+          <span class="text-xs text-base-content/38">Articles Today</span>
+        </div>
+        <div class="text-3xl font-semibold text-primary">255</div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg bg-secondary/15 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"/></svg>
+          </div>
+          <span class="text-xs text-base-content/38">Active Sources</span>
+        </div>
+        <div class="text-3xl font-semibold text-secondary">18</div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg bg-accent/15 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          </div>
+          <span class="text-xs text-base-content/38">Alerts Today</span>
+        </div>
+        <div class="text-3xl font-semibold text-accent">3</div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg bg-info/15 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <span class="text-xs text-base-content/38">Last Fetch</span>
+        </div>
+        <div class="text-3xl font-semibold text-info">6h</div>
+      </div>
+    </div>
+
+    <!-- CATEGORY TABS -->
+    <div class="flex gap-1.5 mb-4 overflow-x-auto pb-1 flex-wrap">
+      <button class="cat-badge bg-primary/20 text-primary border border-primary/30">All <span class="ml-1 opacity-60">2972</span></button>
+      <button class="cat-badge bg-base-300/25 text-base-content/48 border border-base-300/18 hover:border-base-300/40 hover:text-base-content/70 transition-all">Sports <span class="ml-1 opacity-40">673</span></button>
+      <button class="cat-badge bg-base-300/25 text-base-content/48 border border-base-300/18 hover:border-base-300/40 hover:text-base-content/70 transition-all">Science <span class="ml-1 opacity-40">186</span></button>
+      <button class="cat-badge bg-base-300/25 text-base-content/48 border border-base-300/18 hover:border-base-300/40 hover:text-base-content/70 transition-all">Tech <span class="ml-1 opacity-40">485</span></button>
+      <button class="cat-badge bg-base-300/25 text-base-content/48 border border-base-300/18 hover:border-base-300/40 hover:text-base-content/70 transition-all">Business <span class="ml-1 opacity-40">707</span></button>
+      <button class="cat-badge bg-base-300/25 text-base-content/48 border border-base-300/18 hover:border-base-300/40 hover:text-base-content/70 transition-all">Politics <span class="ml-1 opacity-40">921</span></button>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="flex items-center gap-2 mb-5 flex-wrap">
+      <div class="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-base-content/28" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+        <input type="text" placeholder="Filter source…" class="input input-sm input-bordered w-44 pl-8 bg-base-100 border-base-300/28 focus:outline-none focus:border-primary/30 rounded-lg text-sm">
+      </div>
+      <button class="cat-badge bg-base-300/18 text-base-content/48 border border-base-300/18 hover:border-primary/20 hover:text-primary/70 transition-all cursor-pointer">Unread only</button>
+      <button class="cat-badge bg-base-300/18 text-base-content/48 border border-base-300/18 hover:border-warning/20 hover:text-warning/70 transition-all cursor-pointer">Bookmarked</button>
+      <button class="ml-auto text-xs text-base-content/32 hover:text-base-content/58 transition-colors">Mark all read</button>
+    </div>
+
+    <!-- ARTICLES -->
+    <div class="flex flex-col gap-3">
+
+      <!-- Card 1 — Bookmarked -->
+      <div class="editorial-card">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2">
+                <a class="hover:text-primary transition-colors" href="#">OpenAI Restructures ChatGPT Subscription Plans Around Codex as AI Coding Competition Intensifies</a>
+              </h3>
+              <p class="text-sm text-base-content/52 leading-relaxed mb-3">OpenAI is restructuring its ChatGPT tiers around its Codex coding tool, responding to growing competition from GitHub Copilot and Anthropic. The move signals a strategic pivot toward developer tooling.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">OpenAI</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">ChatGPT</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">Codex</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">Anthropic</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <button class="btn btn-ghost btn-xs btn-square text-warning/80 hover:text-warning">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+              </button>
+              <div class="tooltip tooltip-left" data-tip="Score: 94%">
+                <div class="score-glow bg-primary/80" style="color: oklch(var(--p));"></div>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4 flex-wrap">
+            <span class="text-xs text-base-content/42 font-medium">Heise</span>
+            <span class="cat-badge" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">Tech</span>
+            <span class="text-xs text-base-content/32 ml-auto">5h ago · 2 min read</span>
+            <button class="btn btn-xs btn-ghost text-primary/60 hover:text-primary rounded-lg h-6 min-h-0">Read</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 — Expanded inline reader -->
+      <div class="editorial-card expanded">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2 text-primary/90">
+                <a class="hover:text-primary transition-colors" href="#">France Plans National Migration from Windows to Linux Across All Government Systems by 2028</a>
+              </h3>
+              <p class="text-sm text-base-content/52 leading-relaxed mb-3">France's DINUM has published the Open-Interop roadmap to move 280,000 government workstations to Linux, citing data sovereignty concerns and CLOUD Act compliance risks.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">France</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">DINUM</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">Linux</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">Open-Interop</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <button class="btn btn-ghost btn-xs btn-square text-base-content/28 hover:text-base-content/55">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+              </button>
+              <div class="score-glow bg-primary/80" style="color: oklch(var(--p));"></div>
+            </div>
+          </div>
+          <!-- Inline reader -->
+          <div class="reader-editorial mt-4 p-4 rounded-xl border border-base-300/20">
+            <p class="mb-3">France's digital agency, DINUM, has published an internal roadmap for replacing Windows across approximately 280,000 government workstations with a Linux-based operating system. The initiative, codenamed Open-Interop, targets completion by 2028.</p>
+            <p class="mb-3">The strategic shift is driven by data sovereignty concerns under the US CLOUD Act, which compels American technology companies to provide access to data stored anywhere globally — including on European government infrastructure.</p>
+            <p>Initial pilots will run across Ministry of Finance offices beginning Q3 2026. The programme includes dedicated civil servant training and a government-wide migration support team.</p>
+            <div class="flex items-center gap-4 mt-4 pt-3.5 border-t border-base-content/8">
+              <a href="#" class="flex items-center gap-1.5 text-xs text-primary/65 hover:text-primary transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Open original
+              </a>
+              <button class="text-xs text-base-content/32 hover:text-base-content/58 transition-colors ml-auto">Collapse</button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4 flex-wrap">
+            <span class="text-xs text-base-content/42 font-medium">Heise</span>
+            <span class="cat-badge" style="background:rgba(59,130,246,0.1);color:rgba(96,165,250,0.85);border:1px solid rgba(59,130,246,0.18);">Tech</span>
+            <span class="text-xs text-base-content/32 ml-auto">6h ago · 3 min read</span>
+            <button class="btn btn-xs btn-ghost text-base-content/32 hover:text-base-content/55 rounded-lg h-6 min-h-0">Collapse</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 — Read/dimmed -->
+      <div class="editorial-card article-read">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-medium text-base leading-snug mb-2">
+                <a class="hover:text-primary transition-colors" href="#">Google Chrome Binds Session Tokens to Device Hardware, Rendering Stolen Cookies Useless</a>
+              </h3>
+              <p class="text-sm text-base-content/42 leading-relaxed mb-3">Device Bound Session Credentials ties authentication sessions to the originating hardware, blocking session cookie theft by infostealer malware.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:rgba(59,130,246,0.06);color:rgba(96,165,250,0.5);border:1px solid rgba(59,130,246,0.1);">Chrome</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.06);color:rgba(96,165,250,0.5);border:1px solid rgba(59,130,246,0.1);">DBSC</span>
+                <span class="tag-pill" style="background:rgba(59,130,246,0.06);color:rgba(96,165,250,0.5);border:1px solid rgba(59,130,246,0.1);">Cybersecurity</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <div class="score-glow bg-primary/22" style="color: oklch(var(--p) / 0.28);"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4">
+            <span class="text-xs text-base-content/28 font-medium">The Verge</span>
+            <span class="cat-badge" style="background:rgba(59,130,246,0.05);color:rgba(96,165,250,0.42);border:1px solid rgba(59,130,246,0.08);">Tech</span>
+            <span class="text-xs text-base-content/22 ml-auto">6h ago · 3 min read</span>
+            <button class="btn btn-xs btn-ghost text-base-content/22 rounded-lg h-6 min-h-0">Read</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4 — Politics, high score -->
+      <div class="editorial-card">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2">
+                <a class="hover:text-primary transition-colors" href="#">Taiwan Opposition Leader Cheng Li-wun Meets Xi Jinping in Shanghai Amid Cross-Strait Tensions</a>
+              </h3>
+              <p class="text-sm text-base-content/52 leading-relaxed mb-3">Taiwan's opposition KMT leader met China's president while Taiwan's parliament simultaneously blocked a military budget expansion, deepening internal divisions over cross-strait policy.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:rgba(239,68,68,0.1);color:rgba(248,113,113,0.85);border:1px solid rgba(239,68,68,0.18);">Taiwan</span>
+                <span class="tag-pill" style="background:rgba(239,68,68,0.1);color:rgba(248,113,113,0.85);border:1px solid rgba(239,68,68,0.18);">Xi Jinping</span>
+                <span class="tag-pill" style="background:rgba(239,68,68,0.1);color:rgba(248,113,113,0.85);border:1px solid rgba(239,68,68,0.18);">China</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <button class="btn btn-ghost btn-xs btn-square text-base-content/28 hover:text-base-content/55">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+              </button>
+              <div class="score-glow flex-shrink-0" style="background: oklch(var(--a) / 0.85); color: oklch(var(--a));"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4 flex-wrap">
+            <span class="text-xs text-base-content/42 font-medium">Der Spiegel</span>
+            <span class="cat-badge" style="background:rgba(239,68,68,0.1);color:rgba(248,113,113,0.85);border:1px solid rgba(239,68,68,0.18);">Politics</span>
+            <span class="text-xs text-base-content/32 ml-auto">7h ago · 2 min read</span>
+            <button class="btn btn-xs btn-ghost text-primary/60 hover:text-primary rounded-lg h-6 min-h-0">Read</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5 — Science -->
+      <div class="editorial-card">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2">
+                <a class="hover:text-primary transition-colors" href="#">Comet C/2025 R3 (Panstarrs) Appears in Pre-Dawn Sky — Best Viewing Window Narrows Daily</a>
+              </h3>
+              <p class="text-sm text-base-content/52 leading-relaxed mb-3">Visible with binoculars 90 minutes before sunrise on the eastern horizon. Astronomers warn the window decreases each day as the comet recedes from Earth.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:rgba(16,185,129,0.1);color:rgba(52,211,153,0.85);border:1px solid rgba(16,185,129,0.18);">Comet</span>
+                <span class="tag-pill" style="background:rgba(16,185,129,0.1);color:rgba(52,211,153,0.85);border:1px solid rgba(16,185,129,0.18);">Astronomy</span>
+                <span class="tag-pill" style="background:rgba(16,185,129,0.1);color:rgba(52,211,153,0.85);border:1px solid rgba(16,185,129,0.18);">Panstarrs</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <button class="btn btn-ghost btn-xs btn-square text-base-content/28 hover:text-base-content/55">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+              </button>
+              <div class="score-glow bg-secondary/70" style="color: oklch(var(--s));"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4 flex-wrap">
+            <span class="text-xs text-base-content/42 font-medium">Der Spiegel</span>
+            <span class="cat-badge" style="background:rgba(16,185,129,0.1);color:rgba(52,211,153,0.85);border:1px solid rgba(16,185,129,0.18);">Science</span>
+            <span class="text-xs text-base-content/32 ml-auto">8h ago · 1 min read</span>
+            <button class="btn btn-xs btn-ghost text-primary/60 hover:text-primary rounded-lg h-6 min-h-0">Read</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+</body>
+</html>

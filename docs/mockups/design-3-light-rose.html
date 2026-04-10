@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design 3 — Light Rose</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.23/dist/full.min.css" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #fdf2f4; font-family: system-ui, -apple-system, sans-serif; }
+    .editorial-card {
+      background: #ffffff;
+      border: 1px solid rgba(220,60,100,0.08);
+      border-radius: 12px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .editorial-card:hover {
+      box-shadow: 0 4px 20px rgba(220,60,100,0.07), 0 1px 4px rgba(0,0,0,0.05);
+      border-color: rgba(220,60,100,0.15);
+    }
+    .editorial-card.expanded {
+      border-color: rgba(220,60,100,0.25);
+      box-shadow: 0 0 0 1px rgba(220,60,100,0.08), 0 4px 28px rgba(220,60,100,0.09);
+    }
+    .score-glow { position: relative; width: 10px; height: 10px; border-radius: 50%; }
+    .score-glow::after { content: ''; position: absolute; inset: -3px; border-radius: 50%; border: 1.5px solid currentColor; opacity: 0.22; }
+    .cat-badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 500; letter-spacing: 0.01em; }
+    .sidebar-section-label { font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: rgba(180,30,70,0.32); padding: 0 0.75rem; margin: 0.75rem 0 0.25rem; }
+    .stat-card { background: white; border: 1px solid rgba(220,60,100,0.08); border-radius: 10px; padding: 1rem 1.25rem; }
+    .reader-editorial { background: #fff5f7; border-radius: 8px; font-size: 0.875rem; line-height: 1.75; color: rgba(80,20,40,0.68); border: 1px solid rgba(220,60,100,0.08); }
+    .article-read { opacity: 0.42; }
+    .tag-pill { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 500; }
+    aside { background: white; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- NAVBAR -->
+<div class="navbar bg-white sticky top-0 z-50" style="border-bottom:1px solid rgba(220,60,100,0.1);box-shadow:0 1px 8px rgba(220,60,100,0.05);">
+  <div class="navbar-start gap-2">
+    <button class="btn btn-ghost btn-sm btn-square" style="color:#be185d;">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <a class="text-lg font-bold tracking-tight">
+      <span style="color:#e11d48;">News</span><span style="color:#881337;"> Aggregator</span>
+    </a>
+  </div>
+  <div class="navbar-center hidden md:flex">
+    <div class="relative">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2" style="color:rgba(180,30,70,0.35);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input type="text" placeholder="Search all articles (full-text)…" class="input input-sm w-80 pl-9 pr-14 rounded-lg text-sm" style="background:#fdf2f4;border:1px solid rgba(220,60,100,0.12);outline:none;color:#881337;">
+      <kbd class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-mono px-1 rounded" style="color:rgba(180,30,70,0.28);background:rgba(220,60,100,0.07);">/</kbd>
+    </div>
+  </div>
+  <div class="navbar-end gap-1">
+    <button class="btn btn-ghost btn-sm gap-1 font-normal rounded-lg text-sm" style="color:#9f1239;">EN <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 opacity-40" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg></button>
+    <button class="btn btn-ghost btn-circle btn-sm" style="color:#be185d;">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3"/></svg>
+    </button>
+    <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background:linear-gradient(135deg,#fce7f3,#fbcfe8);">
+      <span class="text-xs font-semibold" style="color:#be185d;">D</span>
+    </div>
+  </div>
+</div>
+
+<div class="flex">
+  <!-- SIDEBAR -->
+  <aside class="hidden lg:block bg-white min-h-[calc(100vh-4rem)] py-3 relative" style="width:13rem;border-right:1px solid rgba(220,60,100,0.08);">
+    <div class="sidebar-section-label">Main</div>
+    <nav class="px-2 flex flex-col gap-0.5">
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-medium" style="color:#e11d48;background:rgba(225,29,72,0.08);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg>
+        Dashboard
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all" style="color:rgba(136,19,55,0.5);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"/></svg>
+        Sources
+        <span class="ml-auto text-xs rounded-full px-1.5" style="background:rgba(220,60,100,0.08);color:rgba(136,19,55,0.4);">18</span>
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all" style="color:rgba(136,19,55,0.5);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Alert Rules
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all" style="color:rgba(136,19,55,0.5);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Digests
+      </a>
+    </nav>
+    <div class="sidebar-section-label mt-2">System</div>
+    <nav class="px-2 flex flex-col gap-0.5">
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all" style="color:rgba(136,19,55,0.32);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        AI Stats
+      </a>
+      <a class="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all" style="color:rgba(136,19,55,0.32);">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/></svg>
+        Settings
+      </a>
+    </nav>
+    <div class="absolute bottom-4 left-0 right-0 px-3">
+      <div class="rounded-xl p-2.5 text-xs" style="background:rgba(220,60,100,0.04);border:1px solid rgba(220,60,100,0.08);">
+        <div class="flex items-center gap-1.5 mb-1" style="color:rgba(136,19,55,0.4);">
+          <div class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:#e11d48;"></div>
+          Pipeline active
+        </div>
+        <div class="text-xs" style="color:rgba(136,19,55,0.25);">8 fetching · 8 enriching</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="flex-1 p-5 min-w-0">
+    <!-- STATS ROW -->
+    <div class="grid grid-cols-4 gap-3 mb-6">
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#fce7f3;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" style="color:#e11d48;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
+          </div>
+          <span class="text-xs" style="color:rgba(136,19,55,0.42);">Articles Today</span>
+        </div>
+        <div class="text-3xl font-semibold" style="color:#e11d48;">255</div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#fce7f3;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" style="color:#be185d;" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7M6 17a1 1 0 110 2 1 1 0 010-2z"/></svg>
+          </div>
+          <span class="text-xs" style="color:rgba(136,19,55,0.42);">Active Sources</span>
+        </div>
+        <div class="text-3xl font-semibold" style="color:#be185d;">18</div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#fed7aa;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          </div>
+          <span class="text-xs" style="color:rgba(136,19,55,0.42);">Alerts Today</span>
+        </div>
+        <div class="text-3xl font-semibold text-orange-600">3</div>
+      </div>
+      <div class="stat-card">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background:#d1fae5;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <span class="text-xs" style="color:rgba(136,19,55,0.42);">Last Fetch</span>
+        </div>
+        <div class="text-3xl font-semibold text-emerald-600">6h</div>
+      </div>
+    </div>
+
+    <!-- CATEGORY TABS -->
+    <div class="flex gap-1.5 mb-4 flex-wrap">
+      <button class="cat-badge" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">All <span class="ml-1 opacity-60">2972</span></button>
+      <button class="cat-badge border transition-all" style="background:rgba(220,60,100,0.05);color:rgba(136,19,55,0.48);border-color:rgba(220,60,100,0.1);">Sports <span class="ml-1 opacity-50">673</span></button>
+      <button class="cat-badge border transition-all" style="background:rgba(220,60,100,0.05);color:rgba(136,19,55,0.48);border-color:rgba(220,60,100,0.1);">Science <span class="ml-1 opacity-50">186</span></button>
+      <button class="cat-badge border transition-all" style="background:rgba(220,60,100,0.05);color:rgba(136,19,55,0.48);border-color:rgba(220,60,100,0.1);">Tech <span class="ml-1 opacity-50">485</span></button>
+      <button class="cat-badge border transition-all" style="background:rgba(220,60,100,0.05);color:rgba(136,19,55,0.48);border-color:rgba(220,60,100,0.1);">Business <span class="ml-1 opacity-50">707</span></button>
+      <button class="cat-badge border transition-all" style="background:rgba(220,60,100,0.05);color:rgba(136,19,55,0.48);border-color:rgba(220,60,100,0.1);">Politics <span class="ml-1 opacity-50">921</span></button>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="flex items-center gap-2 mb-5 flex-wrap">
+      <div class="relative">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2" style="color:rgba(180,30,70,0.32);" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/></svg>
+        <input type="text" placeholder="Filter source…" class="input input-sm w-44 pl-8 rounded-lg text-sm" style="background:white;border:1px solid rgba(220,60,100,0.12);outline:none;color:#881337;">
+      </div>
+      <button class="cat-badge border cursor-pointer" style="background:rgba(220,60,100,0.04);color:rgba(136,19,55,0.45);border-color:rgba(220,60,100,0.1);">Unread only</button>
+      <button class="cat-badge border cursor-pointer" style="background:rgba(220,60,100,0.04);color:rgba(136,19,55,0.45);border-color:rgba(220,60,100,0.1);">Bookmarked</button>
+      <button class="ml-auto text-xs" style="color:rgba(136,19,55,0.3);">Mark all read</button>
+    </div>
+
+    <!-- ARTICLES -->
+    <div class="flex flex-col gap-3">
+
+      <!-- Card 1 — Bookmarked -->
+      <div class="editorial-card">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2" style="color:#1c0a12;">
+                <a href="#" onmouseover="this.style.color='#e11d48'" onmouseout="this.style.color='#1c0a12'">OpenAI Restructures ChatGPT Subscription Plans Around Codex as AI Coding Competition Intensifies</a>
+              </h3>
+              <p class="text-sm leading-relaxed mb-3" style="color:rgba(80,20,40,0.55);">OpenAI is restructuring its ChatGPT tiers around its Codex coding tool, responding to growing competition from GitHub Copilot and Anthropic. The move signals a strategic pivot toward developer tooling.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">OpenAI</span>
+                <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">ChatGPT</span>
+                <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">Codex</span>
+                <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">Anthropic</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <button class="btn btn-ghost btn-xs btn-square" style="color:#f59e0b;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+              </button>
+              <div class="score-glow" style="background:#e11d48;color:#e11d48;"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4 flex-wrap">
+            <span class="text-xs font-medium" style="color:rgba(80,20,40,0.5);">Heise</span>
+            <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">Tech</span>
+            <span class="text-xs ml-auto" style="color:rgba(80,20,40,0.38);">5h ago · 2 min read</span>
+            <button class="btn btn-xs btn-ghost rounded-lg h-6 min-h-0" style="color:rgba(225,29,72,0.65);">Read</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2 — Expanded -->
+      <div class="editorial-card expanded">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2" style="color:#be185d;">
+                <a href="#">France Plans National Migration from Windows to Linux Across All Government Systems by 2028</a>
+              </h3>
+              <p class="text-sm leading-relaxed mb-3" style="color:rgba(80,20,40,0.55);">France's DINUM has published the Open-Interop roadmap to move 280,000 government workstations to Linux, citing data sovereignty concerns and CLOUD Act compliance risks.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">France</span>
+                <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">DINUM</span>
+                <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">Linux</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <div class="score-glow" style="background:#e11d48;color:#e11d48;"></div>
+            </div>
+          </div>
+          <div class="reader-editorial mt-4 p-4 rounded-xl">
+            <p class="mb-3">France's digital agency, DINUM, has published an internal roadmap for replacing Windows across approximately 280,000 government workstations with a Linux-based operating system. The initiative, codenamed Open-Interop, targets completion by 2028.</p>
+            <p class="mb-3">The strategic shift is driven by data sovereignty concerns under the US CLOUD Act, which compels American technology companies to provide access to data stored anywhere globally — including on European government infrastructure.</p>
+            <p>Initial pilots will run across Ministry of Finance offices beginning Q3 2026, with dedicated civil servant training and a government-wide migration support team.</p>
+            <div class="flex items-center gap-4 mt-4 pt-3.5" style="border-top:1px solid rgba(220,60,100,0.1);">
+              <a href="#" class="flex items-center gap-1.5 text-xs" style="color:rgba(225,29,72,0.6);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                Open original
+              </a>
+              <button class="text-xs ml-auto" style="color:rgba(80,20,40,0.32);">Collapse</button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4">
+            <span class="text-xs font-medium" style="color:rgba(80,20,40,0.5);">Heise</span>
+            <span class="tag-pill" style="background:#fce7f3;color:#be185d;border:1px solid #fbcfe8;">Tech</span>
+            <span class="text-xs ml-auto" style="color:rgba(80,20,40,0.38);">6h ago · 3 min read</span>
+            <button class="btn btn-xs btn-ghost rounded-lg h-6 min-h-0" style="color:rgba(80,20,40,0.32);">Collapse</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3 — Read -->
+      <div class="editorial-card article-read">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-medium text-base leading-snug mb-2" style="color:rgba(28,10,18,0.6);"><a href="#">Google Chrome Binds Session Tokens to Device Hardware, Rendering Stolen Cookies Useless</a></h3>
+              <p class="text-sm leading-relaxed mb-2" style="color:rgba(80,20,40,0.42);">Device Bound Session Credentials ties auth sessions to hardware, blocking session cookie theft by infostealer malware.</p>
+            </div>
+            <div class="score-glow" style="background:rgba(225,29,72,0.28);color:rgba(225,29,72,0.3);"></div>
+          </div>
+          <div class="flex items-center gap-2 mt-3">
+            <span class="text-xs font-medium" style="color:rgba(80,20,40,0.28);">The Verge</span>
+            <span class="text-xs ml-auto" style="color:rgba(80,20,40,0.2);">6h ago · 3 min read</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4 — Politics -->
+      <div class="editorial-card">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2" style="color:#1c0a12;"><a href="#" onmouseover="this.style.color='#e11d48'" onmouseout="this.style.color='#1c0a12'">Taiwan Opposition Leader Cheng Li-wun Meets Xi Jinping in Shanghai Amid Cross-Strait Tensions</a></h3>
+              <p class="text-sm leading-relaxed mb-3" style="color:rgba(80,20,40,0.55);">Taiwan's opposition KMT leader met China's president while parliament blocked a military budget expansion, deepening divisions over cross-strait policy.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;">Taiwan</span>
+                <span class="tag-pill" style="background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;">Xi Jinping</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <button class="btn btn-ghost btn-xs btn-square" style="color:rgba(80,20,40,0.25);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+              </button>
+              <div class="score-glow" style="background:#9f1239;color:#9f1239;"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4">
+            <span class="text-xs font-medium" style="color:rgba(80,20,40,0.5);">Der Spiegel</span>
+            <span class="tag-pill" style="background:#fff1f2;color:#9f1239;border:1px solid #fecdd3;">Politics</span>
+            <span class="text-xs ml-auto" style="color:rgba(80,20,40,0.38);">7h ago · 2 min read</span>
+            <button class="btn btn-xs btn-ghost rounded-lg h-6 min-h-0" style="color:rgba(225,29,72,0.65);">Read</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5 — Science -->
+      <div class="editorial-card">
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-base leading-snug mb-2" style="color:#1c0a12;"><a href="#" onmouseover="this.style.color='#e11d48'" onmouseout="this.style.color='#1c0a12'">Comet C/2025 R3 (Panstarrs) Appears in Pre-Dawn Sky — Best Viewing Window Narrows Daily</a></h3>
+              <p class="text-sm leading-relaxed mb-3" style="color:rgba(80,20,40,0.55);">Visible with binoculars 90 minutes before sunrise. Astronomers warn the window decreases each day as the comet recedes from Earth.</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span class="tag-pill" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">Comet</span>
+                <span class="tag-pill" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">Astronomy</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-shrink-0 mt-0.5">
+              <button class="btn btn-ghost btn-xs btn-square" style="color:rgba(80,20,40,0.25);">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 20 20" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z"/></svg>
+              </button>
+              <div class="score-glow" style="background:#059669;color:#059669;"></div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 mt-4">
+            <span class="text-xs font-medium" style="color:rgba(80,20,40,0.5);">Der Spiegel</span>
+            <span class="tag-pill" style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;">Science</span>
+            <span class="text-xs ml-auto" style="color:rgba(80,20,40,0.38);">8h ago · 1 min read</span>
+            <button class="btn btn-xs btn-ghost rounded-lg h-6 min-h-0" style="color:rgba(225,29,72,0.65);">Read</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>
