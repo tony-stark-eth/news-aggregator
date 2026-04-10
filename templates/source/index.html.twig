@@ -49,7 +49,7 @@
                                 <div class="text-xs text-base-content/50 truncate max-w-xs">{{ source.feedUrl }}</div>
                             </td>
                             <td>
-                                <span class="badge badge-sm" style="background-color: {{ source.category.color }}; color: white;">
+                                <span class="badge badge-sm" style="background-color: {{ source.category.color }}; color: {{ source.category.color|contrast_text_color }};">
                                     {{ source.category.name }}
                                 </span>
                             </td>

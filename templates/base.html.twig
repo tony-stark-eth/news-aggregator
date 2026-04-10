@@ -80,11 +80,36 @@
                     <li><a data-lang="fr" class="lang-option">FR</a></li>
                 </ul>
             </div>
-            <button id="theme-toggle" class="btn btn-ghost btn-circle" title="Toggle theme">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-            </button>
+            <div class="dropdown dropdown-end">
+                <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1" title="Color scheme">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                    <span id="theme-current-label" class="hidden sm:inline text-xs">Theme</span>
+                </div>
+                <ul tabindex="0" class="dropdown-content menu p-2 shadow-lg bg-base-100 rounded-box w-48 z-10">
+                    <li class="menu-title text-xs">Dark</li>
+                    <li><a data-theme-swatch="night" class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-[#1a1b26] border border-base-content/20"></span> Dark Blue
+                    </a></li>
+                    <li><a data-theme-swatch="dracula" class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-[#282a36] border border-base-content/20"></span> Dark Purple
+                    </a></li>
+                    <li><a data-theme-swatch="forest" class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-[#171212] border border-base-content/20"></span> Dark Emerald
+                    </a></li>
+                    <li class="menu-title text-xs mt-1">Light</li>
+                    <li><a data-theme-swatch="winter" class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-[#e0f2fe] border border-base-content/20"></span> Light Blue
+                    </a></li>
+                    <li><a data-theme-swatch="lemonade" class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-[#f9fce3] border border-base-content/20"></span> Light Warm
+                    </a></li>
+                    <li><a data-theme-swatch="valentine" class="flex items-center gap-2">
+                        <span class="w-4 h-4 rounded-full bg-[#f0d6e8] border border-base-content/20"></span> Light Rose
+                    </a></li>
+                </ul>
+            </div>
             <div class="dropdown dropdown-end">
                 <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar placeholder">
                     <div class="bg-neutral text-neutral-content rounded-full w-10">

@@ -48,7 +48,7 @@
         <div class="flex items-center gap-2 mt-2 text-xs">
             <span class="badge badge-outline badge-sm max-w-[120px] truncate">{{ article.source.name }}</span>
             {% if article.category %}
-                <span class="badge badge-sm" style="background-color: {{ article.category.color }}; color: white;">{{ article.category.name }}</span>
+                <span class="badge badge-sm" style="background-color: {{ article.category.color }}; color: {{ article.category.color|contrast_text_color }};">{{ article.category.name }}</span>
             {% endif %}
             <time datetime="{{ article.publishedAt ? article.publishedAt|date('c') : article.fetchedAt|date('c') }}" class="text-base-content/50 timeago">
                 {{ article.publishedAt ? article.publishedAt|date('Y-m-d H:i') : article.fetchedAt|date('Y-m-d H:i') }}
