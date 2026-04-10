@@ -9,6 +9,7 @@ use Doctrine\DBAL\Connection;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\Response;
 
 #[CoversNothing]
@@ -16,12 +17,15 @@ final class HealthControllerTest extends TestCase
 {
     private Connection&MockObject $connection;
 
+    private LoggerInterface&MockObject $logger;
+
     private HealthController $controller;
 
     protected function setUp(): void
     {
         $this->connection = $this->createMock(Connection::class);
-        $this->controller = new HealthController($this->connection);
+        $this->logger = $this->createMock(LoggerInterface::class);
+        $this->controller = new HealthController($this->connection, $this->logger);
     }
 
     public function testReturnsOkWhenDatabaseIsReachable(): void
@@ -37,20 +41,22 @@ final class HealthControllerTest extends TestCase
         self::assertSame('{"status":"ok"}', $response->getContent());
     }
 
-    public function testReturns503WhenDatabaseIsUnreachable(): void
+    public function testReturns503WithoutLeakingDetailsWhenDatabaseIsUnreachable(): void
     {
         $this->connection
             ->expects(self::once())
             ->method('executeQuery')
-            ->willThrowException(new \RuntimeException('Connection refused'));
+            ->willThrowException(new \RuntimeException('Connection refused to host database:5432'));
+
+        $this->logger->expects(self::once())
+            ->method('warning')
+            ->with('Health check failed: {error}', self::callback(
+                static fn (array $ctx): bool => \is_string($ctx['error']) && str_contains($ctx['error'], 'Connection refused'),
+            ));
 
         $response = ($this->controller)();
 
         self::assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $response->getStatusCode());
-
-        /** @var array{status: string, message: string} $data */
-        $data = json_decode((string) $response->getContent(), true, 512, \JSON_THROW_ON_ERROR);
-        self::assertSame('error', $data['status']);
-        self::assertSame('Connection refused', $data['message']);
+        self::assertSame('{"status":"error"}', $response->getContent());
     }
 }
