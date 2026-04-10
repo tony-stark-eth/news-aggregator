@@ -28,6 +28,13 @@ final class ImportOpmlController
     #[Route('/sources/import', name: 'app_sources_import_opml_post', methods: ['POST'])]
     public function handleImport(Request $request): Response
     {
+        $token = $request->request->getString('_token');
+        if (! $this->controller->isCsrfTokenValid('import_opml', $token)) {
+            return $this->controller->render('source/import.html.twig', [
+                'error' => 'Invalid CSRF token. Please try again.',
+            ]);
+        }
+
         $file = $request->files->get('opml_file');
 
         if (! $file instanceof UploadedFile || ! $file->isValid()) {

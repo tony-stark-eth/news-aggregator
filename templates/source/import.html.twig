@@ -26,6 +26,7 @@
                       hx-target="#import-result"
                       hx-swap="innerHTML"
                       hx-encoding="multipart/form-data">
+                    <input type="hidden" name="_token" value="{{ csrf_token('import_opml') }}">
                     <div class="form-control mb-4">
                         <label class="label" for="opml_file">
                             <span class="label-text">OPML File</span>
