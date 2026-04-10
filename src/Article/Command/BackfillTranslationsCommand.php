@@ -58,9 +58,10 @@ final class BackfillTranslationsCommand extends Command
             return Command::SUCCESS;
         }
 
-        // Set enrichmentStatus to Pending so EnrichArticleHandler will process them
+        // Reset enrichmentStatus then set to Pending so EnrichArticleHandler will process them
         // (handler skips articles with null status as "legacy complete")
         foreach ($articles as $article) {
+            $article->resetEnrichmentStatus();
             $article->setEnrichmentStatus(EnrichmentStatus::Pending);
         }
         $this->articleRepository->flush();

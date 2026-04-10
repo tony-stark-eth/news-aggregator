@@ -173,6 +173,10 @@ class Article
 
     public function setScore(?float $score): void
     {
+        if ($score !== null && ($score < 0.0 || $score > 1.0)) {
+            throw new \InvalidArgumentException(sprintf('Score must be between 0.0 and 1.0, got %f', $score));
+        }
+
         $this->score = $score;
     }
 
@@ -216,9 +220,23 @@ class Article
         return $this->enrichmentStatus;
     }
 
-    public function setEnrichmentStatus(?EnrichmentStatus $enrichmentStatus): void
+    /**
+     * Transition enrichment status with guard: null->Pending, Pending->Complete.
+     * Use {@see resetEnrichmentStatus()} to re-enqueue a completed article.
+     */
+    public function setEnrichmentStatus(EnrichmentStatus $enrichmentStatus): void
     {
+        $this->guardEnrichmentTransition($enrichmentStatus);
         $this->enrichmentStatus = $enrichmentStatus;
+    }
+
+    /**
+     * Reset enrichment status to null so the article can be re-enqueued.
+     * Used by backfill/re-enrichment commands before setting Pending again.
+     */
+    public function resetEnrichmentStatus(): void
+    {
+        $this->enrichmentStatus = null;
     }
 
     public function getPublishedAt(): ?\DateTimeImmutable
@@ -329,5 +347,21 @@ class Article
     public function getFetchedAt(): \DateTimeImmutable
     {
         return $this->fetchedAt;
+    }
+
+    private function guardEnrichmentTransition(EnrichmentStatus $target): void
+    {
+        $current = $this->enrichmentStatus;
+
+        $allowed = ! $current instanceof EnrichmentStatus && $target === EnrichmentStatus::Pending
+            || $current === EnrichmentStatus::Pending && $target === EnrichmentStatus::Complete;
+
+        if (! $allowed) {
+            throw new \LogicException(sprintf(
+                'Invalid enrichment status transition from %s to %s',
+                $current instanceof EnrichmentStatus ? $current->value : 'null',
+                $target->value,
+            ));
+        }
     }
 }

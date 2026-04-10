@@ -40,7 +40,7 @@ PROMPT;
         private KeywordExtractionServiceInterface $keywordExtractionFallback,
         private AiQualityGateServiceInterface $qualityGate,
         private ModelQualityTrackerInterface $qualityTracker,
-        private AiTextCleanupService $textCleanup,
+        private AiTextCleanupServiceInterface $textCleanup,
         private LoggerInterface $logger,
     ) {
     }

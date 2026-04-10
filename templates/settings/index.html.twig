@@ -21,6 +21,18 @@
                 <h3 class="card-title text-base">Notifications</h3>
                 {% if hasNotifierDsn %}
                     <span class="badge badge-success">Configured</span>
+                    <div class="mt-2 flex items-center gap-2">
+                        <button
+                            class="btn btn-sm btn-outline"
+                            hx-post="{{ path('app_settings_test_notification') }}"
+                            hx-headers='{"X-CSRF-Token": "{{ csrf_token('test_notification') }}"}'
+                            hx-target="#test-notification-result"
+                            hx-swap="innerHTML"
+                        >
+                            Send Test Notification
+                        </button>
+                        <span id="test-notification-result"></span>
+                    </div>
                 {% else %}
                     <span class="badge badge-warning">Not configured</span>
                     <p class="text-sm text-base-content/50">Set NOTIFIER_CHATTER_DSN in .env.local for notifications.</p>

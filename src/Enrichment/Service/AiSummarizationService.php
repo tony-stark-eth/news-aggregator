@@ -30,7 +30,7 @@ PROMPT;
         private AiQualityGateServiceInterface $qualityGate,
         private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
-        private AiTextCleanupService $textCleanup,
+        private AiTextCleanupServiceInterface $textCleanup,
     ) {
     }
 

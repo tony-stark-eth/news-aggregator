@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Article\Entity;
 
 use App\Article\Entity\Article;
+use App\Article\ValueObject\EnrichmentStatus;
 use App\Shared\Entity\Category;
 use App\Shared\ValueObject\EnrichmentMethod;
 use App\Source\Entity\Source;
@@ -67,13 +68,114 @@ final class ArticleTest extends TestCase
         self::assertSame('Science', $article->getCategory()?->getName());
     }
 
-    public function testSetScore(): void
+    public function testSetScoreValidRange(): void
     {
         $article = $this->createArticle();
 
         $article->setScore(0.85);
-
         self::assertSame(0.85, $article->getScore());
+    }
+
+    public function testSetScoreAcceptsNull(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setScore(null);
+        self::assertNull($article->getScore());
+    }
+
+    public function testSetScoreAcceptsBoundaryZero(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setScore(0.0);
+        self::assertSame(0.0, $article->getScore());
+    }
+
+    public function testSetScoreAcceptsBoundaryOne(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setScore(1.0);
+        self::assertSame(1.0, $article->getScore());
+    }
+
+    public function testSetScoreRejectsAboveOne(): void
+    {
+        $article = $this->createArticle();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Score must be between 0.0 and 1.0');
+        $article->setScore(1.01);
+    }
+
+    public function testSetScoreRejectsBelowZero(): void
+    {
+        $article = $this->createArticle();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Score must be between 0.0 and 1.0');
+        $article->setScore(-0.1);
+    }
+
+    public function testEnrichmentStatusTransitionNullToPending(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+        self::assertSame(EnrichmentStatus::Pending, $article->getEnrichmentStatus());
+    }
+
+    public function testEnrichmentStatusTransitionPendingToComplete(): void
+    {
+        $article = $this->createArticle();
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+
+        $article->setEnrichmentStatus(EnrichmentStatus::Complete);
+        self::assertSame(EnrichmentStatus::Complete, $article->getEnrichmentStatus());
+    }
+
+    public function testEnrichmentStatusRejectsNullToComplete(): void
+    {
+        $article = $this->createArticle();
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Invalid enrichment status transition from null to complete');
+        $article->setEnrichmentStatus(EnrichmentStatus::Complete);
+    }
+
+    public function testEnrichmentStatusRejectsCompleteToPending(): void
+    {
+        $article = $this->createArticle();
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+        $article->setEnrichmentStatus(EnrichmentStatus::Complete);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Invalid enrichment status transition from complete to pending');
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+    }
+
+    public function testEnrichmentStatusRejectsPendingToPending(): void
+    {
+        $article = $this->createArticle();
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+
+        $this->expectException(\LogicException::class);
+        $this->expectExceptionMessage('Invalid enrichment status transition from pending to pending');
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+    }
+
+    public function testResetEnrichmentStatusAllowsReEnqueue(): void
+    {
+        $article = $this->createArticle();
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+        $article->setEnrichmentStatus(EnrichmentStatus::Complete);
+
+        $article->resetEnrichmentStatus();
+        self::assertNull($article->getEnrichmentStatus());
+
+        $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+        self::assertSame(EnrichmentStatus::Pending, $article->getEnrichmentStatus());
     }
 
     public function testSetFingerprint(): void

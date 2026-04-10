@@ -28,6 +28,12 @@ services:
         target: 443
         published: ${HTTP3_PORT:-8443}
         protocol: udp
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
     depends_on:
       database:
         condition: service_healthy

@@ -35,6 +35,7 @@ use App\Shared\AI\Platform\ModelFailoverPlatform;
 use App\Shared\AI\Service\ModelDiscoveryService;
 use App\Shared\Command\CleanupCommand;
 use App\Shared\Controller\SettingsController;
+use App\Shared\Controller\TestNotificationController;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use App\Shared\Search\Service\SealArticleSearchService;
 use App\Shared\Service\QueueDepthServiceInterface;
@@ -206,6 +207,10 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%')
         ->arg('$retentionArticles', '%env(int:RETENTION_ARTICLES)%')
         ->arg('$retentionLogs', '%env(int:RETENTION_LOGS)%');
+
+    // Wire notifier DSN for TestNotificationController (to detect null transport)
+    $services->set(TestNotificationController::class)
+        ->arg('$notifierDsn', '%env(default::NOTIFIER_CHATTER_DSN)%');
 
     // Wire notifier DSN for NotificationDispatchService (to detect null transport)
     $services->set(NotificationDispatchService::class)

@@ -9,12 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Health Check Endpoint
+- GET `/health` endpoint for container orchestration — returns 200 `{"status":"ok"}` when database is reachable, 503 with error message otherwise (#153)
+- No authentication required — added to public access firewall
+
+#### Test Notification from Settings Page (#102)
+- "Send Test Notification" button on the settings page (htmx-powered, inline success/failure feedback)
+- Handles missing transport (`null://null` or empty DSN) with a warning badge
+- CSRF-protected POST endpoint at `/settings/test-notification`
+
 #### OPML Import and Export
 - Export all sources as OPML 2.0 XML via `GET /sources/export.opml` with `Content-Disposition: attachment` (#77)
 - Import OPML files via `GET/POST /sources/import` with file upload form and htmx inline results
 - Sources grouped by category in export; categories auto-created on import when not found
 - Duplicate detection: sources with matching feed URLs are skipped during import
 - Export/Import links added to the sources index page
+
+### Changed
+
+#### Article Entity Domain Behavior (#154)
+- `setEnrichmentStatus()` now enforces valid state transitions: null -> Pending -> Complete
+- `setScore()` validates the 0.0-1.0 range, throws `\InvalidArgumentException` on out-of-range values
+- New `resetEnrichmentStatus()` method for re-enrichment workflows (backfill commands)
+- Extracted `AiTextCleanupServiceInterface` from concrete `AiTextCleanupService` — all 4 consumer services now depend on the interface
 
 #### Dynamic Paid Model Usage During High Pipeline Load
 - Queue-aware model routing in `ModelFailoverPlatform` — automatically skips free models when enrichment queue is deep (#157)

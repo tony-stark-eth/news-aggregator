@@ -11,7 +11,7 @@ namespace App\Enrichment\Service;
  * Regex requires 2+ lowercase chars before the uppercase boundary to preserve
  * brand names like iPhone, eBay, and abbreviations like pH or HTTPServer.
  */
-final readonly class AiTextCleanupService
+final readonly class AiTextCleanupService implements AiTextCleanupServiceInterface
 {
     private const string CAMEL_CASE_JOIN_PATTERN = '/(?<=[a-z]{2})(?=[A-Z][a-z])/';
 

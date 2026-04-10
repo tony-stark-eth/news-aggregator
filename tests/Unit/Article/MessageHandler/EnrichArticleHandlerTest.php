@@ -172,7 +172,13 @@ final class EnrichArticleHandlerTest extends TestCase
         $article = new Article('Test Article', 'https://example.com/1', $source, new \DateTimeImmutable());
         $article->setContentRaw('<p>Content</p>');
         $article->setContentText('Content text');
-        $article->setEnrichmentStatus($status);
+
+        if ($status === EnrichmentStatus::Pending) {
+            $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+        } elseif ($status === EnrichmentStatus::Complete) {
+            $article->setEnrichmentStatus(EnrichmentStatus::Pending);
+            $article->setEnrichmentStatus(EnrichmentStatus::Complete);
+        }
 
         // Set the article ID via reflection so findById can return it
         $ref = new \ReflectionProperty(Article::class, 'id');
