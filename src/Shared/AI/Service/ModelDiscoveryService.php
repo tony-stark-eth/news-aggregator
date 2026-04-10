@@ -18,11 +18,15 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 
     private const string CACHE_KEY_TOOL_CALLING = 'openrouter_tool_calling_models';
 
+    private const string CACHE_KEY_EMBEDDING = 'openrouter_embedding_models';
+
     private const int CACHE_TTL = 3600;
 
     private const string BREAKER_KEY_FREE = 'openrouter_cb';
 
     private const string BREAKER_KEY_TOOL_CALLING = 'openrouter_tool_calling_cb';
+
+    private const string BREAKER_KEY_EMBEDDING = 'openrouter_embedding_cb';
 
     private const int BREAKER_THRESHOLD = 3;
 
@@ -56,6 +60,16 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
             self::BREAKER_KEY_TOOL_CALLING,
             'tool-calling',
             $this->fetchToolCallingModels(...),
+        );
+    }
+
+    public function discoverEmbeddingModels(): ModelIdCollection
+    {
+        return $this->discoverModels(
+            self::CACHE_KEY_EMBEDDING,
+            self::BREAKER_KEY_EMBEDDING,
+            'embedding',
+            $this->fetchEmbeddingModels(...),
         );
     }
 
@@ -253,7 +267,7 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
     }
 
     /**
-     * @return array{models: list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}, supported_parameters?: list<string>}>, blockedList: list<string>}
+     * @return array{models: list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}, supported_parameters?: list<string>, output_modalities?: list<string>}>, blockedList: list<string>}
      */
     private function fetchModelData(): array
     {
@@ -264,7 +278,7 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
             ? array_map('trim', explode(',', $this->blockedModels))
             : [];
 
-        /** @var list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}, supported_parameters?: list<string>}> $models */
+        /** @var list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}, supported_parameters?: list<string>, output_modalities?: list<string>}> $models */
         $models = $data['data'] ?? [];
 
         return [
@@ -324,6 +338,32 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         }
 
         return new ModelIdCollection($toolModels);
+    }
+
+    private function fetchEmbeddingModels(): ModelIdCollection
+    {
+        ['models' => $models, 'blockedList' => $blockedList] = $this->fetchModelData();
+
+        $embeddingModels = [];
+        foreach ($models as $model) {
+            if (! $this->isFreeModel($model)) {
+                continue;
+            }
+
+            if (in_array($model['id'], $blockedList, true)) {
+                continue;
+            }
+
+            /** @var list<string> $modalities */
+            $modalities = $model['output_modalities'] ?? [];
+            if (! in_array('embeddings', $modalities, true)) {
+                continue;
+            }
+
+            $embeddingModels[] = new ModelId($model['id']);
+        }
+
+        return new ModelIdCollection($embeddingModels);
     }
 
     /**

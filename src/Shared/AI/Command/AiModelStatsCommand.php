@@ -7,6 +7,7 @@ namespace App\Shared\AI\Command;
 use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
+use App\Shared\AI\ValueObject\ModelIdCollection;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -30,45 +31,45 @@ final class AiModelStatsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        // Show quality stats
+        $this->showQualityStats($io);
+        $this->showModelPool($io, 'free', $this->modelDiscovery->discoverFreeModels());
+        $this->showModelPool($io, 'tool-calling', $this->modelDiscovery->discoverToolCallingModels());
+        $this->showModelPool($io, 'embedding', $this->modelDiscovery->discoverEmbeddingModels());
+
+        return Command::SUCCESS;
+    }
+
+    private function showQualityStats(SymfonyStyle $io): void
+    {
         $stats = $this->qualityTracker->getAllStats();
         if ($stats->isEmpty()) {
             $io->info('No model quality data yet.');
-        } else {
-            $rows = [];
-            foreach ($stats as $modelId => $data) {
-                $rows[] = [
-                    $modelId,
-                    $data->accepted,
-                    $data->rejected,
-                    sprintf('%.1f%%', $data->acceptanceRate * 100),
-                ];
-            }
 
-            $io->table(
-                ['Model', 'Accepted', 'Rejected', 'Rate'],
-                $rows,
-            );
+            return;
         }
 
-        // Show available free models
-        $freeModels = $this->modelDiscovery->discoverFreeModels();
-        if ($freeModels->isEmpty()) {
-            $io->warning('No free models discovered (circuit breaker may be open).');
-        } else {
-            $io->section(sprintf('Available free models (%d)', $freeModels->count()));
-            $io->listing(array_map(static fn (ModelId $model): string => (string) $model, $freeModels->toArray()));
+        $rows = [];
+        foreach ($stats as $modelId => $data) {
+            $rows[] = [
+                $modelId,
+                $data->accepted,
+                $data->rejected,
+                sprintf('%.1f%%', $data->acceptanceRate * 100),
+            ];
         }
 
-        // Show available tool-calling models
-        $toolModels = $this->modelDiscovery->discoverToolCallingModels();
-        if ($toolModels->isEmpty()) {
-            $io->warning('No tool-calling models discovered (circuit breaker may be open).');
-        } else {
-            $io->section(sprintf('Available tool-calling models (%d)', $toolModels->count()));
-            $io->listing(array_map(static fn (ModelId $model): string => (string) $model, $toolModels->toArray()));
+        $io->table(['Model', 'Accepted', 'Rejected', 'Rate'], $rows);
+    }
+
+    private function showModelPool(SymfonyStyle $io, string $poolName, ModelIdCollection $models): void
+    {
+        if ($models->isEmpty()) {
+            $io->warning(sprintf('No %s models discovered (circuit breaker may be open).', $poolName));
+
+            return;
         }
 
-        return Command::SUCCESS;
+        $io->section(sprintf('Available %s models (%d)', $poolName, $models->count()));
+        $io->listing(array_map(static fn (ModelId $model): string => (string) $model, $models->toArray()));
     }
 }

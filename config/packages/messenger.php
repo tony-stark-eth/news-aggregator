@@ -45,6 +45,7 @@ return static function (ContainerConfigurator $container): void {
                 'App\Article\Message\RescoreArticlesMessage' => 'async',
                 'App\Article\Message\FetchFullTextMessage' => 'async_fulltext',
                 'App\Article\Message\EnrichArticleMessage' => 'async_enrich',
+                'App\Chat\Message\GenerateEmbeddingMessage' => 'async_enrich',
             ],
         ],
     ]);

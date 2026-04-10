@@ -11,4 +11,6 @@ interface ModelDiscoveryServiceInterface
     public function discoverFreeModels(): ModelIdCollection;
 
     public function discoverToolCallingModels(): ModelIdCollection;
+
+    public function discoverEmbeddingModels(): ModelIdCollection;
 }

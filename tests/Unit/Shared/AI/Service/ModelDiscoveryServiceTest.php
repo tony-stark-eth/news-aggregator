@@ -32,6 +32,10 @@ final class ModelDiscoveryServiceTest extends TestCase
 
     private const string TOOL_CALLING_CACHE_KEY = 'openrouter_tool_calling_models';
 
+    private const string EMBEDDING_BREAKER_KEY = 'openrouter_embedding_cb';
+
+    private const string EMBEDDING_CACHE_KEY = 'openrouter_embedding_models';
+
     public function testDiscoversFreeModels(): void
     {
         $service = $this->createService($this->successClient());
@@ -922,6 +926,305 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertFalse($breakerItem->isHit());
     }
 
+    public function testDiscoversEmbeddingModels(): void
+    {
+        $service = $this->createService($this->embeddingClient());
+
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertCount(2, $models);
+        $values = array_map(static fn (ModelId $m): string => $m->value, $models->toArray());
+        self::assertContains('embedding-model-1', $values);
+        self::assertContains('embedding-model-2', $values);
+        self::assertNotContains('no-embed-model', $values);
+        self::assertNotContains('paid-embed-model', $values);
+    }
+
+    public function testEmbeddingFiltersModelsWithoutEmbeddingModality(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'has-embedding',
+                'context_length' => 8192,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'output_modalities' => ['embeddings'],
+            ],
+            [
+                'id' => 'text-only',
+                'context_length' => 8192,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'output_modalities' => ['text'],
+            ],
+            [
+                'id' => 'no-modalities',
+                'context_length' => 8192,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+            ],
+        ]));
+
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('has-embedding', $first->value);
+    }
+
+    public function testEmbeddingFiltersPaidModels(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'free-embed',
+                'context_length' => 8192,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'output_modalities' => ['embeddings'],
+            ],
+            [
+                'id' => 'paid-embed',
+                'context_length' => 8192,
+                'pricing' => [
+                    'prompt' => '0.001',
+                    'completion' => '0',
+                ],
+                'output_modalities' => ['embeddings'],
+            ],
+        ]));
+
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('free-embed', $first->value);
+    }
+
+    public function testEmbeddingFiltersBlockedModels(): void
+    {
+        $service = $this->createService(
+            $this->clientWithModels([
+                [
+                    'id' => 'good-embed',
+                    'context_length' => 8192,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'output_modalities' => ['embeddings'],
+                ],
+                [
+                    'id' => 'blocked-embed',
+                    'context_length' => 8192,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'output_modalities' => ['embeddings'],
+                ],
+            ]),
+            blockedModels: 'blocked-embed',
+        );
+
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('good-embed', $first->value);
+    }
+
+    public function testEmbeddingCachesResults(): void
+    {
+        $callCount = 0;
+        $factory = function () use (&$callCount): MockResponse {
+            $callCount++;
+
+            return new MockResponse($this->embeddingModelsJson());
+        };
+
+        $service = $this->createService(new MockHttpClient($factory));
+
+        $service->discoverEmbeddingModels();
+        $service->discoverEmbeddingModels();
+
+        self::assertSame(1, $callCount);
+    }
+
+    public function testEmbeddingCacheStoresModelIds(): void
+    {
+        $cache = new ArrayAdapter();
+        $service = $this->createService($this->embeddingClient(), cache: $cache);
+
+        $service->discoverEmbeddingModels();
+
+        $cacheItem = $cache->getItem(self::EMBEDDING_CACHE_KEY);
+        self::assertTrue($cacheItem->isHit());
+
+        /** @var list<string> $cached */
+        $cached = $cacheItem->get();
+        self::assertContains('embedding-model-1', $cached);
+        self::assertContains('embedding-model-2', $cached);
+    }
+
+    public function testEmbeddingCircuitBreakerIsIndependent(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Open the FREE models breaker
+        $this->setBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        // Embedding breaker should still be closed — API call should happen
+        $apiCallCount = 0;
+        $factory = function () use (&$apiCallCount): MockResponse {
+            $apiCallCount++;
+
+            return new MockResponse($this->embeddingModelsJson());
+        };
+
+        $service = $this->createService(new MockHttpClient($factory), cache: $cache, clock: $clock);
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertSame(1, $apiCallCount);
+        self::assertCount(2, $models);
+    }
+
+    public function testEmbeddingBreakerOpensIndependently(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Three failures on embedding should open its own breaker
+        for ($i = 0; $i < 3; $i++) {
+            $service = $this->createService($this->failingClient(), cache: $cache, clock: $clock);
+            $service->discoverEmbeddingModels();
+        }
+
+        // Verify embedding breaker is open
+        $embeddingBreakerItem = $cache->getItem(self::EMBEDDING_BREAKER_KEY);
+        self::assertTrue($embeddingBreakerItem->isHit());
+
+        /** @var array{state: string, failures: int, opened_at: ?int} $data */
+        $data = $embeddingBreakerItem->get();
+        self::assertSame(CircuitBreakerState::Open->value, $data['state']);
+
+        // Verify free models breaker is still closed (not in cache)
+        $freeBreakerItem = $cache->getItem(self::BREAKER_KEY);
+        self::assertFalse($freeBreakerItem->isHit());
+    }
+
+    public function testEmbeddingOpenBreakerReturnsCachedModels(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Pre-populate embedding cache
+        $populateService = $this->createService($this->embeddingClient(), cache: $cache, clock: $clock);
+        $populateService->discoverEmbeddingModels();
+
+        // Open the embedding breaker
+        $this->setEmbeddingBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        // Should return cached models without API call
+        $apiCallCount = 0;
+        $factory = function () use (&$apiCallCount): MockResponse {
+            $apiCallCount++;
+
+            return new MockResponse('error', [
+                'error' => 'should not be called',
+            ]);
+        };
+
+        $service = $this->createService(new MockHttpClient($factory), cache: $cache, clock: $clock);
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertSame(0, $apiCallCount);
+        self::assertCount(2, $models);
+    }
+
+    public function testEmbeddingOpenBreakerWithNoCacheReturnsEmpty(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        $this->setEmbeddingBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        $service = $this->createService($this->failingClient(), cache: $cache, clock: $clock);
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertCount(0, $models);
+    }
+
+    public function testEmbeddingDoesNotFilterByContextLength(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'small-context-embed',
+                'context_length' => 512,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'output_modalities' => ['embeddings'],
+            ],
+        ]));
+
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('small-context-embed', $first->value);
+    }
+
+    public function testEmbeddingLoggerInfoOnSuccessfulDiscovery(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('Discovered'),
+                self::callback(static fn (array $ctx): bool => $ctx['count'] === 2 && $ctx['pool'] === 'embedding'),
+            );
+
+        $service = new ModelDiscoveryService(
+            $this->embeddingClient(),
+            new ArrayAdapter(),
+            new MockClock(),
+            $logger,
+        );
+        $service->discoverEmbeddingModels();
+    }
+
+    public function testEmbeddingReturnsEmptyWhenNoEmbeddingModelsExist(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'text-model',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'output_modalities' => ['text'],
+            ],
+        ]));
+
+        $models = $service->discoverEmbeddingModels();
+
+        self::assertCount(0, $models);
+    }
+
     private function createService(
         MockHttpClient $client,
         ?ArrayAdapter $cache = null,
@@ -1098,5 +1401,70 @@ final class ModelDiscoveryServiceTest extends TestCase
         ]);
         $item->expiresAfter(172_800);
         $cache->save($item);
+    }
+
+    private function setEmbeddingBreakerState(
+        ArrayAdapter $cache,
+        CircuitBreakerState $state,
+        int $failures = 3,
+        ?int $openedAt = null,
+    ): void {
+        $item = $cache->getItem(self::EMBEDDING_BREAKER_KEY);
+        $item->set([
+            'state' => $state->value,
+            'failures' => $failures,
+            'opened_at' => $openedAt ?? 1_735_689_600,
+        ]);
+        $item->expiresAfter(172_800);
+        $cache->save($item);
+    }
+
+    private function embeddingClient(): MockHttpClient
+    {
+        return new MockHttpClient(new MockResponse($this->embeddingModelsJson()));
+    }
+
+    private function embeddingModelsJson(): string
+    {
+        return json_encode([
+            'data' => [
+                [
+                    'id' => 'embedding-model-1',
+                    'context_length' => 8192,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'output_modalities' => ['embeddings'],
+                ],
+                [
+                    'id' => 'no-embed-model',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'output_modalities' => ['text'],
+                ],
+                [
+                    'id' => 'paid-embed-model',
+                    'context_length' => 8192,
+                    'pricing' => [
+                        'prompt' => '0.001',
+                        'completion' => '0',
+                    ],
+                    'output_modalities' => ['embeddings'],
+                ],
+                [
+                    'id' => 'embedding-model-2',
+                    'context_length' => 4096,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'output_modalities' => ['embeddings'],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
     }
 }
