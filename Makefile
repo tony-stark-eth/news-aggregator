@@ -101,10 +101,10 @@ coverage: ## Generate code coverage report
 .PHONY: ts-build ts-watch
 
 ts-build: ## Compile TypeScript via Bun
-	$(BUN) build assets/ts/*.ts --outdir=assets/js/
+	$(BUN) build assets/ts/*.ts --outdir=assets/js/ --root=assets/ts
 
 ts-watch: ## Watch and compile TypeScript via Bun
-	$(BUN) build assets/ts/*.ts --outdir=assets/js/ --watch
+	$(BUN) build assets/ts/*.ts --outdir=assets/js/ --root=assets/ts --watch
 
 ## —— Database 💾 ——————————————————————————————————
 .PHONY: db-create db-drop db-reset export-postgres import-postgres

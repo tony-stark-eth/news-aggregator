@@ -58,19 +58,44 @@
         {% endfor %}
     </div>
 
-    {# Source filter dropdown #}
-    <div class="mb-4">
-        <select class="select select-bordered select-sm w-full max-w-xs"
-                hx-on:change="window.location.href = this.value"
-                aria-label="Filter by source">
-            <option value="{{ path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0, bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0}) }}"
-                    {{ currentSource is null ? 'selected' : '' }}>All Sources</option>
-            {% for source in sources %}
-                <option value="{{ path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0, bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0, source: source.id}) }}"
-                        {{ currentSource == source.id ? 'selected' : '' }}>{{ source.name }}</option>
-            {% endfor %}
-        </select>
+    {# Source filter dropdown — filterable TypeScript component #}
+    {% set source_options = [{ id: null, name: 'All Sources', url: path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0, bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0}) }] %}
+    {% for source in sources %}
+        {% set source_options = source_options|merge([{ id: source.id, name: source.name, url: path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0, bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0, source: source.id}) }]) %}
+    {% endfor %}
+    <div class="mb-4 relative w-full max-w-xs"
+         data-source-filter
+         data-sources="{{ source_options|json_encode|e('html_attr') }}"
+         data-current-source="{{ currentSource|default('') }}">
+        <input type="text"
+               data-source-filter-input
+               placeholder="Filter sources..."
+               autocomplete="off"
+               class="input input-bordered input-sm w-full pr-8"
+               aria-label="Filter by source"
+               {% if sources is empty %}disabled{% endif %}
+               value="{% if currentSource is null %}All Sources{% else %}{% for source in sources %}{% if currentSource == source.id %}{{ source.name }}{% endif %}{% endfor %}{% endif %}" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
+            <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+        </svg>
+        <div data-source-filter-dropdown class="hidden absolute z-50 mt-1 w-full bg-base-100 border border-base-300 rounded-lg shadow-lg">
+            <ul data-source-filter-list class="menu menu-sm max-h-48 overflow-y-auto flex-nowrap p-1"></ul>
+        </div>
     </div>
+    <noscript>
+        <div class="mb-4">
+            <select class="select select-bordered select-sm w-full max-w-xs"
+                    onchange="window.location.href = this.value"
+                    aria-label="Filter by source">
+                <option value="{{ path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0, bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0}) }}"
+                        {{ currentSource is null ? 'selected' : '' }}>All Sources</option>
+                {% for source in sources %}
+                    <option value="{{ path('app_dashboard', {category: currentCategory, unreadOnly: unreadOnly ? 1 : 0, bookmarkedOnly: bookmarkedOnly|default(false) ? 1 : 0, source: source.id}) }}"
+                            {{ currentSource == source.id ? 'selected' : '' }}>{{ source.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </noscript>
 
     {# Unread filter + Bookmarked filter + Mark all read #}
     <div id="filter-bar" class="flex items-center gap-3 mb-4">

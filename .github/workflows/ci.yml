@@ -96,7 +96,7 @@ jobs:
       - name: Install importmap vendor assets
         run: docker compose run --rm --no-deps --entrypoint "" php php bin/console importmap:install --no-interaction
       - name: Build TypeScript assets
-        run: docker compose run --rm --no-deps --entrypoint "" php sh -c "bun build assets/ts/*.ts --outdir=assets/js/"
+        run: docker compose run --rm --no-deps --entrypoint "" php sh -c "bun build assets/ts/*.ts --outdir=assets/js/ --root=assets/ts"
       - name: Start app (vendor already installed — entrypoint skips composer install)
         run: docker compose up -d --wait --no-build php
       # Tests bypass PgBouncer and connect directly to database.
