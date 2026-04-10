@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Chat\Controller;
 
 use App\Chat\Controller\ChatController;
 use App\Chat\Service\ArticleChatServiceInterface;
+use App\Chat\Service\StreamingChatServiceInterface;
 use App\Chat\ValueObject\ChatResponse;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[CoversNothing]
 final class ChatControllerTest extends TestCase
@@ -137,13 +139,67 @@ final class ChatControllerTest extends TestCase
         self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
     }
 
+    public function testStreamReturnsStreamedResponse(): void
+    {
+        $streamingService = $this->createStub(StreamingChatServiceInterface::class);
+        $streamingService->method('stream')
+            ->willReturnCallback(static function (): \Generator {
+                yield "event: token\ndata: {\"text\":\"Hi\"}\n\n";
+            });
+
+        $controller = $this->buildController(
+            $this->createStub(ArticleChatServiceInterface::class),
+            null,
+            $streamingService,
+        );
+
+        $request = Request::create('/chat/stream', 'POST', content: json_encode([
+            'message' => 'Hello',
+            'conversationId' => 'conv-1',
+        ], \JSON_THROW_ON_ERROR));
+        $request->setSession(new Session(new MockArraySessionStorage()));
+
+        $response = $controller->stream($request);
+
+        self::assertInstanceOf(StreamedResponse::class, $response);
+        self::assertSame('text/event-stream', $response->headers->get('Content-Type'));
+        self::assertStringContainsString('no-cache', (string) $response->headers->get('Cache-Control'));
+        self::assertSame('no', $response->headers->get('X-Accel-Buffering'));
+    }
+
+    public function testStreamReturnsBadRequestForEmptyBody(): void
+    {
+        $controller = $this->buildController($this->createStub(ArticleChatServiceInterface::class));
+
+        $request = Request::create('/chat/stream', 'POST', content: '');
+        $response = $controller->stream($request);
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
+    public function testStreamReturnsBadRequestForEmptyMessage(): void
+    {
+        $controller = $this->buildController($this->createStub(ArticleChatServiceInterface::class));
+
+        $request = Request::create('/chat/stream', 'POST', content: json_encode([
+            'message' => '',
+        ], \JSON_THROW_ON_ERROR));
+        $request->setSession(new Session(new MockArraySessionStorage()));
+
+        $response = $controller->stream($request);
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
     private function buildController(
         ArticleChatServiceInterface $chatService,
         ?LoggerInterface $logger = null,
+        ?StreamingChatServiceInterface $streamingService = null,
     ): ChatController {
         return new ChatController(
             $this->createStub(ControllerHelper::class),
             $chatService,
+            $streamingService ?? $this->createStub(StreamingChatServiceInterface::class),
             $logger ?? $this->createStub(LoggerInterface::class),
         );
     }
