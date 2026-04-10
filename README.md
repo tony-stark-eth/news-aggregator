@@ -17,6 +17,7 @@ Self-hosted, AI-enhanced RSS/Atom news aggregator built with Symfony 8 + Franken
 - **RSS/Atom feed aggregation** from configurable sources
 - **AI-powered categorization & summarization** via OpenRouter free models (with rule-based fallback)
 - **Keyword extraction** — AI-extracted entities (people, orgs, places) displayed as tags, searchable
+- **Keyword quality filter** — removes noise tokens, keeps named entities
 - **Multi-language translation** — translates articles to all configured display languages (EN/DE/FR) with client-side language selector; originals preserved
 - **Smart alerts** with keyword and AI-based evaluation
 - **Alert rule fixtures** — define alert strategies in YAML files, load via CLI
@@ -24,7 +25,16 @@ Self-hosted, AI-enhanced RSS/Atom news aggregator built with Symfony 8 + Franken
 - **Full-text search** via SEAL + Loupe (zero infrastructure, SQLite-based) with auto-reindexing
 - **Inline article filter** — client-side search-as-you-type on the dashboard
 - **Article scoring & ranking** based on recency, source reliability, and category weights
+- **Score explanation tooltip** — hover to see scoring breakdown
+- **Article bookmarks** — save for later, persist per-user, filter dashboard
 - **Deduplication** across sources (URL, title similarity, content fingerprint)
+- **OPML import and export** — bulk source management with duplicate detection
+- **Full-text article fetch (Readability)** — Phase 1.5 pipeline with per-domain rate limiting and per-source toggle
+- **Real-time updates via Mercure SSE** — new articles banner, in-place enrichment updates
+- **htmx** — declarative partial page updates, no-reload filtering, inline actions
+- **Health check endpoint** (`/health`) — container orchestration, no auth required
+- **Settings UI** — runtime configuration of display languages, fetch interval, retention periods
+- **Dynamic paid model routing** — automatic acceleration when enrichment queue is deep
 - **Data retention** with configurable cleanup intervals
 - **Scheduled maintenance** — daily search reindex + cleanup via Symfony Scheduler
 - Single-user auth, multi-user ready architecture
@@ -91,9 +101,15 @@ Copy `.env.example` to `.env.local` and adjust:
 | `ADMIN_PASSWORD_HASH` | Bcrypt hash of admin password | `$2y$13$...` |
 | `OPENROUTER_API_KEY` | OpenRouter API key (optional) | `sk-or-...` |
 | `OPENROUTER_PAID_FALLBACK_MODEL` | Paid model added to end of failover chain | `google/gemini-2.5-flash-lite` |
+| `OPENROUTER_BLOCKED_MODELS` | Comma-separated blocked model IDs | (empty) |
 | `NOTIFIER_CHATTER_DSN` | Notification transport DSN | see below |
 | `FETCH_DEFAULT_INTERVAL_MINUTES` | How often to fetch feeds | `60` |
 | `DISPLAY_LANGUAGES` | Comma-separated display languages | `en` |
+| `MERCURE_URL` | Internal Mercure hub URL (for publishing) | `https://php/.well-known/mercure` |
+| `MERCURE_PUBLIC_URL` | Public Mercure hub URL (for browser SSE) | `https://localhost:8443/.well-known/mercure` |
+| `MERCURE_JWT_SECRET` | JWT secret for Mercure publishing | `!ChangeThisMercureHubJWTSecretKey!` |
+| `QUEUE_ACCELERATE_THRESHOLD` | Queue depth to start using paid model | `20` |
+| `QUEUE_SKIP_FREE_THRESHOLD` | Queue depth to skip free models entirely | `50` |
 | `FULL_TEXT_FETCH_ENABLED` | Enable full-text article fetching | `true` |
 | `FULL_TEXT_FETCH_TIMEOUT` | HTTP timeout for full-text fetch (seconds) | `15` |
 | `FULL_TEXT_RATE_LIMIT_REQUESTS` | Max requests per domain in rate limit window | `2` |
@@ -191,6 +207,8 @@ Navigate to **Alerts** in the sidebar, then:
 
 Digests are periodic AI-generated editorial summaries. Navigate to **Digests** to manage configurations.
 
+![Digests page](docs/screenshots/digests.png)
+
 | Setting | Description |
 |---------|-------------|
 | **Cron expression** | When to generate, e.g. `0 8 * * *` (daily 8am) |
@@ -239,6 +257,54 @@ Articles are indexed via SEAL + Loupe (SQLite-based, zero infrastructure). Searc
 - **Inline filter** — type in the filter input above the dashboard article list for instant client-side filtering
 - **Auto-reindex** — new articles are indexed automatically via a Doctrine event listener. A daily full reindex runs as a safety net via the maintenance scheduler.
 - **Manual reindex**: `make sf c="app:search-reindex"`
+
+## Article Bookmarking
+
+Save articles for later reading with a single click. Bookmarks are persisted per-user and survive article cleanup. The dashboard includes a bookmark filter to show only saved articles.
+
+![Dashboard with bookmarks](docs/screenshots/dashboard-bookmarks.png)
+
+## OPML Import & Export
+
+Manage sources in bulk via standard OPML files. Import feeds from other readers (Miniflux, FreshRSS, Feedly exports) — duplicate URLs are detected and skipped. Export your current sources as OPML to back up or migrate to another reader.
+
+![OPML import](docs/screenshots/opml-import.png)
+
+Navigate to **Sources** and use the Import/Export buttons.
+
+## Real-time Updates
+
+New articles and enrichment completions are pushed to the browser in real time via Mercure SSE (Server-Sent Events), built into FrankenPHP/Caddy with zero additional infrastructure.
+
+- **New articles banner** — appears when new articles arrive while you are reading
+- **In-place enrichment** — article cards update live when AI enrichment completes (category, summary, keywords appear without page reload)
+
+The browser connects via the native `EventSource` API. No WebSocket server or polling required.
+
+## Full-text Article Fetch
+
+Articles are fetched in full text during Phase 1.5 of the enrichment pipeline using Mozilla Readability. This runs between feed parsing and AI enrichment, so the AI receives the complete article text rather than a truncated RSS snippet.
+
+- **Per-source toggle** — enable or disable full-text fetch on each source
+- **Per-domain rate limiting** — configurable sliding window to respect publisher limits
+- **Graceful fallback** — if full-text fetch fails, the original feed content is used
+
+## Health Check
+
+A lightweight endpoint at `/health` returns system status without requiring authentication. Useful for Docker health checks and container orchestration.
+
+```bash
+curl -k https://localhost:8443/health
+# {"status":"ok","checks":{"database":"ok","messenger":"ok"}}
+```
+
+## Settings
+
+Runtime configuration is available at **Settings** in the sidebar. Settings use a hybrid approach: environment variables set defaults, and the UI allows overriding them at runtime without restarting containers.
+
+![Settings page](docs/screenshots/settings.png)
+
+Configurable values include display languages, fetch interval, article retention period, and log retention period.
 
 ## Data Retention
 
