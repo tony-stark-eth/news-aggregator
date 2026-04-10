@@ -15,3 +15,4 @@ import './js/language-selector.js';
 import './js/mercure-updates.js';
 import './js/inline-reader.js';
 import './js/sidebar-collapse.js';
+import './js/source-filter.js';
