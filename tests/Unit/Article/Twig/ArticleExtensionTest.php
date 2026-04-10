@@ -180,6 +180,32 @@ final class ArticleExtensionTest extends TestCase
         self::assertSame(55, $result['enrichment']);
     }
 
+    public function testScoreBreakdownKillsFloorMutant(): void
+    {
+        $article = $this->createArticle();
+        $article->setScore(0.5);
+
+        $this->scoringService->expects(self::once())
+            ->method('breakdown')
+            ->with($article)
+            ->willReturn([
+                // x * 100 gives values with fractional >= 0.5
+                // round(75.6)=76, floor(75.6)=75 — kills floor mutant on each field
+                'recency' => 0.756,
+                'category' => 0.757,
+                'source' => 0.758,
+                'enrichment' => 0.759,
+            ]);
+
+        $result = $this->extension->scoreBreakdown($article);
+
+        self::assertNotNull($result);
+        self::assertSame(76, $result['recency']);
+        self::assertSame(76, $result['category']);
+        self::assertSame(76, $result['source']);
+        self::assertSame(76, $result['enrichment']);
+    }
+
     // --- Twig registration ---
 
     public function testRegistersReadingTimeFilter(): void

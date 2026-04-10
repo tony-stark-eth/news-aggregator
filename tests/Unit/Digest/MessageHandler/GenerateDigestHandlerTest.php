@@ -24,6 +24,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\Notifier\Notification\Notification;
 use Symfony\Component\Notifier\NotifierInterface;
+use Symfony\Component\Notifier\Recipient\NoRecipient;
 
 #[CoversClass(GenerateDigestHandler::class)]
 #[UsesClass(GenerateDigestMessage::class)]
@@ -88,7 +89,10 @@ final class GenerateDigestHandlerTest extends TestCase
 
         $this->notifier->expects(self::once())->method('send')
             ->with(self::callback(static function (Notification $n): bool {
-                return str_contains($n->getSubject(), 'Test') && str_contains($n->getSubject(), '2 articles');
+                return str_contains($n->getSubject(), 'Test')
+                    && str_contains($n->getSubject(), '2 articles')
+                    && $n->getChannels(new NoRecipient()) === ['chat']
+                    && $n->getContent() === 'Summary content';
             }));
 
         $this->configRepository->expects(self::once())->method('flush');
@@ -206,7 +210,19 @@ final class GenerateDigestHandlerTest extends TestCase
         $this->summary->method('generate')->willReturn('Content');
         $this->notifier->method('send')->willThrowException(new \RuntimeException('Transport error'));
 
-        $this->logger->expects(self::exactly(2))->method(self::anything());
+        $this->logger->expects(self::once())->method('warning')
+            ->with(
+                'Digest delivery failed: {error}',
+                self::callback(static fn (array $ctx): bool => $ctx['error'] === 'Transport error'
+                    && $ctx['name'] === 'Test'
+                    && $ctx['digest_config_id'] === 1),
+            );
+
+        $this->logger->expects(self::once())->method('info')
+            ->with(
+                self::anything(),
+                self::callback(static fn (array $ctx): bool => $ctx['delivery_success'] === false),
+            );
 
         $savedLog = null;
         $this->logRepository
