@@ -12,6 +12,27 @@
         const savedTheme = localStorage.getItem('theme') || 'night';
         document.documentElement.setAttribute('data-theme', savedTheme);
     </script>
+    <style>
+        .sidebar-expanded { width: 16rem; }
+        .sidebar-collapsed { width: 4rem; }
+        .sidebar-collapsed .sidebar-label { display: none; }
+        .sidebar-collapsed .sidebar-title { display: none; }
+        .sidebar-collapsed .menu { padding-left: 0; padding-right: 0; }
+        .sidebar-collapsed .menu li a { justify-content: center; padding-left: 0.5rem; padding-right: 0.5rem; }
+        .sidebar-collapsed [data-sidebar-toggle-icon] { transform: rotate(180deg); }
+        /* Only enable transition after initial paint to prevent flash */
+        .sidebar-ready [data-sidebar] { transition: width 200ms ease-in-out; }
+        /* Tooltips only visible in collapsed state */
+        .sidebar-expanded .tooltip::before,
+        .sidebar-expanded .tooltip::after { display: none !important; }
+    </style>
+    <script>
+        try {
+            if (localStorage.getItem('sidebar-collapsed') === 'true') {
+                document.documentElement.classList.add('sidebar-start-collapsed');
+            }
+        } catch (e) {}
+    </script>
 </head>
 <body class="min-h-screen bg-base-200">
     {% include 'components/_flash_messages.html.twig' %}
@@ -81,17 +102,59 @@
 
     <div class="flex">
         {% block sidebar %}
-        <aside class="hidden lg:block w-64 p-4 bg-base-100 min-h-[calc(100vh-4rem)]">
-            <div class="menu">
-                <li class="menu-title">Navigation</li>
-                <li><a href="{{ path('app_dashboard') }}" class="{{ nav.activeRoute == 'app_dashboard' ? 'active' : '' }}">Dashboard</a></li>
-                <li><a href="{{ path('app_sources') }}" class="{{ nav.activeRoute == 'app_sources' ? 'active' : '' }}">Sources</a></li>
-                <li><a href="{{ path('app_alerts') }}" class="{{ nav.activeRoute == 'app_alerts' ? 'active' : '' }}">Alert Rules</a></li>
-                <li><a href="{{ path('app_digests') }}" class="{{ nav.activeRoute == 'app_digests' ? 'active' : '' }}">Digests</a></li>
-                <li><a href="{{ path('app_notifications') }}" class="{{ nav.activeRoute == 'app_notifications' ? 'active' : '' }}">Notification Log</a></li>
-                <li><a href="{{ path('app_ai_stats') }}" class="{{ nav.activeRoute == 'app_ai_stats' ? 'active' : '' }}">AI Stats</a></li>
-                <li><a href="{{ path('app_settings') }}" class="{{ nav.activeRoute == 'app_settings' ? 'active' : '' }}">Settings</a></li>
+        <aside class="hidden lg:block p-2 bg-base-100 min-h-[calc(100vh-4rem)] overflow-hidden" data-sidebar>
+            <div class="flex justify-end mb-2">
+                <button class="btn btn-ghost btn-sm btn-square" data-sidebar-toggle title="Toggle sidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200" data-sidebar-toggle-icon fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
             </div>
+            <ul class="menu">
+                <li class="menu-title sidebar-title">Navigation</li>
+                <li>
+                    <a href="{{ path('app_dashboard') }}" class="{{ nav.activeRoute == 'app_dashboard' ? 'active' : '' }} tooltip tooltip-right" data-tip="Dashboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" /></svg>
+                        <span class="sidebar-label">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_sources') }}" class="{{ nav.activeRoute == 'app_sources' ? 'active' : '' }} tooltip tooltip-right" data-tip="Sources">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11a7 7 0 017 7m-6 0a1 1 0 110-2 1 1 0 010 2z" /></svg>
+                        <span class="sidebar-label">Sources</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_alerts') }}" class="{{ nav.activeRoute == 'app_alerts' ? 'active' : '' }} tooltip tooltip-right" data-tip="Alert Rules">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
+                        <span class="sidebar-label">Alert Rules</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_digests') }}" class="{{ nav.activeRoute == 'app_digests' ? 'active' : '' }} tooltip tooltip-right" data-tip="Digests">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        <span class="sidebar-label">Digests</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_notifications') }}" class="{{ nav.activeRoute == 'app_notifications' ? 'active' : '' }} tooltip tooltip-right" data-tip="Notification Log">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                        <span class="sidebar-label">Notification Log</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_ai_stats') }}" class="{{ nav.activeRoute == 'app_ai_stats' ? 'active' : '' }} tooltip tooltip-right" data-tip="AI Stats">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                        <span class="sidebar-label">AI Stats</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ path('app_settings') }}" class="{{ nav.activeRoute == 'app_settings' ? 'active' : '' }} tooltip tooltip-right" data-tip="Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                        <span class="sidebar-label">Settings</span>
+                    </a>
+                </li>
+            </ul>
         </aside>
         {% endblock %}
 
