@@ -4,13 +4,13 @@
 
 {% block body %}
     {# Stats row #}
-    <div class="stats shadow mb-6 w-full overflow-x-auto">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         {% include 'components/_stat_widget.html.twig' with { label: 'Articles Today', value: articlesToday, color: 'primary' } %}
         {% include 'components/_stat_widget.html.twig' with { label: 'Active Sources', value: activeSources, color: 'secondary' } %}
         {% include 'components/_stat_widget.html.twig' with { label: 'Alerts Today', value: alertsToday, color: 'accent' } %}
-        <div class="stat bg-base-100 rounded-lg shadow-sm">
-            <div class="stat-title">Last Fetch</div>
-            <div class="stat-value text-info">
+        <div class="bg-base-100 rounded-lg shadow-sm p-4">
+            <div class="text-xs text-base-content/60">Last Fetch</div>
+            <div class="text-2xl font-bold text-info">
                 {% if lastFetchedAt %}
                     <time class="timeago" datetime="{{ lastFetchedAt|date('c') }}">{{ lastFetchedAt|date('Y-m-d H:i') }}</time>
                 {% else %}
@@ -38,7 +38,7 @@
     {% endif %}
 
     {# Category tabs #}
-    <div id="category-tabs" class="tabs tabs-boxed mb-4 overflow-x-auto flex-nowrap">
+    <div id="category-tabs" class="tabs tabs-boxed mb-4 flex flex-nowrap overflow-x-auto">
         <a hx-get="{{ path('app_dashboard', {source: currentSource}) }}"
            hx-target="#article-feed"
            hx-swap="innerHTML"
