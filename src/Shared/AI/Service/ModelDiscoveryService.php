@@ -14,11 +14,15 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 {
-    private const string CACHE_KEY = 'openrouter_free_models';
+    private const string CACHE_KEY_FREE = 'openrouter_free_models';
+
+    private const string CACHE_KEY_TOOL_CALLING = 'openrouter_tool_calling_models';
 
     private const int CACHE_TTL = 3600;
 
-    private const string BREAKER_KEY = 'openrouter_cb';
+    private const string BREAKER_KEY_FREE = 'openrouter_cb';
+
+    private const string BREAKER_KEY_TOOL_CALLING = 'openrouter_tool_calling_cb';
 
     private const int BREAKER_THRESHOLD = 3;
 
@@ -37,17 +41,46 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 
     public function discoverFreeModels(): ModelIdCollection
     {
-        $state = $this->getState();
+        return $this->discoverModels(
+            self::CACHE_KEY_FREE,
+            self::BREAKER_KEY_FREE,
+            'free',
+            $this->fetchFreeModels(...),
+        );
+    }
+
+    public function discoverToolCallingModels(): ModelIdCollection
+    {
+        return $this->discoverModels(
+            self::CACHE_KEY_TOOL_CALLING,
+            self::BREAKER_KEY_TOOL_CALLING,
+            'tool-calling',
+            $this->fetchToolCallingModels(...),
+        );
+    }
+
+    /**
+     * @param \Closure(): ModelIdCollection $fetchFn
+     */
+    private function discoverModels(
+        string $cacheKey,
+        string $breakerKey,
+        string $poolName,
+        \Closure $fetchFn,
+    ): ModelIdCollection {
+        $state = $this->getState($breakerKey);
 
         if ($state === CircuitBreakerState::Open) {
-            $this->logger->debug('Circuit breaker open, using cached model list');
+            $this->logger->debug('Circuit breaker open for {pool} pool, using cached model list', [
+                'pool' => $poolName,
+            ]);
 
-            return $this->getCachedModels();
+            return $this->getCachedModels($cacheKey);
         }
 
         // Closed state: check model cache first
         if ($state === CircuitBreakerState::Closed) {
-            $cacheItem = $this->cache->getItem(self::CACHE_KEY);
+            $cacheItem = $this->cache->getItem($cacheKey);
             if ($cacheItem->isHit()) {
                 /** @var list<string> $cached */
                 $cached = $cacheItem->get();
@@ -58,33 +91,54 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 
         // Closed (cache miss) or HalfOpen: probe the API
         if ($state === CircuitBreakerState::HalfOpen) {
-            $this->logger->debug('Circuit breaker half-open, attempting probe request');
+            $this->logger->debug('Circuit breaker half-open for {pool} pool, attempting probe request', [
+                'pool' => $poolName,
+            ]);
         }
 
-        return $this->fetchWithCircuitBreaker($state);
+        return $this->fetchWithCircuitBreaker(
+            $cacheKey,
+            $breakerKey,
+            $poolName,
+            $state,
+            $fetchFn,
+        );
     }
 
-    private function fetchWithCircuitBreaker(CircuitBreakerState $state): ModelIdCollection
-    {
+    /**
+     * @param \Closure(): ModelIdCollection $fetchFn
+     */
+    private function fetchWithCircuitBreaker(
+        string $cacheKey,
+        string $breakerKey,
+        string $poolName,
+        CircuitBreakerState $state,
+        \Closure $fetchFn,
+    ): ModelIdCollection {
         try {
-            $models = $this->fetchFreeModels();
+            $models = $fetchFn();
 
-            $this->resetBreaker();
-            $this->cacheModels($models);
+            $this->resetBreaker($breakerKey);
+            $this->cacheModels($models, $cacheKey);
 
-            $this->logger->info('Discovered {count} free OpenRouter models', [
+            $this->logger->info('Discovered {count} {pool} OpenRouter models', [
                 'count' => $models->count(),
+                'pool' => $poolName,
             ]);
 
             return $models;
         } catch (\Throwable $e) {
-            return $this->handleFailure($e, $state);
+            return $this->handleFailure($e, $state, $cacheKey, $breakerKey);
         }
     }
 
-    private function handleFailure(\Throwable $e, CircuitBreakerState $state): ModelIdCollection
-    {
-        $failures = $this->incrementFailures();
+    private function handleFailure(
+        \Throwable $e,
+        CircuitBreakerState $state,
+        string $cacheKey,
+        string $breakerKey,
+    ): ModelIdCollection {
+        $failures = $this->incrementFailures($breakerKey);
 
         $this->logger->warning('Model discovery failed ({count}/{threshold}): {error}', [
             'count' => $failures,
@@ -94,18 +148,18 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 
         // HalfOpen probe failed or threshold reached: open the breaker
         if ($state === CircuitBreakerState::HalfOpen || $failures >= self::BREAKER_THRESHOLD) {
-            $this->openBreaker();
+            $this->openBreaker($breakerKey);
         }
 
-        return $this->getCachedModels();
+        return $this->getCachedModels($cacheKey);
     }
 
     /**
      * @return array{state: string, failures: int, opened_at: ?int}
      */
-    private function getBreakerData(): array
+    private function getBreakerData(string $breakerKey): array
     {
-        $item = $this->cache->getItem(self::BREAKER_KEY);
+        $item = $this->cache->getItem($breakerKey);
         if (! $item->isHit()) {
             return [
                 'state' => CircuitBreakerState::Closed->value,
@@ -120,21 +174,21 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         return $data;
     }
 
-    private function getState(): CircuitBreakerState
+    private function getState(string $breakerKey): CircuitBreakerState
     {
-        $data = $this->getBreakerData();
+        $data = $this->getBreakerData($breakerKey);
         $state = CircuitBreakerState::tryFrom($data['state']) ?? CircuitBreakerState::Closed;
 
         if ($state !== CircuitBreakerState::Open) {
             return $state;
         }
 
-        // Check if Open state has expired → transition to HalfOpen
+        // Check if Open state has expired -> transition to HalfOpen
         $openedAt = $data['opened_at'];
         if ($openedAt !== null) {
             $elapsed = $this->clock->now()->getTimestamp() - $openedAt;
             if ($elapsed >= self::BREAKER_RESET_SECONDS) {
-                $this->saveBreakerData(CircuitBreakerState::HalfOpen, $data['failures'], $openedAt);
+                $this->saveBreakerData($breakerKey, CircuitBreakerState::HalfOpen, $data['failures'], $openedAt);
 
                 return CircuitBreakerState::HalfOpen;
             }
@@ -143,19 +197,20 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         return CircuitBreakerState::Open;
     }
 
-    private function incrementFailures(): int
+    private function incrementFailures(string $breakerKey): int
     {
-        $data = $this->getBreakerData();
+        $data = $this->getBreakerData($breakerKey);
         $failures = $data['failures'] + 1;
         $state = CircuitBreakerState::tryFrom($data['state']) ?? CircuitBreakerState::Closed;
-        $this->saveBreakerData($state, $failures, $data['opened_at']);
+        $this->saveBreakerData($breakerKey, $state, $failures, $data['opened_at']);
 
         return $failures;
     }
 
-    private function openBreaker(): void
+    private function openBreaker(string $breakerKey): void
     {
         $this->saveBreakerData(
+            $breakerKey,
             CircuitBreakerState::Open,
             self::BREAKER_THRESHOLD,
             $this->clock->now()->getTimestamp(),
@@ -166,14 +221,18 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         ]);
     }
 
-    private function resetBreaker(): void
+    private function resetBreaker(string $breakerKey): void
     {
-        $this->cache->deleteItem(self::BREAKER_KEY);
+        $this->cache->deleteItem($breakerKey);
     }
 
-    private function saveBreakerData(CircuitBreakerState $state, int $failures, ?int $openedAt): void
-    {
-        $item = $this->cache->getItem(self::BREAKER_KEY);
+    private function saveBreakerData(
+        string $breakerKey,
+        CircuitBreakerState $state,
+        int $failures,
+        ?int $openedAt,
+    ): void {
+        $item = $this->cache->getItem($breakerKey);
         $item->set([
             'state' => $state->value,
             'failures' => $failures,
@@ -184,16 +243,19 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         $this->cache->save($item);
     }
 
-    private function cacheModels(ModelIdCollection $models): void
+    private function cacheModels(ModelIdCollection $models, string $cacheKey): void
     {
         $rawIds = array_map(static fn (ModelId $m): string => $m->value, $models->toArray());
-        $cacheItem = $this->cache->getItem(self::CACHE_KEY);
+        $cacheItem = $this->cache->getItem($cacheKey);
         $cacheItem->set($rawIds);
         $cacheItem->expiresAfter(self::CACHE_TTL);
         $this->cache->save($cacheItem);
     }
 
-    private function fetchFreeModels(): ModelIdCollection
+    /**
+     * @return array{models: list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}, supported_parameters?: list<string>}>, blockedList: list<string>}
+     */
+    private function fetchModelData(): array
     {
         $response = $this->httpClient->request('GET', 'https://openrouter.ai/api/v1/models');
         $data = $response->toArray();
@@ -202,14 +264,22 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
             ? array_map('trim', explode(',', $this->blockedModels))
             : [];
 
-        $freeModels = [];
-        /** @var list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}}> $models */
+        /** @var list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}, supported_parameters?: list<string>}> $models */
         $models = $data['data'] ?? [];
-        foreach ($models as $model) {
-            $isFree = $model['pricing']['prompt'] === '0'
-                && $model['pricing']['completion'] === '0';
 
-            if (! $isFree) {
+        return [
+            'models' => $models,
+            'blockedList' => $blockedList,
+        ];
+    }
+
+    private function fetchFreeModels(): ModelIdCollection
+    {
+        ['models' => $models, 'blockedList' => $blockedList] = $this->fetchModelData();
+
+        $freeModels = [];
+        foreach ($models as $model) {
+            if (! $this->isFreeModel($model)) {
                 continue;
             }
 
@@ -227,9 +297,47 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
         return new ModelIdCollection($freeModels);
     }
 
-    private function getCachedModels(): ModelIdCollection
+    private function fetchToolCallingModels(): ModelIdCollection
     {
-        $item = $this->cache->getItem(self::CACHE_KEY);
+        ['models' => $models, 'blockedList' => $blockedList] = $this->fetchModelData();
+
+        $toolModels = [];
+        foreach ($models as $model) {
+            if (! $this->isFreeModel($model)) {
+                continue;
+            }
+
+            if ($model['context_length'] < self::MIN_CONTEXT_LENGTH) {
+                continue;
+            }
+
+            if (in_array($model['id'], $blockedList, true)) {
+                continue;
+            }
+
+            $supportedParams = $model['supported_parameters'] ?? [];
+            if (! in_array('tools', $supportedParams, true)) {
+                continue;
+            }
+
+            $toolModels[] = new ModelId($model['id']);
+        }
+
+        return new ModelIdCollection($toolModels);
+    }
+
+    /**
+     * @param array{pricing: array{prompt: string, completion: string}} $model
+     */
+    private function isFreeModel(array $model): bool
+    {
+        return $model['pricing']['prompt'] === '0'
+            && $model['pricing']['completion'] === '0';
+    }
+
+    private function getCachedModels(string $cacheKey): ModelIdCollection
+    {
+        $item = $this->cache->getItem($cacheKey);
         if ($item->isHit()) {
             /** @var list<string> $cached */
             $cached = $item->get();

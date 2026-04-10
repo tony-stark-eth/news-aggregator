@@ -9,4 +9,6 @@ use App\Shared\AI\ValueObject\ModelIdCollection;
 interface ModelDiscoveryServiceInterface
 {
     public function discoverFreeModels(): ModelIdCollection;
+
+    public function discoverToolCallingModels(): ModelIdCollection;
 }

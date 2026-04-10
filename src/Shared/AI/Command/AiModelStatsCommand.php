@@ -60,6 +60,15 @@ final class AiModelStatsCommand extends Command
             $io->listing(array_map(static fn (ModelId $model): string => (string) $model, $freeModels->toArray()));
         }
 
+        // Show available tool-calling models
+        $toolModels = $this->modelDiscovery->discoverToolCallingModels();
+        if ($toolModels->isEmpty()) {
+            $io->warning('No tool-calling models discovered (circuit breaker may be open).');
+        } else {
+            $io->section(sprintf('Available tool-calling models (%d)', $toolModels->count()));
+            $io->listing(array_map(static fn (ModelId $model): string => (string) $model, $toolModels->toArray()));
+        }
+
         return Command::SUCCESS;
     }
 }

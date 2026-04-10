@@ -28,6 +28,10 @@ final class ModelDiscoveryServiceTest extends TestCase
 
     private const string CACHE_KEY = 'openrouter_free_models';
 
+    private const string TOOL_CALLING_BREAKER_KEY = 'openrouter_tool_calling_cb';
+
+    private const string TOOL_CALLING_CACHE_KEY = 'openrouter_tool_calling_models';
+
     public function testDiscoversFreeModels(): void
     {
         $service = $this->createService($this->successClient());
@@ -423,7 +427,7 @@ final class ModelDiscoveryServiceTest extends TestCase
     {
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('info')
-            ->with(self::stringContains('Discovered'), self::callback(static fn (array $ctx): bool => $ctx['count'] === 2));
+            ->with(self::stringContains('Discovered'), self::callback(static fn (array $ctx): bool => $ctx['count'] === 2 && $ctx['pool'] === 'free'));
 
         $service = new ModelDiscoveryService(
             $this->successClient(),
@@ -529,6 +533,395 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertTrue($found, 'Expected "Circuit breaker opened" warning was not logged');
     }
 
+    public function testDiscoversToolCallingModels(): void
+    {
+        $service = $this->createService($this->toolCallingClient());
+
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(2, $models);
+        $values = array_map(static fn (ModelId $m): string => $m->value, $models->toArray());
+        self::assertContains('tool-model-1', $values);
+        self::assertContains('tool-model-2', $values);
+        self::assertNotContains('no-tools-model', $values);
+        self::assertNotContains('paid-tool-model', $values);
+    }
+
+    public function testToolCallingFiltersModelsWithoutToolsParam(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'has-tools',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'supported_parameters' => [
+                    'tools',
+                    'temperature',
+                ],
+            ],
+            [
+                'id' => 'no-tools',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'supported_parameters' => [
+                    'temperature',
+                ],
+            ],
+            [
+                'id' => 'missing-params',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+            ],
+        ]));
+
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('has-tools', $first->value);
+    }
+
+    public function testToolCallingFiltersPaidModels(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'free-tools',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'supported_parameters' => [
+                    'tools',
+                ],
+            ],
+            [
+                'id' => 'paid-tools',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0.001',
+                    'completion' => '0',
+                ],
+                'supported_parameters' => [
+                    'tools',
+                ],
+            ],
+        ]));
+
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('free-tools', $first->value);
+    }
+
+    public function testToolCallingFiltersSmallContextModels(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'large-context-tools',
+                'context_length' => 8192,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'supported_parameters' => [
+                    'tools',
+                ],
+            ],
+            [
+                'id' => 'small-context-tools',
+                'context_length' => 4096,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'supported_parameters' => [
+                    'tools',
+                ],
+            ],
+        ]));
+
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('large-context-tools', $first->value);
+    }
+
+    public function testToolCallingFiltersBlockedModels(): void
+    {
+        $service = $this->createService(
+            $this->clientWithModels([
+                [
+                    'id' => 'good-tool-model',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'supported_parameters' => [
+                        'tools',
+                    ],
+                ],
+                [
+                    'id' => 'blocked-tool-model',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'supported_parameters' => [
+                        'tools',
+                    ],
+                ],
+            ]),
+            blockedModels: 'blocked-tool-model',
+        );
+
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(1, $models);
+        $first = $models->first();
+        self::assertInstanceOf(ModelId::class, $first);
+        self::assertSame('good-tool-model', $first->value);
+    }
+
+    public function testToolCallingCachesResults(): void
+    {
+        $callCount = 0;
+        $factory = function () use (&$callCount): MockResponse {
+            $callCount++;
+
+            return new MockResponse($this->toolCallingModelsJson());
+        };
+
+        $service = $this->createService(new MockHttpClient($factory));
+
+        $service->discoverToolCallingModels();
+        $service->discoverToolCallingModels();
+
+        self::assertSame(1, $callCount);
+    }
+
+    public function testToolCallingCacheStoresModelIds(): void
+    {
+        $cache = new ArrayAdapter();
+        $service = $this->createService($this->toolCallingClient(), cache: $cache);
+
+        $service->discoverToolCallingModels();
+
+        $cacheItem = $cache->getItem(self::TOOL_CALLING_CACHE_KEY);
+        self::assertTrue($cacheItem->isHit());
+
+        /** @var list<string> $cached */
+        $cached = $cacheItem->get();
+        self::assertContains('tool-model-1', $cached);
+        self::assertContains('tool-model-2', $cached);
+    }
+
+    public function testToolCallingUsesSeparateCacheFromFreeModels(): void
+    {
+        $cache = new ArrayAdapter();
+        $json = $this->toolCallingModelsJson();
+        $client = new MockHttpClient([
+            new MockResponse($json),
+            new MockResponse($json),
+        ]);
+        $service = $this->createService($client, cache: $cache);
+
+        $service->discoverFreeModels();
+        $service->discoverToolCallingModels();
+
+        $freeCacheItem = $cache->getItem(self::CACHE_KEY);
+        $toolCacheItem = $cache->getItem(self::TOOL_CALLING_CACHE_KEY);
+
+        self::assertTrue($freeCacheItem->isHit());
+        self::assertTrue($toolCacheItem->isHit());
+
+        /** @var list<string> $freeIds */
+        $freeIds = $freeCacheItem->get();
+        /** @var list<string> $toolIds */
+        $toolIds = $toolCacheItem->get();
+
+        // Free models pool should be larger (includes models without tool support)
+        self::assertGreaterThan(\count($toolIds), \count($freeIds));
+    }
+
+    public function testToolCallingCircuitBreakerIsIndependent(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Open the FREE models breaker
+        $this->setBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        // Tool-calling breaker should still be closed — API call should happen
+        $apiCallCount = 0;
+        $factory = function () use (&$apiCallCount): MockResponse {
+            $apiCallCount++;
+
+            return new MockResponse($this->toolCallingModelsJson());
+        };
+
+        $service = $this->createService(new MockHttpClient($factory), cache: $cache, clock: $clock);
+        $models = $service->discoverToolCallingModels();
+
+        self::assertSame(1, $apiCallCount);
+        self::assertCount(2, $models);
+    }
+
+    public function testToolCallingBreakerOpensIndependently(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Three failures on tool-calling should open its own breaker
+        for ($i = 0; $i < 3; $i++) {
+            $service = $this->createService($this->failingClient(), cache: $cache, clock: $clock);
+            $service->discoverToolCallingModels();
+        }
+
+        // Verify tool-calling breaker is open
+        $toolBreakerItem = $cache->getItem(self::TOOL_CALLING_BREAKER_KEY);
+        self::assertTrue($toolBreakerItem->isHit());
+
+        /** @var array{state: string, failures: int, opened_at: ?int} $data */
+        $data = $toolBreakerItem->get();
+        self::assertSame(CircuitBreakerState::Open->value, $data['state']);
+
+        // Verify free models breaker is still closed (not in cache)
+        $freeBreakerItem = $cache->getItem(self::BREAKER_KEY);
+        self::assertFalse($freeBreakerItem->isHit());
+    }
+
+    public function testToolCallingOpenBreakerReturnsCachedModels(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        // Pre-populate tool-calling cache
+        $populateService = $this->createService($this->toolCallingClient(), cache: $cache, clock: $clock);
+        $populateService->discoverToolCallingModels();
+
+        // Open the tool-calling breaker
+        $this->setToolCallingBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        // Should return cached models without API call
+        $apiCallCount = 0;
+        $factory = function () use (&$apiCallCount): MockResponse {
+            $apiCallCount++;
+
+            return new MockResponse('error', [
+                'error' => 'should not be called',
+            ]);
+        };
+
+        $service = $this->createService(new MockHttpClient($factory), cache: $cache, clock: $clock);
+        $models = $service->discoverToolCallingModels();
+
+        self::assertSame(0, $apiCallCount);
+        self::assertCount(2, $models);
+    }
+
+    public function testToolCallingOpenBreakerWithNoCacheReturnsEmpty(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        $this->setToolCallingBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        $service = $this->createService($this->failingClient(), cache: $cache, clock: $clock);
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(0, $models);
+    }
+
+    public function testToolCallingReturnsEmptyWhenNoToolModelsExist(): void
+    {
+        $service = $this->createService($this->clientWithModels([
+            [
+                'id' => 'free-no-tools',
+                'context_length' => 32768,
+                'pricing' => [
+                    'prompt' => '0',
+                    'completion' => '0',
+                ],
+                'supported_parameters' => [
+                    'temperature',
+                ],
+            ],
+        ]));
+
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(0, $models);
+    }
+
+    public function testToolCallingLoggerInfoOnSuccessfulDiscovery(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('Discovered'),
+                self::callback(static fn (array $ctx): bool => $ctx['count'] === 2 && $ctx['pool'] === 'tool-calling'),
+            );
+
+        $service = new ModelDiscoveryService(
+            $this->toolCallingClient(),
+            new ArrayAdapter(),
+            new MockClock(),
+            $logger,
+        );
+        $service->discoverToolCallingModels();
+    }
+
+    public function testToolCallingLoggerWarningOnFailure(): void
+    {
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning')
+            ->with(self::stringContains('failed'));
+
+        $service = new ModelDiscoveryService(
+            $this->failingClient(),
+            new ArrayAdapter(),
+            new MockClock(),
+            $logger,
+        );
+        $service->discoverToolCallingModels();
+    }
+
+    public function testToolCallingHalfOpenAfterResetPeriod(): void
+    {
+        $cache = new ArrayAdapter();
+        $clock = new MockClock('2026-01-01 00:00:00');
+
+        $this->setToolCallingBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
+
+        $clock->modify('+25 hours');
+
+        $service = $this->createService($this->toolCallingClient(), cache: $cache, clock: $clock);
+        $models = $service->discoverToolCallingModels();
+
+        self::assertCount(2, $models);
+
+        // Breaker should be reset after successful probe
+        $breakerItem = $cache->getItem(self::TOOL_CALLING_BREAKER_KEY);
+        self::assertFalse($breakerItem->isHit());
+    }
+
     private function createService(
         MockHttpClient $client,
         ?ArrayAdapter $cache = null,
@@ -557,7 +950,7 @@ final class ModelDiscoveryServiceTest extends TestCase
     }
 
     /**
-     * @param list<array{id: string, context_length: int, pricing: array{prompt: string, completion: string}}> $models
+     * @param list<array<string, mixed>> $models
      */
     private function clientWithModels(array $models): MockHttpClient
     {
@@ -608,6 +1001,73 @@ final class ModelDiscoveryServiceTest extends TestCase
         ], JSON_THROW_ON_ERROR);
     }
 
+    private function toolCallingClient(): MockHttpClient
+    {
+        return new MockHttpClient(new MockResponse($this->toolCallingModelsJson()));
+    }
+
+    private function toolCallingModelsJson(): string
+    {
+        return json_encode([
+            'data' => [
+                [
+                    'id' => 'tool-model-1',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'supported_parameters' => [
+                        'tools',
+                        'temperature',
+                    ],
+                ],
+                [
+                    'id' => 'no-tools-model',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'supported_parameters' => [
+                        'temperature',
+                    ],
+                ],
+                [
+                    'id' => 'paid-tool-model',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0.001',
+                        'completion' => '0.002',
+                    ],
+                    'supported_parameters' => [
+                        'tools',
+                    ],
+                ],
+                [
+                    'id' => 'tool-model-2',
+                    'context_length' => 16384,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                    'supported_parameters' => [
+                        'tools',
+                        'top_p',
+                    ],
+                ],
+                [
+                    'id' => 'free-no-params',
+                    'context_length' => 32768,
+                    'pricing' => [
+                        'prompt' => '0',
+                        'completion' => '0',
+                    ],
+                ],
+            ],
+        ], JSON_THROW_ON_ERROR);
+    }
+
     private function setBreakerState(
         ArrayAdapter $cache,
         CircuitBreakerState $state,
@@ -615,6 +1075,22 @@ final class ModelDiscoveryServiceTest extends TestCase
         ?int $openedAt = null,
     ): void {
         $item = $cache->getItem(self::BREAKER_KEY);
+        $item->set([
+            'state' => $state->value,
+            'failures' => $failures,
+            'opened_at' => $openedAt ?? 1_735_689_600,
+        ]);
+        $item->expiresAfter(172_800);
+        $cache->save($item);
+    }
+
+    private function setToolCallingBreakerState(
+        ArrayAdapter $cache,
+        CircuitBreakerState $state,
+        int $failures = 3,
+        ?int $openedAt = null,
+    ): void {
+        $item = $cache->getItem(self::TOOL_CALLING_BREAKER_KEY);
         $item->set([
             'state' => $state->value,
             'failures' => $failures,
