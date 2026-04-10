@@ -77,6 +77,7 @@ final class ArticleEmbeddingListenerTest extends TestCase
         $bus->expects(self::never())->method('dispatch');
 
         $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::never())->method('warning');
 
         $listener = new ArticleEmbeddingListener($bus, $logger);
         $listener->postPersist($article);

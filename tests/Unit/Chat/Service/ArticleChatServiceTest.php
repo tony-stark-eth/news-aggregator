@@ -198,6 +198,44 @@ final class ArticleChatServiceTest extends TestCase
         $service->chat('User message', 'conv-save');
     }
 
+    public function testChatPassesUserMessageToPlatform(): void
+    {
+        $store = $this->createMock(ConversationMessageStoreInterface::class);
+        $store->method('load')->willReturn(new MessageBag());
+        $store->method('save');
+
+        $textResult = new TextResult('Answer.');
+        $rawResult = $this->createStub(RawResultInterface::class);
+        $rawResult->method('getData')->willReturn([
+            'model' => 'test-model',
+        ]);
+        $converter = $this->createStub(ResultConverterInterface::class);
+        $converter->method('convert')->willReturn($textResult);
+        $converter->method('getTokenUsageExtractor')->willReturn(null);
+        $deferred = new DeferredResult($converter, $rawResult);
+
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::once())->method('invoke')
+            ->with(
+                self::anything(),
+                self::callback(static function (mixed $input): bool {
+                    if (! $input instanceof MessageBag) {
+                        return false;
+                    }
+                    return array_any($input->getMessages(), fn (object $msg): bool => $msg instanceof UserMessage);
+                }),
+            )
+            ->willReturn($deferred);
+
+        $discovery = $this->createToolCallingDiscovery(['model-a']);
+        $toolbox = $this->createEmptyToolbox();
+
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $this->createStub(LoggerInterface::class));
+        $response = $service->chat('My question', 'conv-msg');
+
+        self::assertSame('Answer.', $response->answer);
+    }
+
     public function testChatWithEmptyAnswerFromPlatform(): void
     {
         $store = $this->createMock(ConversationMessageStoreInterface::class);

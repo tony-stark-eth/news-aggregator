@@ -75,12 +75,19 @@ final class VectorSearchRepositoryTest extends TestCase
 
         $results = $this->repository->findBySimilarity($vector, 10);
 
-        // Verify SQL structure
+        // Verify SQL structure — order matters (kills Concat mutant that reorders clauses)
         self::assertStringStartsWith('SELECT id, 1 - (embedding <=> :query_vector::vector)', $capturedSql);
         self::assertStringContainsString('FROM article', $capturedSql);
         self::assertStringContainsString('WHERE embedding IS NOT NULL', $capturedSql);
         self::assertStringContainsString('ORDER BY embedding <=> :query_vector::vector LIMIT :limit', $capturedSql);
         self::assertStringNotContainsString('published_at', $capturedSql);
+
+        // Verify clause ordering: FROM must precede WHERE
+        $fromPos = strpos($capturedSql, 'FROM article');
+        $wherePos = strpos($capturedSql, 'WHERE embedding');
+        self::assertNotFalse($fromPos);
+        self::assertNotFalse($wherePos);
+        self::assertLessThan($wherePos, $fromPos, 'FROM clause must come before WHERE clause');
 
         // Verify params
         self::assertSame('[0.1,0.2,0.3]', $capturedParams['query_vector']);
@@ -124,6 +131,8 @@ final class VectorSearchRepositoryTest extends TestCase
         $result = $this->repository->findBySimilarity([0.1], 5, $since);
 
         self::assertSame([], $result);
+        // Verify SQL still starts with SELECT (kills Assignment mutant: $sql .= changed to $sql =)
+        self::assertStringStartsWith('SELECT id', $capturedSql);
         self::assertStringContainsString('AND published_at >= :since', $capturedSql);
         self::assertSame('2026-04-01 00:00:00', $capturedParams['since']);
         self::assertSame('[0.1]', $capturedParams['query_vector']);
