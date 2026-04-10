@@ -28,7 +28,7 @@ PROMPT;
         private PlatformInterface $platform,
         private TranslationServiceInterface $ruleBasedFallback,
         private LoggerInterface $logger,
-        private AiTextCleanupService $textCleanup,
+        private AiTextCleanupServiceInterface $textCleanup,
     ) {
     }
 

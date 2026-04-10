@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Test Notification from Settings Page (#102)
+- "Send Test Notification" button on the settings page (htmx-powered, inline success/failure feedback)
+- Handles missing transport (`null://null` or empty DSN) with a warning badge
+- CSRF-protected POST endpoint at `/settings/test-notification`
+
+### Changed
+
+#### Article Entity Domain Behavior (#154)
+- `setEnrichmentStatus()` now enforces valid state transitions: null -> Pending -> Complete
+- `setScore()` validates the 0.0-1.0 range, throws `\InvalidArgumentException` on out-of-range values
+- New `resetEnrichmentStatus()` method for re-enrichment workflows (backfill commands)
+- Extracted `AiTextCleanupServiceInterface` from concrete `AiTextCleanupService` — all 4 consumer services now depend on the interface
+
 #### Dynamic Paid Model Usage During High Pipeline Load
 - Queue-aware model routing in `ModelFailoverPlatform` — automatically skips free models when enrichment queue is deep (#157)
 - Three routing modes: normal (queue < 20), accelerated (queue 20-49: primary free then paid), skip-free (queue >= 50: paid only)

@@ -35,7 +35,7 @@ PROMPT;
     public function __construct(
         private PlatformInterface $platform,
         private TranslationServiceInterface $translationFallback,
-        private AiTextCleanupService $textCleanup,
+        private AiTextCleanupServiceInterface $textCleanup,
         private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
     ) {
