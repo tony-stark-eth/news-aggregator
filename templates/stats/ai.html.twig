@@ -34,37 +34,9 @@
         </div>
     </div>
 
-    {% if stats is empty %}
-        <div class="alert alert-info mb-6">No model quality data yet. Stats populate after AI enrichment runs.</div>
-    {% else %}
-        <div class="overflow-x-auto mb-8">
-            <table class="table table-zebra">
-                <thead>
-                    <tr>
-                        <th>Model</th>
-                        <th>Accepted</th>
-                        <th>Rejected</th>
-                        <th>Rate</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for model, data in stats %}
-                        <tr>
-                            <td class="font-mono text-sm">{{ model }}</td>
-                            <td>{{ data.accepted }}</td>
-                            <td>{{ data.rejected }}</td>
-                            <td>
-                                <div class="flex items-center gap-2">
-                                    <progress class="progress {{ data.acceptanceRate > 0.7 ? 'progress-success' : (data.acceptanceRate > 0.4 ? 'progress-warning' : 'progress-error') }} w-20" value="{{ (data.acceptanceRate * 100)|round }}" max="100"></progress>
-                                    <span class="text-sm">{{ (data.acceptanceRate * 100)|round(1) }}%</span>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% endif %}
+    {{ _self.stats_table('Enrichment', enrichmentStats) }}
+    {{ _self.stats_table('Chat', chatStats) }}
+    {{ _self.stats_table('Embedding', embeddingStats) }}
 
     <h2 class="text-xl font-bold mb-4">Available Free Models ({{ freeModels|length }})</h2>
     {% if freeModels is empty %}
@@ -76,4 +48,39 @@
             {% endfor %}
         </div>
     {% endif %}
+
+    {% macro stats_table(title, stats) %}
+        <h2 class="text-xl font-bold mb-4">{{ title }} Model Quality</h2>
+        {% if stats is empty %}
+            <div class="alert alert-info mb-6">No {{ title|lower }} model quality data yet.</div>
+        {% else %}
+            <div class="overflow-x-auto mb-8">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>Accepted</th>
+                            <th>Rejected</th>
+                            <th>Rate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for model, data in stats %}
+                            <tr>
+                                <td class="font-mono text-sm">{{ model }}</td>
+                                <td>{{ data.accepted }}</td>
+                                <td>{{ data.rejected }}</td>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <progress class="progress {{ data.acceptanceRate > 0.7 ? 'progress-success' : (data.acceptanceRate > 0.4 ? 'progress-warning' : 'progress-error') }} w-20" value="{{ (data.acceptanceRate * 100)|round }}" max="100"></progress>
+                                        <span class="text-sm">{{ (data.acceptanceRate * 100)|round(1) }}%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    {% endmacro %}
 {% endblock %}

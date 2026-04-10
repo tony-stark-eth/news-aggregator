@@ -8,6 +8,8 @@ use App\Chat\Service\ChatModelResolverInterface;
 use App\Chat\Service\StreamingChatService;
 use App\Chat\Store\ConversationMessageStoreInterface;
 use App\Chat\Tool\ArticleSearchToolInterface;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -65,7 +67,11 @@ final class StreamingChatServiceTest extends TestCase
         $resolver = $this->createMock(ChatModelResolverInterface::class);
         $resolver->expects(self::once())->method('resolveModel')->willReturn('test/model');
 
-        $service = $this->buildService($store, $platform, $searchTool, $resolver);
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordAcceptance')
+            ->with('test/model', ModelQualityCategory::Chat);
+
+        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker);
         $chunks = iterator_to_array($service->stream('What happened?', 'conv-1'), false);
 
         self::assertCount(3, $chunks);
@@ -112,6 +118,10 @@ final class StreamingChatServiceTest extends TestCase
         $platform = $this->createStub(PlatformInterface::class);
         $platform->method('invoke')->willThrowException(new \RuntimeException('API down'));
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordRejection')
+            ->with('test/model', ModelQualityCategory::Chat);
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('error')
             ->with(
@@ -119,7 +129,7 @@ final class StreamingChatServiceTest extends TestCase
                 self::callback(static fn (array $ctx): bool => $ctx['error'] === 'API down'),
             );
 
-        $service = $this->buildService($store, $platform, $searchTool, logger: $logger);
+        $service = $this->buildService($store, $platform, $searchTool, tracker: $tracker, logger: $logger);
         $chunks = iterator_to_array($service->stream('Hello', 'conv-3'), false);
 
         self::assertCount(1, $chunks);
@@ -371,6 +381,7 @@ final class StreamingChatServiceTest extends TestCase
         PlatformInterface $platform,
         ArticleSearchToolInterface $searchTool,
         ?ChatModelResolverInterface $resolver = null,
+        ?ModelQualityTrackerInterface $tracker = null,
         ?LoggerInterface $logger = null,
     ): StreamingChatService {
         return new StreamingChatService(
@@ -378,6 +389,7 @@ final class StreamingChatServiceTest extends TestCase
             $platform,
             $searchTool,
             $resolver ?? $this->defaultResolver(),
+            $tracker ?? $this->createStub(ModelQualityTrackerInterface::class),
             $logger ?? $this->createStub(LoggerInterface::class),
         );
     }

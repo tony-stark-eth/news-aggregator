@@ -8,7 +8,9 @@ use App\Chat\Store\ConversationMessageStoreInterface;
 use App\Chat\ValueObject\ChatResponse;
 use App\Shared\AI\Platform\ModelFailoverPlatform;
 use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Agent;
 use Symfony\AI\Agent\InputProcessor\SystemPromptInputProcessor;
@@ -27,6 +29,7 @@ final readonly class ArticleChatService implements ArticleChatServiceInterface
         private PlatformInterface $innerPlatform,
         private ModelDiscoveryServiceInterface $modelDiscovery,
         private ToolboxInterface $toolbox,
+        private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
     ) {
     }
@@ -37,17 +40,9 @@ final readonly class ArticleChatService implements ArticleChatServiceInterface
         $history = $this->store->load();
 
         $messages = $this->buildPromptMessages($history, $userMessage);
-        $agent = $this->buildAgent();
-        $result = $agent->call($messages);
+        [$agent, $modelId] = $this->buildAgent();
 
-        $content = $result->getContent();
-        $answer = \is_string($content) ? $content : '';
-
-        $history->add(Message::ofUser($userMessage));
-        $history->add(Message::ofAssistant($answer));
-        $this->store->save($history);
-
-        return new ChatResponse($answer, $this->extractCitedArticleIds($answer), $conversationId);
+        return $this->executeChat($agent, $messages, $history, $userMessage, $conversationId, $modelId);
     }
 
     public function getHistory(string $conversationId): MessageBag
@@ -55,6 +50,37 @@ final readonly class ArticleChatService implements ArticleChatServiceInterface
         $this->store->setConversationId($conversationId);
 
         return $this->store->load();
+    }
+
+    private function executeChat(
+        Agent $agent,
+        MessageBag $messages,
+        MessageBag $history,
+        string $userMessage,
+        string $conversationId,
+        string $modelId,
+    ): ChatResponse {
+        try {
+            $result = $agent->call($messages);
+            $content = $result->getContent();
+            $answer = \is_string($content) ? $content : '';
+
+            $this->qualityTracker->recordAcceptance($modelId, ModelQualityCategory::Chat);
+        } catch (\Throwable $e) {
+            $this->qualityTracker->recordRejection($modelId, ModelQualityCategory::Chat);
+            $this->logger->error('Chat call failed for model {model}: {error}', [
+                'model' => $modelId,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+
+        $history->add(Message::ofUser($userMessage));
+        $history->add(Message::ofAssistant($answer));
+        $this->store->save($history);
+
+        return new ChatResponse($answer, $this->extractCitedArticleIds($answer), $conversationId);
     }
 
     private function buildPromptMessages(MessageBag $history, string $userMessage): MessageBag
@@ -65,20 +91,25 @@ final readonly class ArticleChatService implements ArticleChatServiceInterface
         return $messages;
     }
 
-    private function buildAgent(): Agent
+    /**
+     * @return array{0: Agent, 1: string}
+     */
+    private function buildAgent(): array
     {
         [$platform, $model] = $this->buildPlatformAndModel();
 
         $agentProcessor = new AgentProcessor($this->toolbox);
         $systemPrompt = new SystemPromptInputProcessor($this->getSystemPrompt(), $this->toolbox);
 
-        return new Agent(
+        $agent = new Agent(
             $platform,
             $model,
             [$systemPrompt, $agentProcessor],
             [$agentProcessor],
             'article_chat',
         );
+
+        return [$agent, $model];
     }
 
     /**

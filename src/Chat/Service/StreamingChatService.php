@@ -8,6 +8,8 @@ use App\Chat\Store\ConversationMessageStoreInterface;
 use App\Chat\Tool\ArticleSearchToolInterface;
 use App\Chat\ValueObject\AnswerCollector;
 use App\Chat\ValueObject\StreamContext;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -22,6 +24,7 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
         private PlatformInterface $platform,
         private ArticleSearchToolInterface $searchTool,
         private ChatModelResolverInterface $modelResolver,
+        private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
     ) {
     }
@@ -77,15 +80,17 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
     private function streamFromPlatform(MessageBag $messages, StreamContext $ctx): \Generator
     {
         $collector = new AnswerCollector();
+        $model = $this->modelResolver->resolveModel();
 
         try {
-            $model = $this->modelResolver->resolveModel();
             $result = $this->platform->invoke($model, $messages, [
                 'stream' => true,
             ]);
 
             yield from $this->yieldTokens($result->getResult(), $collector);
+            $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
         } catch (\Throwable $e) {
+            $this->qualityTracker->recordRejection($model, ModelQualityCategory::Chat);
             $this->logger->error('Streaming chat failed: {error}', [
                 'error' => $e->getMessage(),
             ]);

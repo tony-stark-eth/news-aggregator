@@ -8,6 +8,8 @@ use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
 use App\Shared\AI\ValueObject\ModelIdCollection;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
+use App\Shared\AI\ValueObject\ModelQualityStatsMap;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -31,7 +33,10 @@ final class AiModelStatsCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
 
-        $this->showQualityStats($io);
+        $this->showCategoryStats($io, 'Enrichment', ModelQualityCategory::Enrichment);
+        $this->showCategoryStats($io, 'Chat', ModelQualityCategory::Chat);
+        $this->showCategoryStats($io, 'Embedding', ModelQualityCategory::Embedding);
+
         $this->showModelPool($io, 'free', $this->modelDiscovery->discoverFreeModels());
         $this->showModelPool($io, 'tool-calling', $this->modelDiscovery->discoverToolCallingModels());
         $this->showModelPool($io, 'embedding', $this->modelDiscovery->discoverEmbeddingModels());
@@ -39,15 +44,23 @@ final class AiModelStatsCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function showQualityStats(SymfonyStyle $io): void
+    private function showCategoryStats(SymfonyStyle $io, string $title, ModelQualityCategory $category): void
     {
-        $stats = $this->qualityTracker->getAllStats();
+        $stats = $this->qualityTracker->getStatsByCategory($category);
+
+        $io->section($title . ' Model Quality');
+
         if ($stats->isEmpty()) {
-            $io->info('No model quality data yet.');
+            $io->text('No data yet.');
 
             return;
         }
 
+        $this->renderStatsTable($io, $stats);
+    }
+
+    private function renderStatsTable(SymfonyStyle $io, ModelQualityStatsMap $stats): void
+    {
         $rows = [];
         foreach ($stats as $modelId => $data) {
             $rows[] = [

@@ -9,6 +9,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'model_quality_stat')]
+#[ORM\UniqueConstraint(name: 'uniq_model_category', columns: ['model_id', 'category'])]
 class ModelQualityStat
 {
     #[ORM\Id]
@@ -16,8 +17,13 @@ class ModelQualityStat
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 255)]
     private string $modelId;
+
+    #[ORM\Column(length: 32, options: [
+        'default' => 'enrichment',
+    ])]
+    private string $category;
 
     #[ORM\Column(type: Types::INTEGER, options: [
         'default' => 0,
@@ -32,10 +38,14 @@ class ModelQualityStat
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE)]
     private \DateTimeImmutable $updatedAt;
 
-    public function __construct(string $modelId, \DateTimeImmutable $updatedAt)
-    {
+    public function __construct(
+        string $modelId,
+        \DateTimeImmutable $updatedAt,
+        string $category = 'enrichment',
+    ) {
         $this->modelId = $modelId;
         $this->updatedAt = $updatedAt;
+        $this->category = $category;
     }
 
     public function getId(): ?int
@@ -46,6 +56,11 @@ class ModelQualityStat
     public function getModelId(): string
     {
         return $this->modelId;
+    }
+
+    public function getCategory(): string
+    {
+        return $this->category;
     }
 
     public function getAccepted(): int

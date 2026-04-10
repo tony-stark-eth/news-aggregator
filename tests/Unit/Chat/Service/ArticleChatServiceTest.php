@@ -9,8 +9,10 @@ use App\Chat\Store\ConversationMessageStoreInterface;
 use App\Chat\ValueObject\ChatResponse;
 use App\Shared\AI\Platform\ModelFailoverPlatform;
 use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
+use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
 use App\Shared\AI\ValueObject\ModelIdCollection;
+use App\Shared\AI\ValueObject\ModelQualityCategory;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\TestCase;
@@ -30,6 +32,7 @@ use Symfony\AI\Platform\ResultConverterInterface;
 #[UsesClass(ModelFailoverPlatform::class)]
 #[UsesClass(ModelIdCollection::class)]
 #[UsesClass(ModelId::class)]
+#[UsesClass(ModelQualityCategory::class)]
 final class ArticleChatServiceTest extends TestCase
 {
     public function testChatReturnsResponseWithAnswer(): void
@@ -40,7 +43,7 @@ final class ArticleChatServiceTest extends TestCase
         $store->expects(self::once())->method('save')
             ->with(self::callback(static function (MessageBag $bag): bool {
                 $messages = $bag->getMessages();
-                // Must contain both user message and assistant reply
+
                 return \count($messages) >= 2;
             }));
 
@@ -48,9 +51,13 @@ final class ArticleChatServiceTest extends TestCase
         $discovery = $this->createToolCallingDiscovery(['model-a']);
         $toolbox = $this->createEmptyToolbox();
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordAcceptance')
+            ->with('model-a', ModelQualityCategory::Chat);
+
         $logger = $this->createMock(LoggerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $logger);
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $logger);
         $response = $service->chat('What happened today?', 'conv-1');
 
         self::assertSame('This is the answer.', $response->answer);
@@ -68,10 +75,11 @@ final class ArticleChatServiceTest extends TestCase
         $platform = $this->createPlatformReturning($answer);
         $discovery = $this->createToolCallingDiscovery(['model-a']);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
 
         $logger = $this->createStub(LoggerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $logger);
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $logger);
         $response = $service->chat('Tell me about AI', 'conv-2');
 
         self::assertSame([42, 99], $response->citedArticleIds);
@@ -87,8 +95,9 @@ final class ArticleChatServiceTest extends TestCase
         $platform = $this->createPlatformReturning($answer);
         $discovery = $this->createToolCallingDiscovery(['model-a']);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $this->createStub(LoggerInterface::class));
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $this->createStub(LoggerInterface::class));
         $response = $service->chat('query', 'conv-x');
 
         self::assertSame([7], $response->citedArticleIds);
@@ -104,11 +113,15 @@ final class ArticleChatServiceTest extends TestCase
         $discovery = $this->createToolCallingDiscovery([]);
         $toolbox = $this->createEmptyToolbox();
 
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordAcceptance')
+            ->with('openrouter/free', ModelQualityCategory::Chat);
+
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('warning')
             ->with(self::stringContains('No tool-calling models'));
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $logger);
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $logger);
         $response = $service->chat('Hello', 'conv-3');
 
         self::assertSame('Fallback answer.', $response->answer);
@@ -124,9 +137,10 @@ final class ArticleChatServiceTest extends TestCase
         $platform = $this->createStub(PlatformInterface::class);
         $discovery = $this->createStub(ModelDiscoveryServiceInterface::class);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
         $logger = $this->createStub(LoggerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $logger);
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $logger);
         $result = $service->getHistory('conv-5');
 
         self::assertSame($expectedBag, $result);
@@ -141,10 +155,11 @@ final class ArticleChatServiceTest extends TestCase
         $platform = $this->createPlatformReturning('No articles found.');
         $discovery = $this->createToolCallingDiscovery(['model-a']);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
 
         $logger = $this->createStub(LoggerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $logger);
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $logger);
         $response = $service->chat('random question', 'conv-6');
 
         self::assertSame([], $response->citedArticleIds);
@@ -159,10 +174,11 @@ final class ArticleChatServiceTest extends TestCase
         $platform = $this->createPlatformReturning('Multi-model answer.');
         $discovery = $this->createToolCallingDiscovery(['model-a', 'model-b', 'model-c']);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
 
         $logger = $this->createStub(LoggerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $logger);
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $logger);
         $response = $service->chat('Hello', 'conv-7');
 
         self::assertSame('Multi-model answer.', $response->answer);
@@ -193,8 +209,9 @@ final class ArticleChatServiceTest extends TestCase
         $platform = $this->createPlatformReturning('Reply text.');
         $discovery = $this->createToolCallingDiscovery(['model-a']);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $this->createStub(LoggerInterface::class));
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $this->createStub(LoggerInterface::class));
         $service->chat('User message', 'conv-save');
     }
 
@@ -222,6 +239,7 @@ final class ArticleChatServiceTest extends TestCase
                     if (! $input instanceof MessageBag) {
                         return false;
                     }
+
                     return array_any($input->getMessages(), fn (object $msg): bool => $msg instanceof UserMessage);
                 }),
             )
@@ -229,8 +247,9 @@ final class ArticleChatServiceTest extends TestCase
 
         $discovery = $this->createToolCallingDiscovery(['model-a']);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $this->createStub(LoggerInterface::class));
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $this->createStub(LoggerInterface::class));
         $response = $service->chat('My question', 'conv-msg');
 
         self::assertSame('Answer.', $response->answer);
@@ -245,12 +264,42 @@ final class ArticleChatServiceTest extends TestCase
         $platform = $this->createPlatformReturning('');
         $discovery = $this->createToolCallingDiscovery(['model-a']);
         $toolbox = $this->createEmptyToolbox();
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
 
-        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $this->createStub(LoggerInterface::class));
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $this->createStub(LoggerInterface::class));
         $response = $service->chat('question', 'conv-8');
 
         self::assertSame('', $response->answer);
         self::assertSame([], $response->citedArticleIds);
+    }
+
+    public function testChatRecordsRejectionOnFailure(): void
+    {
+        $store = $this->createMock(ConversationMessageStoreInterface::class);
+        $store->method('load')->willReturn(new MessageBag());
+
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')->willThrowException(new \RuntimeException('API down'));
+
+        $discovery = $this->createToolCallingDiscovery(['model-a']);
+        $toolbox = $this->createEmptyToolbox();
+
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordRejection')
+            ->with('model-a', ModelQualityCategory::Chat);
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('error')
+            ->with(
+                self::stringContains('Chat call failed'),
+                self::callback(static fn (array $ctx): bool => $ctx['model'] === 'model-a' && $ctx['error'] === 'API down'),
+            );
+
+        $service = new ArticleChatService($store, $platform, $discovery, $toolbox, $tracker, $logger);
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('API down');
+        $service->chat('Hello', 'conv-fail');
     }
 
     /**
