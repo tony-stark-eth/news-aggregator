@@ -48,12 +48,12 @@
                 <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                     <li>
                         <form action="{{ path('app_search') }}" method="GET" class="p-0">
-                            <input type="text" name="q" placeholder="Search..." class="input input-bordered input-sm w-full" value="{{ nav.searchQuery }}">
+                            <input type="text" name="q" placeholder="Search all articles..." class="input input-bordered input-sm w-full" value="{{ nav.searchQuery }}">
                         </form>
                     </li>
                     <li><a href="{{ path('app_dashboard') }}">Dashboard</a></li>
                     <li><a href="{{ path('app_sources') }}">Sources</a></li>
-                    <li><a href="{{ path('app_alerts') }}">Alerts</a></li>
+                    <li><a href="{{ path('app_alerts') }}">Alert Rules</a></li>
                     <li><a href="{{ path('app_digests') }}">Digests</a></li>
                     <li><a href="{{ path('app_notifications') }}">Notifications</a></li>
                 </ul>
@@ -62,7 +62,10 @@
         </div>
         <div class="navbar-center hidden md:flex">
             <form action="{{ path('app_search') }}" method="GET" class="form-control">
-                <input type="text" name="q" placeholder="Search articles..." class="input input-bordered w-64" value="{{ nav.searchQuery }}">
+                <label class="input input-bordered w-72 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <input type="text" name="q" placeholder="Search all articles..." class="grow bg-transparent outline-none" value="{{ nav.searchQuery }}">
+                </label>
             </form>
         </div>
         <div class="navbar-end gap-2">
