@@ -66,6 +66,8 @@
                         hx-on::before-request="if(this.dataset.expanded === 'true') { document.getElementById('article-content-{{ article.id }}').innerHTML = ''; this.dataset.expanded = 'false'; this.textContent = 'Read'; event.preventDefault(); return; } this.dataset.expanded = 'true'; this.textContent = 'Collapse';">
                     Read
                 </button>
+            {% else %}
+                <a href="{{ article.url }}" target="_blank" rel="noopener" class="btn btn-xs btn-ghost text-info">Read on source →</a>
             {% endif %}
         </div>
     </div>

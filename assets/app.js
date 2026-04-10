@@ -13,3 +13,4 @@ import './js/mark-as-read.js';
 import './js/article-filter.js';
 import './js/language-selector.js';
 import './js/mercure-updates.js';
+import './js/inline-reader.js';
