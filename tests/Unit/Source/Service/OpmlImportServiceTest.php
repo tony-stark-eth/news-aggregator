@@ -10,6 +10,8 @@ use App\Source\Dto\OpmlImportResultDto;
 use App\Source\Entity\Source;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\Source\Service\OpmlImportService;
+use App\Source\ValueObject\FeedPreview;
+use App\Source\ValueObject\FeedUrl;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -17,6 +19,7 @@ use Symfony\Component\Clock\MockClock;
 
 #[CoversClass(OpmlImportService::class)]
 #[CoversClass(OpmlImportResultDto::class)]
+#[CoversClass(FeedPreview::class)]
 final class OpmlImportServiceTest extends TestCase
 {
     private const string VALID_OPML = <<<'XML'
@@ -391,5 +394,254 @@ final class OpmlImportServiceTest extends TestCase
             );
 
         $this->service->import($opml);
+    }
+
+    public function testImportSetsSiteUrlFromHtmlUrl(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline type="rss" text="My Feed" xmlUrl="https://example.com/feed.xml" htmlUrl="https://example.com"/>
+              </body>
+            </opml>
+            XML;
+
+        $uncategorized = new Category('Uncategorized', 'uncategorized', 5, '#6B7280');
+        $this->categoryRepository->method('findBySlug')->willReturn($uncategorized);
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+
+        $savedSource = null;
+        $this->sourceRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (Source $source) use (&$savedSource): bool {
+                $savedSource = $source;
+
+                return true;
+            }));
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        $this->service->import($opml);
+
+        self::assertInstanceOf(Source::class, $savedSource);
+        self::assertSame('https://example.com', $savedSource->getSiteUrl());
+    }
+
+    public function testImportDoesNotSetSiteUrlWhenHtmlUrlIsNull(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline type="rss" text="No Site" xmlUrl="https://example.com/feed.xml"/>
+              </body>
+            </opml>
+            XML;
+
+        $uncategorized = new Category('Uncategorized', 'uncategorized', 5, '#6B7280');
+        $this->categoryRepository->method('findBySlug')->willReturn($uncategorized);
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+
+        $savedSource = null;
+        $this->sourceRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function (Source $source) use (&$savedSource): bool {
+                $savedSource = $source;
+
+                return true;
+            }));
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        $this->service->import($opml);
+
+        self::assertInstanceOf(Source::class, $savedSource);
+        self::assertNull($savedSource->getSiteUrl());
+    }
+
+    public function testImportHandlesOutlineWithXmlUrlButNoType(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline text="No Type" xmlUrl="https://example.com/notype.xml"/>
+              </body>
+            </opml>
+            XML;
+
+        $uncategorized = new Category('Uncategorized', 'uncategorized', 5, '#6B7280');
+        $this->categoryRepository->method('findBySlug')->willReturn($uncategorized);
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+        $this->sourceRepository->expects(self::once())->method('save');
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        $result = $this->service->import($opml);
+
+        self::assertSame(1, $result->importedCount);
+        self::assertSame(['No Type'], $result->importedNames);
+    }
+
+    public function testImportHandlesMultipleFlatRssOutlines(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline type="rss" text="Feed A" xmlUrl="https://example.com/a.xml"/>
+                <outline type="rss" text="Feed B" xmlUrl="https://example.com/b.xml"/>
+                <outline type="rss" text="Feed C" xmlUrl="https://example.com/c.xml"/>
+              </body>
+            </opml>
+            XML;
+
+        $uncategorized = new Category('Uncategorized', 'uncategorized', 5, '#6B7280');
+        $this->categoryRepository->method('findBySlug')->willReturn($uncategorized);
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+        $this->sourceRepository->expects(self::exactly(3))->method('save');
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        $result = $this->service->import($opml);
+
+        self::assertSame(3, $result->importedCount);
+        self::assertSame(['Feed A', 'Feed B', 'Feed C'], $result->importedNames);
+    }
+
+    public function testImportUsesTitleWhenTextIsMissingForCategory(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline title="Title Only Category">
+                  <outline type="rss" text="Feed" xmlUrl="https://example.com/feed.xml"/>
+                </outline>
+              </body>
+            </opml>
+            XML;
+
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+        $this->sourceRepository->expects(self::once())->method('save');
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        $this->categoryRepository->expects(self::once())
+            ->method('findBySlug')
+            ->with('title-only-category')
+            ->willReturn(null);
+
+        $this->categoryRepository->expects(self::once())
+            ->method('save')
+            ->with(
+                self::callback(static fn (Category $cat): bool => $cat->getName() === 'Title Only Category'),
+                true,
+            );
+
+        $this->service->import($opml);
+    }
+
+    public function testImportUsesTitleWhenTextIsMissingForOutline(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline type="rss" title="Title Feed" xmlUrl="https://example.com/feed.xml"/>
+              </body>
+            </opml>
+            XML;
+
+        $uncategorized = new Category('Uncategorized', 'uncategorized', 5, '#6B7280');
+        $this->categoryRepository->method('findBySlug')->willReturn($uncategorized);
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+        $this->sourceRepository->expects(self::once())->method('save');
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        $result = $this->service->import($opml);
+
+        self::assertSame(['Title Feed'], $result->importedNames);
+    }
+
+    public function testImportResolvesExistingCategoryFromDatabaseOnlyOnce(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline text="Tech">
+                  <outline type="rss" text="Feed A" xmlUrl="https://example.com/a.xml"/>
+                  <outline type="rss" text="Feed B" xmlUrl="https://example.com/b.xml"/>
+                </outline>
+              </body>
+            </opml>
+            XML;
+
+        $techCategory = new Category('Tech', 'tech', 8, '#3B82F6');
+
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+        $this->sourceRepository->expects(self::exactly(2))->method('save');
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        // Database lookup should happen only once -- second feed reuses the cache
+        $this->categoryRepository->expects(self::once())
+            ->method('findBySlug')
+            ->with('tech')
+            ->willReturn($techCategory);
+
+        $result = $this->service->import($opml);
+
+        self::assertSame(2, $result->importedCount);
+    }
+
+    public function testImportSlugTrimsLeadingAndTrailingHyphens(): void
+    {
+        $opml = <<<'XML'
+            <?xml version="1.0" encoding="UTF-8"?>
+            <opml version="2.0">
+              <head><title>Test</title></head>
+              <body>
+                <outline text="--Dashes--">
+                  <outline type="rss" text="Feed" xmlUrl="https://example.com/feed.xml"/>
+                </outline>
+              </body>
+            </opml>
+            XML;
+
+        $this->sourceRepository->method('findByFeedUrl')->willReturn(null);
+        $this->sourceRepository->expects(self::once())->method('save');
+        $this->sourceRepository->expects(self::once())->method('flush');
+
+        $this->categoryRepository->expects(self::once())
+            ->method('findBySlug')
+            ->with('dashes')
+            ->willReturn(null);
+
+        $this->categoryRepository->expects(self::once())
+            ->method('save')
+            ->with(
+                self::callback(static fn (Category $cat): bool => $cat->getSlug() === 'dashes'),
+                true,
+            );
+
+        $this->service->import($opml);
+    }
+
+    public function testImportDefaultsHasFullContentToFalse(): void
+    {
+        // FeedPreview default value -- tested here for mutation coverage
+        $feedUrl = new FeedUrl('https://example.com/feed.xml');
+        $preview = new FeedPreview(
+            title: 'Test',
+            itemCount: 5,
+            detectedLanguage: null,
+            feedUrl: $feedUrl,
+        );
+
+        self::assertFalse($preview->hasFullContent);
     }
 }
