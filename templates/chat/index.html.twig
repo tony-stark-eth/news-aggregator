@@ -1,0 +1,113 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Chat - News Assistant{% endblock %}
+
+{% block body %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-4">
+        <h1 class="text-2xl font-bold">News Assistant</h1>
+        <button id="chat-new" class="btn btn-outline btn-sm">New Conversation</button>
+    </div>
+
+    <div id="chat-messages" class="bg-base-200 rounded-box p-4 min-h-[400px] max-h-[60vh] overflow-y-auto mb-4 space-y-4">
+        <div class="text-base-content/50 text-center py-8">
+            Ask me anything about your news articles.
+        </div>
+    </div>
+
+    <form id="chat-form" class="flex gap-2">
+        <input type="text" id="chat-input" name="message"
+            placeholder="Ask about your articles..."
+            class="input input-bordered flex-1"
+            autocomplete="off" required>
+        <button type="submit" id="chat-submit" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            Send
+        </button>
+    </form>
+</div>
+
+<script>
+(function() {
+    const messagesEl = document.getElementById('chat-messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('chat-input');
+    const submitBtn = document.getElementById('chat-submit');
+    const newBtn = document.getElementById('chat-new');
+    let conversationId = null;
+
+    function addMessage(role, content) {
+        // Remove placeholder if present
+        const placeholder = messagesEl.querySelector('.text-center');
+        if (placeholder) placeholder.remove();
+
+        const wrapper = document.createElement('div');
+        wrapper.className = role === 'user'
+            ? 'chat chat-end'
+            : 'chat chat-start';
+
+        const bubble = document.createElement('div');
+        bubble.className = role === 'user'
+            ? 'chat-bubble chat-bubble-primary'
+            : 'chat-bubble chat-bubble-secondary';
+        bubble.textContent = content;
+
+        wrapper.appendChild(bubble);
+        messagesEl.appendChild(wrapper);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function setLoading(loading) {
+        submitBtn.disabled = loading;
+        input.disabled = loading;
+        if (loading) {
+            submitBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span>';
+        } else {
+            submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg> Send';
+        }
+    }
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const message = input.value.trim();
+        if (!message) return;
+
+        addMessage('user', message);
+        input.value = '';
+        setLoading(true);
+
+        try {
+            const body = { message: message };
+            if (conversationId) body.conversationId = conversationId;
+
+            const response = await fetch('/chat/message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                conversationId = data.conversationId;
+                addMessage('assistant', data.answer);
+            } else {
+                addMessage('assistant', 'Error: ' + (data.error || 'Something went wrong'));
+            }
+        } catch (err) {
+            addMessage('assistant', 'Error: Failed to send message. Please try again.');
+        } finally {
+            setLoading(false);
+            input.focus();
+        }
+    });
+
+    newBtn.addEventListener('click', function() {
+        conversationId = null;
+        messagesEl.innerHTML = '<div class="text-base-content/50 text-center py-8">Ask me anything about your news articles.</div>';
+        input.focus();
+    });
+})();
+</script>
+{% endblock %}

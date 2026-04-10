@@ -96,6 +96,12 @@ src/
 │   └── Repository/  # AlertRuleRepositoryInterface, NotificationLogRepositoryInterface
 ├── Digest/          # Periodic AI-generated editorial summaries
 │   └── Repository/  # DigestConfigRepositoryInterface, DigestLogRepositoryInterface
+├── Chat/            # Conversational RAG assistant (symfony/ai-agent + pgvector)
+│   ├── Controller/  # ChatController, ChatHistoryController
+│   ├── Service/     # ArticleChatService (agent orchestration), EmbeddingService, ArticleContextFormatter
+│   ├── Store/       # ConversationMessageStore (DBAL-backed multi-turn persistence)
+│   ├── Tool/        # ArticleSearchTool (hybrid semantic + keyword search, #[AsTool])
+│   └── ValueObject/ # ChatResponse
 ├── User/            # Auth (symfony/security-bundle), per-user read state (UserArticleRead), bookmarks (UserArticleBookmark)
 │   ├── Controller/  # ToggleBookmarkController, MarkAllReadController
 │   └── Repository/  # UserRepositoryInterface, UserArticleReadRepositoryInterface, UserArticleBookmarkRepositoryInterface

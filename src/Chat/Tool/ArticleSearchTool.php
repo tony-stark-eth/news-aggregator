@@ -5,7 +5,13 @@ declare(strict_types=1);
 namespace App\Chat\Tool;
 
 use Psr\Log\LoggerInterface;
+use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 
+#[AsTool(
+    name: 'article_search',
+    description: 'Search the user\'s article database using hybrid semantic and keyword search. Returns relevant articles with title, summary, keywords, publication date, URL, and relevance score. Use this tool when the user asks about news topics, events, or wants to find specific articles.',
+    method: 'search',
+)]
 final readonly class ArticleSearchTool implements ArticleSearchToolInterface
 {
     private const float KEYWORD_SCORE_BASE = 1.0;

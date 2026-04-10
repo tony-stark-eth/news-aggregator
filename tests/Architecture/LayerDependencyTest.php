@@ -85,4 +85,19 @@ final class LayerDependencyTest
                 Selector::inNamespace('App\Digest'),
             );
     }
+
+    public function testChatDoesNotDependOnNonSharedDomains(): Rule
+    {
+        return PHPat::rule()
+            ->classes(Selector::inNamespace('App\Chat'))
+            ->shouldNot()
+            ->dependOn()
+            ->classes(
+                Selector::inNamespace('App\Enrichment'),
+                Selector::inNamespace('App\Notification'),
+                Selector::inNamespace('App\Digest'),
+                Selector::inNamespace('App\Source'),
+                Selector::inNamespace('App\User'),
+            );
+    }
 }

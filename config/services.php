@@ -7,6 +7,11 @@ use App\Article\Mercure\MercurePublisherServiceInterface;
 use App\Article\Service\AiDeduplicationService;
 use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
+use App\Chat\Service\ArticleChatService;
+use App\Chat\Service\ArticleChatServiceInterface;
+use App\Chat\Store\ConversationMessageStore;
+use App\Chat\Store\ConversationMessageStoreInterface;
+use App\Chat\Tool\ArticleSearchTool;
 use App\Digest\Service\DigestSummaryService;
 use App\Enrichment\Service\AiBatchTranslationService;
 use App\Enrichment\Service\AiCategorizationService;
@@ -42,6 +47,7 @@ use App\Shared\Service\QueueDepthServiceInterface;
 use App\Shared\Service\SettingsService;
 use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Command\SeedDataCommand;
+use Symfony\AI\Agent\Toolbox\Toolbox;
 use Symfony\AI\Platform\Bridge\Generic\CompletionsModel;
 use Symfony\AI\Platform\Bridge\OpenRouter\ModelCatalog;
 use Symfony\AI\Platform\Capability;
@@ -231,4 +237,21 @@ return static function (ContainerConfigurator $container): void {
 
     // Search: SEAL/Loupe engine wired by argument name (loupeEngine → cmsig_seal.engine.loupe alias)
     $services->alias(ArticleSearchServiceInterface::class, SealArticleSearchService::class);
+
+    // Chat: Toolbox wrapping the ArticleSearchTool for the agent
+    $services->set('chat.toolbox', Toolbox::class)
+        ->arg('$tools', [service(ArticleSearchTool::class)]);
+
+    // Chat: ArticleChatService uses inner OpenRouter platform for tool-calling agent
+    $services->set(ArticleChatService::class)
+        ->arg('$innerPlatform', service('ai.platform.openrouter'))
+        ->arg('$toolbox', service('chat.toolbox'));
+
+    $services->alias(ArticleChatServiceInterface::class, ArticleChatService::class);
+
+    // Chat: ConversationMessageStore uses DBAL connection
+    $services->set(ConversationMessageStore::class)
+        ->arg('$connection', service('doctrine.dbal.default_connection'));
+
+    $services->alias(ConversationMessageStoreInterface::class, ConversationMessageStore::class);
 };
