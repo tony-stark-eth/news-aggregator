@@ -71,6 +71,8 @@ final class ChatController
     #[Route('/chat/stream', name: 'app_chat_stream', methods: ['POST'])]
     public function stream(Request $request): Response
     {
+        set_time_limit(120);
+
         $data = $this->decodeRequest($request);
         if ($data === null) {
             return new JsonResponse([
