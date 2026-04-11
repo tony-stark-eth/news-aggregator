@@ -20,6 +20,7 @@ final class CombinedEnrichmentResultTest extends TestCase
             ['Google', 'AI'],
             EnrichmentMethod::Ai,
             'model-1',
+            0.75,
         );
 
         self::assertSame('tech', $result->categorySlug);
@@ -27,6 +28,7 @@ final class CombinedEnrichmentResultTest extends TestCase
         self::assertSame(['Google', 'AI'], $result->keywords);
         self::assertSame(EnrichmentMethod::Ai, $result->method);
         self::assertSame('model-1', $result->modelUsed);
+        self::assertSame(0.75, $result->sentimentScore);
     }
 
     public function testConstructsWithNullFields(): void
@@ -43,5 +45,6 @@ final class CombinedEnrichmentResultTest extends TestCase
         self::assertSame([], $result->keywords);
         self::assertSame(EnrichmentMethod::RuleBased, $result->method);
         self::assertNull($result->modelUsed);
+        self::assertNull($result->sentimentScore);
     }
 }

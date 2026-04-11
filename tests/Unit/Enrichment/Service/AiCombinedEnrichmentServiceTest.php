@@ -849,6 +849,90 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
         $service->enrich('Title', 'Content');
     }
 
+    public function testExtractsSentimentScoreFromAiResponse(): void
+    {
+        $json = json_encode([
+            'category' => 'tech',
+            'summary' => 'Google announced a new AI model for developers.',
+            'keywords' => ['Google', 'AI'],
+            'sentiment_score' => 0.75,
+        ], JSON_THROW_ON_ERROR);
+
+        $platform = new InMemoryPlatform($json);
+        $service = $this->createService($platform);
+
+        $result = $service->enrich('Google AI announcement', 'New AI model for developers');
+
+        self::assertSame(0.75, $result->sentimentScore);
+    }
+
+    public function testSentimentScoreNullWhenMissing(): void
+    {
+        $json = json_encode([
+            'category' => 'tech',
+            'summary' => 'Google announced a new AI model for developers.',
+            'keywords' => ['Google', 'AI'],
+        ], JSON_THROW_ON_ERROR);
+
+        $platform = new InMemoryPlatform($json);
+        $service = $this->createService($platform);
+
+        $result = $service->enrich('Google AI announcement', 'New AI model for developers');
+
+        self::assertNull($result->sentimentScore);
+    }
+
+    public function testSentimentScoreNullWhenOutOfRange(): void
+    {
+        $json = json_encode([
+            'category' => 'tech',
+            'summary' => 'Google announced a new AI model for developers.',
+            'keywords' => ['Google', 'AI'],
+            'sentiment_score' => 5.0,
+        ], JSON_THROW_ON_ERROR);
+
+        $platform = new InMemoryPlatform($json);
+        $service = $this->createService($platform);
+
+        $result = $service->enrich('Google AI announcement', 'New AI model for developers');
+
+        self::assertNull($result->sentimentScore);
+    }
+
+    public function testSentimentScoreNullWhenNotNumeric(): void
+    {
+        $json = json_encode([
+            'category' => 'tech',
+            'summary' => 'Google announced a new AI model for developers.',
+            'keywords' => ['Google', 'AI'],
+            'sentiment_score' => 'positive',
+        ], JSON_THROW_ON_ERROR);
+
+        $platform = new InMemoryPlatform($json);
+        $service = $this->createService($platform);
+
+        $result = $service->enrich('Google AI announcement', 'New AI model for developers');
+
+        self::assertNull($result->sentimentScore);
+    }
+
+    public function testNegativeSentimentScoreExtracted(): void
+    {
+        $json = json_encode([
+            'category' => 'politics',
+            'summary' => 'The government announced new sanctions against multiple countries.',
+            'keywords' => ['sanctions', 'government'],
+            'sentiment_score' => -0.8,
+        ], JSON_THROW_ON_ERROR);
+
+        $platform = new InMemoryPlatform($json);
+        $service = $this->createService($platform);
+
+        $result = $service->enrich('Sanctions Announcement', 'The government announced new sanctions');
+
+        self::assertSame(-0.8, $result->sentimentScore);
+    }
+
     private function createService(
         PlatformInterface $platform,
         ?ModelQualityTrackerInterface $tracker = null,
@@ -873,6 +957,9 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
         );
         $qualityGate->method('validateSummary')->willReturnCallback(
             static fn (string $summary): bool => mb_strlen($summary) >= 20 && mb_strlen($summary) <= 500,
+        );
+        $qualityGate->method('validateSentiment')->willReturnCallback(
+            static fn (float $score): bool => $score >= -1.0 && $score <= 1.0,
         );
 
         return new AiCombinedEnrichmentService(
@@ -906,6 +993,9 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
         );
         $qualityGate->method('validateSummary')->willReturnCallback(
             static fn (string $summary): bool => mb_strlen($summary) >= 20 && mb_strlen($summary) <= 500,
+        );
+        $qualityGate->method('validateSentiment')->willReturnCallback(
+            static fn (float $score): bool => $score >= -1.0 && $score <= 1.0,
         );
 
         return new AiCombinedEnrichmentService(

@@ -24,6 +24,7 @@ Analyze the following news article and return a JSON object with exactly these f
 - "category": one of [politics, business, tech, science, sports, entertainment, health, world]
 - "summary": 1-2 concise sentences summarizing the key facts
 - "keywords": array of 3-5 key entities (people, organizations, places, topics)
+- "sentiment_score": float from -1.0 (very negative) to +1.0 (very positive), 0.0 = neutral
 
 Title: %s
 Content: %s
@@ -105,8 +106,9 @@ PROMPT;
         $categorySlug = $this->extractCategory($decoded);
         $summary = $this->extractSummary($decoded, $title);
         $keywords = $this->extractKeywords($decoded);
+        $sentimentScore = $this->extractSentiment($decoded);
 
-        $anyFieldFromAi = $categorySlug !== null || $summary !== null || $keywords !== [];
+        $anyFieldFromAi = $categorySlug !== null || $summary !== null || $keywords !== [] || $sentimentScore !== null;
 
         if ($anyFieldFromAi) {
             $this->qualityTracker->recordAcceptance($actualModel);
@@ -131,6 +133,7 @@ PROMPT;
             $keywords,
             $method,
             $anyFieldFromAi ? $actualModel : null,
+            $sentimentScore,
         );
     }
 
@@ -181,6 +184,25 @@ PROMPT;
         }
 
         return $this->keywordFilter->filter($keywords);
+    }
+
+    /**
+     * @param array<string, mixed> $decoded
+     */
+    private function extractSentiment(array $decoded): ?float
+    {
+        if (! isset($decoded['sentiment_score'])) {
+            return null;
+        }
+
+        $value = $decoded['sentiment_score'];
+        if (! is_int($value) && ! is_float($value)) {
+            return null;
+        }
+
+        $score = (float) $value;
+
+        return $this->qualityGate->validateSentiment($score) ? $score : null;
     }
 
     /**
