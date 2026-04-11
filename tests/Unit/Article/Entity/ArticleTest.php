@@ -178,6 +178,79 @@ final class ArticleTest extends TestCase
         self::assertSame(EnrichmentStatus::Pending, $article->getEnrichmentStatus());
     }
 
+    public function testSetSentimentScoreValidRange(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setSentimentScore(0.75);
+        self::assertSame(0.75, $article->getSentimentScore());
+    }
+
+    public function testSetSentimentScoreAcceptsNull(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setSentimentScore(null);
+        self::assertNull($article->getSentimentScore());
+    }
+
+    public function testSetSentimentScoreAcceptsNegative(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setSentimentScore(-0.5);
+        self::assertSame(-0.5, $article->getSentimentScore());
+    }
+
+    public function testSetSentimentScoreAcceptsBoundaryNegativeOne(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setSentimentScore(-1.0);
+        self::assertSame(-1.0, $article->getSentimentScore());
+    }
+
+    public function testSetSentimentScoreAcceptsBoundaryPositiveOne(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setSentimentScore(1.0);
+        self::assertSame(1.0, $article->getSentimentScore());
+    }
+
+    public function testSetSentimentScoreAcceptsBoundaryZero(): void
+    {
+        $article = $this->createArticle();
+
+        $article->setSentimentScore(0.0);
+        self::assertSame(0.0, $article->getSentimentScore());
+    }
+
+    public function testSetSentimentScoreRejectsAboveOne(): void
+    {
+        $article = $this->createArticle();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Sentiment score must be between -1.0 and 1.0');
+        $article->setSentimentScore(1.01);
+    }
+
+    public function testSetSentimentScoreRejectsBelowNegativeOne(): void
+    {
+        $article = $this->createArticle();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Sentiment score must be between -1.0 and 1.0');
+        $article->setSentimentScore(-1.01);
+    }
+
+    public function testConstructorDefaultsSentimentScoreToNull(): void
+    {
+        $article = $this->createArticle();
+
+        self::assertNull($article->getSentimentScore());
+    }
+
     public function testSetFingerprint(): void
     {
         $article = $this->createArticle();
