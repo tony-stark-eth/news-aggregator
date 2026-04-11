@@ -119,10 +119,27 @@
             card.rel = 'noopener';
             card.className = 'block p-2 bg-base-100 rounded-lg hover:bg-base-300 transition-colors text-sm';
 
-            const title = document.createElement('div');
+            const titleRow = document.createElement('div');
+            titleRow.className = 'flex items-center gap-1.5';
+
+            const title = document.createElement('span');
             title.className = 'font-medium text-xs link link-hover truncate';
             title.textContent = article.title;
-            card.appendChild(title);
+            titleRow.appendChild(title);
+
+            if (article.searchSource) {
+                const badge = document.createElement('span');
+                const badgeColors = {
+                    keyword: 'badge-info',
+                    semantic: 'badge-secondary',
+                    hybrid: 'badge-accent'
+                };
+                badge.className = 'badge badge-xs shrink-0 ' + (badgeColors[article.searchSource] || 'badge-ghost');
+                badge.textContent = article.searchSource;
+                titleRow.appendChild(badge);
+            }
+
+            card.appendChild(titleRow);
 
             if (article.summary) {
                 const summary = document.createElement('div');

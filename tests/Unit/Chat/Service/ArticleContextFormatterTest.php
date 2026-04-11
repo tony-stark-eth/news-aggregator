@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Chat\Service;
 
 use App\Article\Entity\Article;
 use App\Chat\Service\ArticleContextFormatter;
+use App\Chat\ValueObject\SearchSource;
 use App\Source\Entity\Source;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
@@ -69,6 +70,8 @@ final class ArticleContextFormatterTest extends TestCase
 
         $results = $this->formatter->format([$article], [
             1 => 0.85,
+        ], [
+            1 => SearchSource::Hybrid,
         ]);
 
         self::assertCount(1, $results);
@@ -80,6 +83,7 @@ final class ArticleContextFormatterTest extends TestCase
         self::assertSame('2026-04-09T08:00:00+00:00', $r['publishedAt']);
         self::assertSame('https://example.com/1', $r['url']);
         self::assertSame(0.85, $r['score']);
+        self::assertSame('hybrid', $r['searchSource']);
     }
 
     public function testFormatWithNullSummaryKeywordsPublishedAt(): void
@@ -98,6 +102,52 @@ final class ArticleContextFormatterTest extends TestCase
     public function testFormatEmptyArticlesReturnsEmpty(): void
     {
         self::assertSame([], $this->formatter->format([], []));
+    }
+
+    public function testFormatIncludesSearchSourceFromSourcesMap(): void
+    {
+        $articles = [
+            $this->createArticle(1, 'A', 'https://example.com/1'),
+            $this->createArticle(2, 'B', 'https://example.com/2'),
+            $this->createArticle(3, 'C', 'https://example.com/3'),
+        ];
+
+        $scores = [
+            1 => 0.9,
+            2 => 0.8,
+            3 => 0.7,
+        ];
+        $sources = [
+            1 => SearchSource::Keyword,
+            2 => SearchSource::Semantic,
+            3 => SearchSource::Hybrid,
+        ];
+
+        $results = $this->formatter->format($articles, $scores, $sources);
+
+        self::assertSame('keyword', $results[0]['searchSource']);
+        self::assertSame('semantic', $results[1]['searchSource']);
+        self::assertSame('hybrid', $results[2]['searchSource']);
+    }
+
+    public function testFormatDefaultsToKeywordWhenSourceMissing(): void
+    {
+        $article = $this->createArticle(1, 'Test', 'https://example.com/1');
+        $results = $this->formatter->format([$article], [
+            1 => 0.5,
+        ]);
+
+        self::assertSame('keyword', $results[0]['searchSource']);
+    }
+
+    public function testFormatDefaultsToKeywordWhenSourcesEmpty(): void
+    {
+        $article = $this->createArticle(1, 'Test', 'https://example.com/1');
+        $results = $this->formatter->format([$article], [
+            1 => 0.5,
+        ], []);
+
+        self::assertSame('keyword', $results[0]['searchSource']);
     }
 
     public function testFormatRoundsScoreToFourDecimals(): void

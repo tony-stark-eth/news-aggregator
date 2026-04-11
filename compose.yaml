@@ -15,6 +15,7 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      - loupe_data:/app/var/loupe
     ports:
       - name: http
         target: 80
@@ -71,3 +72,4 @@ volumes:
   caddy_data:
   caddy_config:
   database_data:
+  loupe_data:

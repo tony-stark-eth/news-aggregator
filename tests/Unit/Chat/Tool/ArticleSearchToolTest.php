@@ -11,6 +11,8 @@ use App\Chat\Service\ArticleContextFormatter;
 use App\Chat\Service\EmbeddingServiceInterface;
 use App\Chat\Tool\ArticleSearchTool;
 use App\Chat\Tool\SearchDependencies;
+use App\Chat\ValueObject\SearchMergeResult;
+use App\Chat\ValueObject\SearchSource;
 use App\Shared\Search\Service\ArticleSearchServiceInterface;
 use App\Source\Entity\Source;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -21,6 +23,8 @@ use Symfony\Component\Clock\MockClock;
 
 #[CoversClass(ArticleSearchTool::class)]
 #[CoversClass(SearchDependencies::class)]
+#[CoversClass(SearchMergeResult::class)]
+#[CoversClass(SearchSource::class)]
 final class ArticleSearchToolTest extends TestCase
 {
     private EmbeddingServiceInterface&MockObject $embedding;
@@ -105,18 +109,30 @@ final class ArticleSearchToolTest extends TestCase
             ->method('findByIds')
             ->willReturn([$article1, $article2, $article3]);
 
+        $this->logger->expects(self::once())
+            ->method('info')
+            ->with(
+                'Search results: {keyword} keyword, {semantic} semantic, {hybrid} hybrid',
+                self::callback(static fn (array $ctx): bool => $ctx['keyword'] === 1
+                    && $ctx['semantic'] === 1
+                    && $ctx['hybrid'] === 1),
+            );
+
         $results = $this->tool->search('AI news');
 
         self::assertCount(3, $results);
         // Article 2 found by both: 0.7 (semantic) + 1.0 (keyword pos 0) + 0.2 (boost) = 1.9
         self::assertSame(2, $results[0]['id']);
         self::assertSame(1.9, $results[0]['score']);
+        self::assertSame('hybrid', $results[0]['searchSource']);
         // Article 3: 0.95 (keyword pos 1)
         self::assertSame(3, $results[1]['id']);
         self::assertSame(0.95, $results[1]['score']);
+        self::assertSame('keyword', $results[1]['searchSource']);
         // Article 1: 0.9 (semantic only)
         self::assertSame(1, $results[2]['id']);
         self::assertSame(0.9, $results[2]['score']);
+        self::assertSame('semantic', $results[2]['searchSource']);
     }
 
     public function testSearchFallsBackToKeywordOnlyWhenEmbeddingReturnsNull(): void
@@ -139,11 +155,21 @@ final class ArticleSearchToolTest extends TestCase
             ->with([5])
             ->willReturn([$article]);
 
+        $this->logger->expects(self::once())
+            ->method('info')
+            ->with(
+                'Search results: {keyword} keyword, {semantic} semantic, {hybrid} hybrid',
+                self::callback(static fn (array $ctx): bool => $ctx['keyword'] === 1
+                    && $ctx['semantic'] === 0
+                    && $ctx['hybrid'] === 0),
+            );
+
         $results = $this->tool->search('test query');
 
         self::assertCount(1, $results);
         self::assertSame(5, $results[0]['id']);
         self::assertSame(1.0, $results[0]['score']);
+        self::assertSame('keyword', $results[0]['searchSource']);
     }
 
     public function testSearchWithDaysBackFilterPassesSinceDate(): void
@@ -295,6 +321,7 @@ final class ArticleSearchToolTest extends TestCase
         self::assertSame('2026-04-09T10:00:00+00:00', $result['publishedAt']);
         self::assertSame('https://example.com/1', $result['url']);
         self::assertSame(1.0, $result['score']);
+        self::assertSame('keyword', $result['searchSource']);
     }
 
     public function testSearchArticleWithNullFieldsFormatsGracefully(): void

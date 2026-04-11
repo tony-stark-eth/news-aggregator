@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Chat\Tool;
 
+use App\Chat\ValueObject\SearchMergeResult;
+use App\Chat\ValueObject\SearchSource;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 
@@ -34,9 +36,9 @@ final readonly class ArticleSearchTool implements ArticleSearchToolInterface
         }
 
         $since = $this->resolveSince($daysBack);
-        $scores = $this->mergeSearchResults($trimmed, $since, $limit);
+        $mergeResult = $this->mergeSearchResults($trimmed, $since, $limit);
 
-        if ($scores === []) {
+        if ($mergeResult->scores === []) {
             $this->logger->info('Hybrid search returned no results for query', [
                 'query' => $trimmed,
             ]);
@@ -44,13 +46,12 @@ final readonly class ArticleSearchTool implements ArticleSearchToolInterface
             return [];
         }
 
-        return $this->loadAndFormat($scores, $limit);
+        $this->logSourceDistribution($mergeResult->sources);
+
+        return $this->loadAndFormat($mergeResult, $limit);
     }
 
-    /**
-     * @return array<int, float> article ID => combined score
-     */
-    private function mergeSearchResults(string $query, ?\DateTimeImmutable $since, int $limit): array
+    private function mergeSearchResults(string $query, ?\DateTimeImmutable $since, int $limit): SearchMergeResult
     {
         $semanticScores = $this->runSemanticSearch($query, $since, $limit);
         $keywordScores = $this->runKeywordSearch($query, $limit);
@@ -94,38 +95,62 @@ final readonly class ArticleSearchTool implements ArticleSearchToolInterface
     /**
      * @param array<int, float> $semantic
      * @param array<int, float> $keyword
-     *
-     * @return array<int, float>
      */
-    private function combineScores(array $semantic, array $keyword): array
+    private function combineScores(array $semantic, array $keyword): SearchMergeResult
     {
         $combined = [];
+        $sources = [];
         $allIds = array_unique([...array_keys($semantic), ...array_keys($keyword)]);
 
         foreach ($allIds as $id) {
             $score = ($semantic[$id] ?? 0.0) + ($keyword[$id] ?? 0.0);
-            if (isset($semantic[$id], $keyword[$id])) {
+            $inSemantic = isset($semantic[$id]);
+            $inKeyword = isset($keyword[$id]);
+
+            if ($inSemantic && $inKeyword) {
                 $score += self::BOOST_BOTH;
+                $sources[$id] = SearchSource::Hybrid;
+            } elseif ($inSemantic) {
+                $sources[$id] = SearchSource::Semantic;
+            } else {
+                $sources[$id] = SearchSource::Keyword;
             }
+
             $combined[$id] = $score;
         }
 
         arsort($combined);
 
-        return $combined;
+        return new SearchMergeResult($combined, $sources);
     }
 
     /**
-     * @param array<int, float> $scores
-     *
-     * @return list<array{id: int, title: string, summary: string|null, keywords: list<string>, publishedAt: string|null, url: string, score: float}>
+     * @return list<array{id: int, title: string, summary: string|null, keywords: list<string>, publishedAt: string|null, url: string, score: float, searchSource: string}>
      */
-    private function loadAndFormat(array $scores, int $limit): array
+    private function loadAndFormat(SearchMergeResult $mergeResult, int $limit): array
     {
-        $topIds = \array_slice(array_keys($scores), 0, $limit);
+        $topIds = \array_slice(array_keys($mergeResult->scores), 0, $limit);
         $articles = $this->deps->articleRepository->findByIds($topIds);
 
-        return $this->deps->formatter->format($articles, $scores);
+        return $this->deps->formatter->format($articles, $mergeResult->scores, $mergeResult->sources);
+    }
+
+    /**
+     * @param array<int, SearchSource> $sources
+     */
+    private function logSourceDistribution(array $sources): void
+    {
+        $counts = [
+            SearchSource::Keyword->value => 0,
+            SearchSource::Semantic->value => 0,
+            SearchSource::Hybrid->value => 0,
+        ];
+
+        foreach ($sources as $source) {
+            ++$counts[$source->value];
+        }
+
+        $this->logger->info('Search results: {keyword} keyword, {semantic} semantic, {hybrid} hybrid', $counts);
     }
 
     private function resolveSince(?int $daysBack): ?\DateTimeImmutable
