@@ -91,4 +91,65 @@ final class SourceRepository extends ServiceEntityRepository implements SourceRe
 
         return $result !== null ? new \DateTimeImmutable($result) : null;
     }
+
+    public function countAll(): int
+    {
+        return $this->count();
+    }
+
+    public function countDisabled(): int
+    {
+        return $this->count([
+            'enabled' => false,
+        ]);
+    }
+
+    public function countByHealth(): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        /** @var array{healthy: int|string, degraded: int|string, failing: int|string, disabled_health: int|string}|false $result */
+        $result = $conn->executeQuery("
+            SELECT
+                COUNT(*) FILTER (WHERE health_status = 'healthy') AS healthy,
+                COUNT(*) FILTER (WHERE health_status = 'degraded') AS degraded,
+                COUNT(*) FILTER (WHERE health_status = 'failing') AS failing,
+                COUNT(*) FILTER (WHERE health_status = 'disabled') AS disabled_health
+            FROM source
+        ")->fetchAssociative();
+
+        if ($result === false) {
+            return [
+                'healthy' => 0,
+                'degraded' => 0,
+                'failing' => 0,
+                'disabled_health' => 0,
+            ];
+        }
+
+        return [
+            'healthy' => (int) $result['healthy'],
+            'degraded' => (int) $result['degraded'],
+            'failing' => (int) $result['failing'],
+            'disabled_health' => (int) $result['disabled_health'],
+        ];
+    }
+
+    /**
+     * @return list<Source>
+     */
+    public function findAllOrderedByHealth(): array
+    {
+        /** @var list<Source> */
+        return $this->createQueryBuilder('s')
+            ->orderBy("CASE s.healthStatus
+                WHEN 'failing' THEN 0
+                WHEN 'degraded' THEN 1
+                WHEN 'disabled' THEN 2
+                WHEN 'healthy' THEN 3
+                ELSE 4 END", 'ASC')
+            ->addOrderBy('s.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

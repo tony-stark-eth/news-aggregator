@@ -259,4 +259,106 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
     {
         $this->getEntityManager()->clear();
     }
+
+    public function getFullTextStats(): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        /** @var array{total: int|string, fetched: int|string, failed: int|string, pending: int|string, skipped: int|string, no_status: int|string}|false $result */
+        $result = $conn->executeQuery("
+            SELECT
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE full_text_status = 'fetched') AS fetched,
+                COUNT(*) FILTER (WHERE full_text_status = 'failed') AS failed,
+                COUNT(*) FILTER (WHERE full_text_status = 'pending') AS pending,
+                COUNT(*) FILTER (WHERE full_text_status = 'skipped') AS skipped,
+                COUNT(*) FILTER (WHERE full_text_status IS NULL) AS no_status
+            FROM article
+        ")->fetchAssociative();
+
+        if ($result === false) {
+            return [
+                'total' => 0,
+                'fetched' => 0,
+                'failed' => 0,
+                'pending' => 0,
+                'skipped' => 0,
+                'no_status' => 0,
+            ];
+        }
+
+        return [
+            'total' => (int) $result['total'],
+            'fetched' => (int) $result['fetched'],
+            'failed' => (int) $result['failed'],
+            'pending' => (int) $result['pending'],
+            'skipped' => (int) $result['skipped'],
+            'no_status' => (int) $result['no_status'],
+        ];
+    }
+
+    public function getEnrichmentStats(): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        /** @var array{total: int|string, ai: int|string, rule_based: int|string, pending: int|string, complete: int|string, no_method: int|string}|false $result */
+        $result = $conn->executeQuery("
+            SELECT
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE enrichment_method = 'ai') AS ai,
+                COUNT(*) FILTER (WHERE enrichment_method = 'rule_based') AS rule_based,
+                COUNT(*) FILTER (WHERE enrichment_status = 'pending') AS pending,
+                COUNT(*) FILTER (WHERE enrichment_status = 'complete') AS complete,
+                COUNT(*) FILTER (WHERE enrichment_method IS NULL) AS no_method
+            FROM article
+        ")->fetchAssociative();
+
+        if ($result === false) {
+            return [
+                'total' => 0,
+                'ai' => 0,
+                'rule_based' => 0,
+                'pending' => 0,
+                'complete' => 0,
+                'no_method' => 0,
+            ];
+        }
+
+        return [
+            'total' => (int) $result['total'],
+            'ai' => (int) $result['ai'],
+            'rule_based' => (int) $result['rule_based'],
+            'pending' => (int) $result['pending'],
+            'complete' => (int) $result['complete'],
+            'no_method' => (int) $result['no_method'],
+        ];
+    }
+
+    public function getEmbeddingStats(): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        /** @var array{total: int|string, with_embedding: int|string, without_embedding: int|string}|false $result */
+        $result = $conn->executeQuery('
+            SELECT
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE embedding IS NOT NULL) AS with_embedding,
+                COUNT(*) FILTER (WHERE embedding IS NULL) AS without_embedding
+            FROM article
+        ')->fetchAssociative();
+
+        if ($result === false) {
+            return [
+                'total' => 0,
+                'with_embedding' => 0,
+                'without_embedding' => 0,
+            ];
+        }
+
+        return [
+            'total' => (int) $result['total'],
+            'with_embedding' => (int) $result['with_embedding'],
+            'without_embedding' => (int) $result['without_embedding'],
+        ];
+    }
 }

@@ -31,4 +31,18 @@ interface SourceRepositoryInterface
     public function flush(): void;
 
     public function findMostRecentFetchedAt(): ?\DateTimeImmutable;
+
+    public function countAll(): int;
+
+    public function countDisabled(): int;
+
+    /**
+     * @return array{healthy: int, degraded: int, failing: int, disabled_health: int}
+     */
+    public function countByHealth(): array;
+
+    /**
+     * @return list<Source>
+     */
+    public function findAllOrderedByHealth(): array;
 }

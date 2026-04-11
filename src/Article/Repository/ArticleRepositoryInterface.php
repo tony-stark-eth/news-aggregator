@@ -68,4 +68,19 @@ interface ArticleRepositoryInterface
     public function isConnectionHealthy(): bool;
 
     public function clear(): void;
+
+    /**
+     * @return array{total: int, fetched: int, failed: int, pending: int, skipped: int, no_status: int}
+     */
+    public function getFullTextStats(): array;
+
+    /**
+     * @return array{total: int, ai: int, rule_based: int, pending: int, complete: int, no_method: int}
+     */
+    public function getEnrichmentStats(): array;
+
+    /**
+     * @return array{total: int, with_embedding: int, without_embedding: int}
+     */
+    public function getEmbeddingStats(): array;
 }

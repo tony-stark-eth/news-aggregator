@@ -1,0 +1,231 @@
+{% extends 'base.html.twig' %}
+{% block title %}Pipeline Status{% endblock %}
+{% block body %}
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{{ path('app_settings') }}" class="btn btn-ghost btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+        </a>
+        <h1 class="text-2xl font-bold">Pipeline Status</h1>
+    </div>
+
+    <div class="grid gap-6 max-w-4xl">
+
+        {# ── Feed Fetch Pipeline ── #}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm" tabindex="0">
+            <input type="checkbox" checked />
+            <div class="collapse-title text-lg font-semibold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 5c7.18 0 13 5.82 13 13M6 11c4 0 7 3 7 7m-6-1a1 1 0 110-2 1 1 0 010 2z" /></svg>
+                Feed Fetch Pipeline
+                {% if feedStats.failing > 0 %}
+                    <span class="badge badge-error badge-sm">{{ feedStats.failing }} failing</span>
+                {% elseif feedStats.degraded > 0 %}
+                    <span class="badge badge-warning badge-sm">{{ feedStats.degraded }} degraded</span>
+                {% else %}
+                    <span class="badge badge-success badge-sm">healthy</span>
+                {% endif %}
+            </div>
+            <div class="collapse-content">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Total Sources', value: feedStats.total, color: 'base-content'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Enabled', value: feedStats.enabled, color: 'success'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Disabled', value: feedStats.disabled, color: 'base-content/50'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Healthy', value: feedStats.healthy, color: 'success'} %}
+                </div>
+
+                {% if sources|length > 0 %}
+                    <div class="overflow-x-auto">
+                        <table class="table table-xs">
+                            <thead>
+                                <tr>
+                                    <th>Source</th>
+                                    <th>Status</th>
+                                    <th>Last Fetch</th>
+                                    <th>Errors</th>
+                                    <th>Success Rate</th>
+                                    <th>Interval</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for source in sources %}
+                                    <tr class="{{ source.healthStatus.value in ['failing', 'degraded'] ? 'bg-error/5' : '' }}">
+                                        <td>
+                                            <div class="font-medium">{{ source.name }}</div>
+                                            <div class="text-xs text-base-content/50 truncate max-w-48">{{ source.feedUrl }}</div>
+                                        </td>
+                                        <td>
+                                            {% include 'components/_source_health_badge.html.twig' with {health: source.healthStatus.value} %}
+                                            {% if not source.enabled %}
+                                                <span class="badge badge-ghost badge-xs ml-1">off</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-xs">
+                                            {% if source.lastFetchedAt %}
+                                                {{ source.lastFetchedAt|date('M j, H:i') }}
+                                            {% else %}
+                                                <span class="text-base-content/40">never</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if source.errorCount > 0 %}
+                                                <span class="text-error font-medium">{{ source.errorCount }}</span>
+                                                {% if source.lastErrorMessage %}
+                                                    <div class="text-xs text-error/70 truncate max-w-48" title="{{ source.lastErrorMessage }}">{{ source.lastErrorMessage|length > 60 ? source.lastErrorMessage|slice(0, 60) ~ '...' : source.lastErrorMessage }}</div>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-base-content/40">0</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if source.successRate is not null %}
+                                                <span class="{{ source.successRate >= 90 ? 'text-success' : (source.successRate >= 70 ? 'text-warning' : 'text-error') }}">{{ source.successRate }}%</span>
+                                            {% else %}
+                                                <span class="text-base-content/40">n/a</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-xs">{{ source.fetchIntervalMinutes ? source.fetchIntervalMinutes ~ 'min' : 'default' }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    {% include 'components/_empty_state.html.twig' with {message: 'No sources configured yet.'} %}
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── Full-Text Fetch Pipeline ── #}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm" tabindex="0">
+            <input type="checkbox" checked />
+            <div class="collapse-title text-lg font-semibold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                Full-Text Fetch Pipeline
+                {% if fullTextStats.failed > 0 %}
+                    <span class="badge badge-warning badge-sm">{{ fullTextStats.failed }} failed</span>
+                {% else %}
+                    <span class="badge badge-success badge-sm">healthy</span>
+                {% endif %}
+            </div>
+            <div class="collapse-content">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Total Articles', value: fullTextStats.total, color: 'base-content'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Fetched', value: fullTextStats.fetched, color: 'success'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Failed', value: fullTextStats.failed, color: 'error'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Pending', value: fullTextStats.pending, color: 'warning'} %}
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Skipped', value: fullTextStats.skipped, color: 'base-content/50'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'No Status', value: fullTextStats.noStatus, color: 'base-content/50'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Success Rate', value: fullTextStats.successRate ~ '%', color: fullTextStats.successRate >= 90 ? 'success' : (fullTextStats.successRate >= 70 ? 'warning' : 'error')} %}
+                </div>
+
+                {% if fullTextStats.total > 0 %}
+                    <progress class="progress progress-success w-full" value="{{ fullTextStats.fetched }}" max="{{ fullTextStats.total }}"></progress>
+                    <div class="text-xs text-base-content/50 mt-1">
+                        {{ fullTextStats.fetched }} of {{ fullTextStats.total }} articles have full-text content
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── AI Enrichment Pipeline ── #}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm" tabindex="0">
+            <input type="checkbox" checked />
+            <div class="collapse-title text-lg font-semibold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                AI Enrichment Pipeline
+                {% if enrichQueueDepth > 0 %}
+                    <span class="badge badge-warning badge-sm">{{ enrichQueueDepth }} queued</span>
+                {% else %}
+                    <span class="badge badge-success badge-sm">idle</span>
+                {% endif %}
+            </div>
+            <div class="collapse-content">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Total Articles', value: enrichmentStats.total, color: 'base-content'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'AI Enriched', value: enrichmentStats.ai, color: 'success'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Rule-Based', value: enrichmentStats.rule_based, color: 'info'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Pending', value: enrichmentStats.pending, color: 'warning'} %}
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Complete', value: enrichmentStats.complete, color: 'success'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'No Method', value: enrichmentStats.no_method, color: 'base-content/50'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Queue Depth', value: enrichQueueDepth, color: enrichQueueDepth > 20 ? 'error' : (enrichQueueDepth > 0 ? 'warning' : 'success')} %}
+                </div>
+
+                {% if enrichmentStats.total > 0 %}
+                    <progress class="progress progress-info w-full" value="{{ enrichmentStats.ai + enrichmentStats.rule_based }}" max="{{ enrichmentStats.total }}"></progress>
+                    <div class="text-xs text-base-content/50 mt-1">
+                        {{ enrichmentStats.ai + enrichmentStats.rule_based }} of {{ enrichmentStats.total }} articles enriched
+                    </div>
+                {% endif %}
+
+                {% if modelStats.count > 0 %}
+                    <h4 class="font-semibold mt-4 mb-2">Model Usage</h4>
+                    <div class="overflow-x-auto">
+                        <table class="table table-xs">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Accepted</th>
+                                    <th>Rejected</th>
+                                    <th>Acceptance Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for modelId, modelStat in modelStats %}
+                                    <tr>
+                                        <td class="font-mono text-xs">{{ modelId }}</td>
+                                        <td class="text-success">{{ modelStat.accepted }}</td>
+                                        <td class="text-error">{{ modelStat.rejected }}</td>
+                                        <td>
+                                            {% set rate = (modelStat.acceptanceRate * 100)|round(1) %}
+                                            <span class="{{ rate >= 80 ? 'text-success' : (rate >= 50 ? 'text-warning' : 'text-error') }}">{{ rate }}%</span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-sm text-base-content/50 mt-4">No model quality data recorded yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── Embedding Pipeline ── #}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm" tabindex="0">
+            <input type="checkbox" checked />
+            <div class="collapse-title text-lg font-semibold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" /></svg>
+                Embedding Pipeline
+                {% if embeddingStats.with_embedding > 0 %}
+                    <span class="badge badge-success badge-sm">active</span>
+                {% else %}
+                    <span class="badge badge-ghost badge-sm">inactive</span>
+                {% endif %}
+            </div>
+            <div class="collapse-content">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Total Articles', value: embeddingStats.total, color: 'base-content'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'With Embeddings', value: embeddingStats.with_embedding, color: 'success'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Without Embeddings', value: embeddingStats.without_embedding, color: 'base-content/50'} %}
+                </div>
+
+                {% if embeddingStats.total > 0 %}
+                    <progress class="progress progress-accent w-full" value="{{ embeddingStats.with_embedding }}" max="{{ embeddingStats.total }}"></progress>
+                    <div class="text-xs text-base-content/50 mt-1">
+                        {% if embeddingStats.with_embedding == 0 %}
+                            No embeddings generated. Embedding model may not be configured or available.
+                        {% else %}
+                            {{ embeddingStats.with_embedding }} of {{ embeddingStats.total }} articles have embeddings
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </div>
+{% endblock %}
