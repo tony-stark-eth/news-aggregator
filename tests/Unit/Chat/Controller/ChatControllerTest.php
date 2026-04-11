@@ -16,7 +16,6 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\Session\Session;
 use Symfony\Component\HttpFoundation\Session\Storage\MockArraySessionStorage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[CoversNothing]
 final class ChatControllerTest extends TestCase
@@ -139,13 +138,11 @@ final class ChatControllerTest extends TestCase
         self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
     }
 
-    public function testStreamReturnsStreamedResponse(): void
+    public function testStreamReturnsJsonResponseWithConversationId(): void
     {
-        $streamingService = $this->createStub(StreamingChatServiceInterface::class);
-        $streamingService->method('stream')
-            ->willReturnCallback(static function (): \Generator {
-                yield "event: token\ndata: {\"text\":\"Hi\"}\n\n";
-            });
+        $streamingService = $this->createMock(StreamingChatServiceInterface::class);
+        $streamingService->expects(self::once())->method('stream')
+            ->with('Hello', 'conv-1');
 
         $controller = $this->buildController(
             $this->createStub(ArticleChatServiceInterface::class),
@@ -161,10 +158,40 @@ final class ChatControllerTest extends TestCase
 
         $response = $controller->stream($request);
 
-        self::assertInstanceOf(StreamedResponse::class, $response);
-        self::assertSame('text/event-stream', $response->headers->get('Content-Type'));
-        self::assertStringContainsString('no-cache', (string) $response->headers->get('Cache-Control'));
-        self::assertSame('no', $response->headers->get('X-Accel-Buffering'));
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+
+        /** @var array{conversationId: string} $data */
+        $data = json_decode((string) $response->getContent(), true, 512, \JSON_THROW_ON_ERROR);
+        self::assertSame('conv-1', $data['conversationId']);
+    }
+
+    public function testStreamReturnsServerErrorOnException(): void
+    {
+        $streamingService = $this->createStub(StreamingChatServiceInterface::class);
+        $streamingService->method('stream')
+            ->willThrowException(new \RuntimeException('Stream broken'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('error')
+            ->with(
+                self::stringContains('Chat stream failed'),
+                self::callback(static fn (array $ctx): bool => $ctx['error'] === 'Stream broken'),
+            );
+
+        $controller = $this->buildController(
+            $this->createStub(ArticleChatServiceInterface::class),
+            $logger,
+            $streamingService,
+        );
+
+        $request = Request::create('/chat/stream', 'POST', content: json_encode([
+            'message' => 'Hello',
+            'conversationId' => 'conv-err',
+        ], \JSON_THROW_ON_ERROR));
+        $request->setSession(new Session(new MockArraySessionStorage()));
+
+        $response = $controller->stream($request);
+        self::assertSame(Response::HTTP_INTERNAL_SERVER_ERROR, $response->getStatusCode());
     }
 
     public function testStreamReturnsBadRequestForEmptyBody(): void

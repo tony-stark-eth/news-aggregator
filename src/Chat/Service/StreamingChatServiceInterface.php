@@ -7,12 +7,10 @@ namespace App\Chat\Service;
 interface StreamingChatServiceInterface
 {
     /**
-     * Stream a chat response token by token.
+     * Stream a chat response, publishing tokens to Mercure as they arrive.
      *
      * Phase 1: searches articles (non-streaming).
-     * Phase 2: streams synthesis via platform SSE.
-     *
-     * @return \Generator<int, string> yields SSE-formatted lines
+     * Phase 2: streams synthesis via platform, publishing tokens to Mercure.
      */
-    public function stream(string $userMessage, string $conversationId): \Generator;
+    public function stream(string $userMessage, string $conversationId): void;
 }
