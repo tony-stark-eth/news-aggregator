@@ -15,12 +15,12 @@ use Symfony\Component\Scheduler\Trigger\PeriodicalTrigger;
 #[CoversClass(MaintenanceScheduleProvider::class)]
 final class MaintenanceScheduleProviderTest extends TestCase
 {
-    public function testScheduleContainsThreeRecurringMessages(): void
+    public function testScheduleContainsFourRecurringMessages(): void
     {
         $provider = new MaintenanceScheduleProvider();
         $schedule = $provider->getSchedule();
 
-        self::assertCount(3, $schedule->getRecurringMessages());
+        self::assertCount(4, $schedule->getRecurringMessages());
     }
 
     public function testScheduleIncludesAllMaintenanceTasks(): void
@@ -33,6 +33,7 @@ final class MaintenanceScheduleProviderTest extends TestCase
         self::assertContains('app:search-reindex', $commands);
         self::assertContains('app:cleanup', $commands);
         self::assertContains('app:embed-articles --limit=500', $commands);
+        self::assertContains('app:backfill-sentiment --limit=500', $commands);
     }
 
     /**

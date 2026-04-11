@@ -11,6 +11,7 @@ use App\Chat\Store\ConversationMessageStoreInterface;
 use App\Chat\Tool\ArticleSearchToolInterface;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelQualityCategory;
+use App\Shared\Service\SettingsServiceInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -592,7 +593,13 @@ final class StreamingChatServiceTest extends TestCase
         ?ModelQualityTrackerInterface $tracker = null,
         ?LoggerInterface $logger = null,
         ?ChatStreamPublisherInterface $publisher = null,
+        ?SettingsServiceInterface $settingsOverride = null,
     ): StreamingChatService {
+        if (! $settingsOverride instanceof SettingsServiceInterface) {
+            $settingsOverride = $this->createStub(SettingsServiceInterface::class);
+            $settingsOverride->method('getSentimentSlider')->willReturn(0);
+        }
+
         return new StreamingChatService(
             $store,
             $platform,
@@ -601,6 +608,7 @@ final class StreamingChatServiceTest extends TestCase
             $tracker ?? $this->createStub(ModelQualityTrackerInterface::class),
             $logger ?? $this->createStub(LoggerInterface::class),
             $publisher ?? $this->createStub(ChatStreamPublisherInterface::class),
+            $settingsOverride,
         );
     }
 

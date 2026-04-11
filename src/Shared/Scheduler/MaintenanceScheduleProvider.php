@@ -31,6 +31,12 @@ final class MaintenanceScheduleProvider implements ScheduleProviderInterface
             RecurringMessage::every('10 minutes', new RunCommandMessage('app:embed-articles --limit=500')),
         );
 
+        // Backfill sentiment scores for articles without one.
+        // Uses rule-based scoring directly (fast, no async needed); becomes a no-op once all articles are scored.
+        $schedule->add(
+            RecurringMessage::every('10 minutes', new RunCommandMessage('app:backfill-sentiment --limit=500')),
+        );
+
         return $schedule;
     }
 }

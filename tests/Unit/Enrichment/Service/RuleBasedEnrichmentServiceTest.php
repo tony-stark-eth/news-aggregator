@@ -225,6 +225,69 @@ final class RuleBasedEnrichmentServiceTest extends TestCase
         self::assertNull($article->getKeywords());
     }
 
+    public function testEnrichAppliesSentimentScore(): void
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $source = $this->createSource($category);
+        $article = $this->createArticle($source);
+        $item = new FeedItem('Major breakthrough in science', 'https://example.com/7', null, 'A success story', null);
+
+        $categorization = $this->createStub(CategorizationServiceInterface::class);
+        $categorization->method('categorize')->willReturn(new EnrichmentResult(null, EnrichmentMethod::RuleBased));
+
+        $categoryRepo = $this->createStub(CategoryRepositoryInterface::class);
+
+        $summarization = $this->createStub(SummarizationServiceInterface::class);
+        $summarization->method('summarize')->willReturn(new EnrichmentResult(null, EnrichmentMethod::RuleBased));
+
+        $keywords = $this->createStub(KeywordExtractionServiceInterface::class);
+        $keywords->method('extract')->willReturn([]);
+
+        $sentimentScoring = $this->createMock(SentimentScoringServiceInterface::class);
+        $sentimentScoring->expects(self::once())
+            ->method('score')
+            ->with('Major breakthrough in science', 'A success story')
+            ->willReturn(0.6);
+
+        $scoring = $this->createStub(ScoringServiceInterface::class);
+        $scoring->method('score')->willReturn(0.5);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
+        $service->enrich($article, $item, $source);
+
+        self::assertSame(0.6, $article->getSentimentScore());
+    }
+
+    public function testEnrichSkipsSentimentWhenNull(): void
+    {
+        $category = new Category('Tech', 'tech', 10, '#3B82F6');
+        $source = $this->createSource($category);
+        $article = $this->createArticle($source);
+        $item = new FeedItem('Neutral title', 'https://example.com/8', null, null, null);
+
+        $categorization = $this->createStub(CategorizationServiceInterface::class);
+        $categorization->method('categorize')->willReturn(new EnrichmentResult(null, EnrichmentMethod::RuleBased));
+
+        $categoryRepo = $this->createStub(CategoryRepositoryInterface::class);
+
+        $summarization = $this->createStub(SummarizationServiceInterface::class);
+        $summarization->method('summarize')->willReturn(new EnrichmentResult(null, EnrichmentMethod::RuleBased));
+
+        $keywords = $this->createStub(KeywordExtractionServiceInterface::class);
+        $keywords->method('extract')->willReturn([]);
+
+        $sentimentScoring = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentScoring->method('score')->willReturn(null);
+
+        $scoring = $this->createStub(ScoringServiceInterface::class);
+        $scoring->method('score')->willReturn(0.3);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
+        $service->enrich($article, $item, $source);
+
+        self::assertNull($article->getSentimentScore());
+    }
+
     private function createSource(Category $category): Source
     {
         return new Source('Test', 'https://example.com/feed', $category, new \DateTimeImmutable());

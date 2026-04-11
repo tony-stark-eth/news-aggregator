@@ -102,4 +102,96 @@ final class RuleBasedSentimentScoringServiceTest extends TestCase
         self::assertNotNull($score);
         self::assertGreaterThan(0.0, $score);
     }
+
+    public function testTitleWeightIsDoubled(): void
+    {
+        // "breakthrough" in title only: positiveCount = 1*2 (title weight), negativeCount = 0
+        // raw = (2-0)/2 = 1.0, capped to 0.8
+        $score = $this->service->score('breakthrough announced', null);
+
+        self::assertSame(0.8, $score);
+    }
+
+    public function testContentOnlyWeight(): void
+    {
+        // "breakthrough" in content only: positiveCount = 1*1 (content weight), negativeCount = 0
+        // raw = (1-0)/1 = 1.0, capped to 0.8
+        $score = $this->service->score('Neutral title', 'A major breakthrough today');
+
+        self::assertSame(0.8, $score);
+    }
+
+    public function testExactBalancedScore(): void
+    {
+        // "success" (positive) + "crisis" (negative) both in title
+        // positiveCount = 1*2, negativeCount = 1*2
+        // raw = (2-2)/4 = 0.0
+        $score = $this->service->score('success amid crisis', null);
+
+        self::assertSame(0.0, $score);
+    }
+
+    public function testNegativeOnlyReturnsExactCap(): void
+    {
+        // Only negative keywords → raw = -1.0, capped at -0.8
+        $score = $this->service->score('terrible crisis', null);
+
+        self::assertSame(-0.8, $score);
+    }
+
+    public function testMbStrtolowerHandlesUmlauts(): void
+    {
+        // "ERFOLG" (success in German with umlauts) — tests that mb_strtolower is used
+        // Our keywords are English, so use uppercase English keywords
+        // "BREAKTHROUGH" must match "breakthrough" keyword via mb_strtolower
+        $score = $this->service->score('ÜBERRASCHUNG: BREAKTHROUGH', null);
+
+        self::assertNotNull($score);
+        self::assertGreaterThan(0.0, $score);
+    }
+
+    public function testContentPositiveMatchesAddToTitlePositiveMatches(): void
+    {
+        // Title: "success" (positive, weight 2=2), "crisis" (negative, weight 2=2)
+        // Content: "breakthrough" (positive, weight 1=1)
+        // positiveCount = 2 + 1 = 3, negativeCount = 2
+        // raw = (3-2)/(3+2) = 0.2
+        $score = $this->service->score('A success despite crisis', 'The breakthrough happened');
+
+        self::assertNotNull($score);
+        self::assertEqualsWithDelta(0.2, $score, 0.01);
+    }
+
+    public function testContentNegativeMatchesAddToTitleNegativeMatches(): void
+    {
+        // Title: "crisis" (negative, weight 2=2), "success" (positive, weight 2=2)
+        // Content: "crash" (negative, weight 1=1)
+        // negativeCount = 2 + 1 = 3, positiveCount = 2
+        // raw = (2-3)/(2+3) = -0.2
+        $score = $this->service->score('Success before the crisis', 'The crash was unexpected');
+
+        self::assertNotNull($score);
+        self::assertEqualsWithDelta(-0.2, $score, 0.01);
+    }
+
+    public function testTitleAndContentNegativeMatches(): void
+    {
+        // Title: "crisis" (negative, weight 2), content: "crash" (negative, weight 1)
+        // negativeCount = 2 + 1 = 3, positiveCount = 0
+        // raw = -3/3 = -1.0, capped to -0.8
+        $score = $this->service->score('The crisis deepens', 'Markets crash badly');
+
+        self::assertSame(-0.8, $score);
+    }
+
+    public function testCounterIncrements(): void
+    {
+        // Two positive keywords in title: "success" and "win" → 2*2 = 4 positive
+        // One negative keyword in title: "crisis" → 1*2 = 2 negative
+        // raw = (4-2)/6 = 0.333...
+        $score = $this->service->score('success and win despite crisis', null);
+
+        self::assertNotNull($score);
+        self::assertEqualsWithDelta(0.333, $score, 0.01);
+    }
 }
