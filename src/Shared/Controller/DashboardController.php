@@ -8,6 +8,7 @@ use App\Article\Entity\Article;
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Shared\Repository\CategoryRepositoryInterface;
+use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
 use App\User\Repository\UserArticleBookmarkRepositoryInterface;
@@ -29,6 +30,7 @@ final class DashboardController
         private readonly SourceRepositoryInterface $sourceRepository,
         private readonly CategoryRepositoryInterface $categoryRepository,
         private readonly NotificationLogRepositoryInterface $notificationLogRepository,
+        private readonly SettingsServiceInterface $settingsService,
         private readonly ClockInterface $clock,
     ) {
     }
@@ -52,6 +54,8 @@ final class DashboardController
 
         $user = $this->controller->getUser();
 
+        $sentimentSlider = $this->settingsService->getSentimentSlider();
+
         $articles = $this->articleRepository->findPaginated(
             $category,
             $unreadOnly && $user instanceof User ? $user : null,
@@ -59,6 +63,7 @@ final class DashboardController
             $limit,
             $source,
             $bookmarkedOnly && $user instanceof User ? $user : null,
+            $sentimentSlider !== 0 ? $sentimentSlider : null,
         );
 
         // Build read-state and bookmark-state sets for the current user

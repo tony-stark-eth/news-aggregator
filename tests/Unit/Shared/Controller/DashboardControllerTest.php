@@ -8,6 +8,7 @@ use App\Article\Repository\ArticleRepositoryInterface;
 use App\Notification\Repository\NotificationLogRepositoryInterface;
 use App\Shared\Controller\DashboardController;
 use App\Shared\Repository\CategoryRepositoryInterface;
+use App\Shared\Service\SettingsServiceInterface;
 use App\Source\Repository\SourceRepositoryInterface;
 use App\User\Entity\User;
 use App\User\Repository\UserArticleBookmarkRepositoryInterface;
@@ -71,6 +72,8 @@ final class DashboardControllerTest extends TestCase
         $this->sourceRepository = $this->createMock(SourceRepositoryInterface::class);
         $this->categoryRepository = $this->createMock(CategoryRepositoryInterface::class);
         $this->notificationLogRepository = $this->createMock(NotificationLogRepositoryInterface::class);
+        $settingsService = $this->createStub(SettingsServiceInterface::class);
+        $settingsService->method('getSentimentSlider')->willReturn(0);
         $this->clock = new MockClock(new \DateTimeImmutable('2026-04-06 14:30:00', new \DateTimeZone('UTC')));
 
         $this->controller = new DashboardController(
@@ -81,6 +84,7 @@ final class DashboardControllerTest extends TestCase
             $this->sourceRepository,
             $this->categoryRepository,
             $this->notificationLogRepository,
+            $settingsService,
             $this->clock,
         );
     }

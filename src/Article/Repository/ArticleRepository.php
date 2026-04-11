@@ -9,6 +9,7 @@ use App\User\Entity\User;
 use App\User\Entity\UserArticleBookmark;
 use App\User\Entity\UserArticleRead;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -117,15 +118,15 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
     /**
      * @return list<Article>
      */
-    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit, ?int $sourceId = null, ?User $bookmarkedForUser = null): array
+    public function findPaginated(?string $categorySlug, ?User $unreadForUser, int $page, int $limit, ?int $sourceId = null, ?User $bookmarkedForUser = null, ?int $sentimentSlider = null): array
     {
         $qb = $this->createQueryBuilder('a')
             ->leftJoin('a.category', 'c')
             ->leftJoin('a.source', 's')
-            ->orderBy('CASE WHEN a.publishedAt IS NOT NULL THEN a.publishedAt ELSE a.fetchedAt END', 'DESC')
-            ->addOrderBy('a.score', 'DESC')
             ->setFirstResult(($page - 1) * $limit)
             ->setMaxResults($limit);
+
+        $this->applySentimentOrdering($qb, $sentimentSlider);
 
         if ($categorySlug !== null && $categorySlug !== '') {
             $qb->andWhere('c.slug = :cat')->setParameter('cat', $categorySlug);
@@ -382,5 +383,35 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             'with_embedding' => (int) $result['with_embedding'],
             'without_embedding' => (int) $result['without_embedding'],
         ];
+    }
+
+    private function applySentimentOrdering(QueryBuilder $qb, ?int $sentimentSlider): void
+    {
+        if ($sentimentSlider === null || $sentimentSlider === 0) {
+            $qb->orderBy('CASE WHEN a.publishedAt IS NOT NULL THEN a.publishedAt ELSE a.fetchedAt END', 'DESC')
+                ->addOrderBy('a.score', 'DESC');
+
+            return;
+        }
+
+        $sliderFactor = $sentimentSlider / 10.0;
+
+        // At ±6-10: filter out opposite sentiment articles (null sentiment always included)
+        if (abs($sentimentSlider) >= 6) {
+            if ($sentimentSlider > 0) {
+                $qb->andWhere('a.sentimentScore IS NULL OR a.sentimentScore >= :sentimentThreshold')
+                    ->setParameter('sentimentThreshold', -0.3);
+            } else {
+                $qb->andWhere('a.sentimentScore IS NULL OR a.sentimentScore <= :sentimentThreshold')
+                    ->setParameter('sentimentThreshold', 0.3);
+            }
+        }
+
+        // Boost matching sentiment via ORDER BY: sentiment_boost = COALESCE(sentiment_score, 0) * sliderFactor
+        $qb->addSelect('(COALESCE(a.sentimentScore, 0) * :sliderFactor) AS HIDDEN sentimentBoost')
+            ->setParameter('sliderFactor', $sliderFactor)
+            ->orderBy('sentimentBoost', 'DESC')
+            ->addOrderBy('CASE WHEN a.publishedAt IS NOT NULL THEN a.publishedAt ELSE a.fetchedAt END', 'DESC')
+            ->addOrderBy('a.score', 'DESC');
     }
 }
