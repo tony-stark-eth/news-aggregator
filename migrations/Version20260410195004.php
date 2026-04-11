@@ -17,7 +17,7 @@ final class Version20260410195004 extends AbstractMigration
     public function up(Schema $schema): void
     {
         $this->addSql('CREATE EXTENSION IF NOT EXISTS vector');
-        $this->addSql('ALTER TABLE article ADD embedding vector(1536) DEFAULT NULL');
+        $this->addSql('ALTER TABLE article ADD embedding vector(2048) DEFAULT NULL');
     }
 
     public function down(Schema $schema): void

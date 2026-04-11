@@ -94,7 +94,7 @@ final class StreamingChatServiceTest extends TestCase
         self::assertStringContainsString('"searchSource":"hybrid"', $doneChunks[0]);
     }
 
-    public function testStreamHandlesNonStreamResult(): void
+    public function testStreamHandlesSingleChunkResponse(): void
     {
         $store = $this->createMock(ConversationMessageStoreInterface::class);
         $store->expects(self::once())->method('load')->willReturn(new MessageBag());
@@ -105,7 +105,9 @@ final class StreamingChatServiceTest extends TestCase
 
         $platform = $this->createStub(PlatformInterface::class);
         $platform->method('invoke')
-            ->willReturn($this->createDeferredForText(new TextResult('Full answer')));
+            ->willReturn($this->createDeferredForStream(
+                new StreamResult($this->textGenerator(['Full answer'])),
+            ));
 
         $service = $this->buildService($store, $platform, $searchTool);
         $chunks = iterator_to_array($service->stream('Hello', 'conv-2'), false);
@@ -619,10 +621,11 @@ final class StreamingChatServiceTest extends TestCase
 
     private function createDeferredForText(TextResult $textResult): DeferredResult
     {
-        $converter = $this->createStub(ResultConverterInterface::class);
-        $converter->method('convert')->willReturn($textResult);
-        $converter->method('getTokenUsageExtractor')->willReturn(null);
+        $text = $textResult->getContent();
+        $generator = (static function () use ($text): \Generator {
+            yield $text;
+        })();
 
-        return new DeferredResult($converter, new InMemoryRawResult([]));
+        return $this->createDeferredForStream(new StreamResult($generator));
     }
 }

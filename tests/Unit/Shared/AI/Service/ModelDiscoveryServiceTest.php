@@ -934,106 +934,29 @@ final class ModelDiscoveryServiceTest extends TestCase
 
         self::assertCount(2, $models);
         $values = array_map(static fn (ModelId $m): string => $m->value, $models->toArray());
-        self::assertContains('embedding-model-1', $values);
-        self::assertContains('embedding-model-2', $values);
+        self::assertContains('nvidia/llama-nemotron-embed-vl-1b-v2:free', $values);
+        self::assertContains('qwen/qwen3-embedding-0.6b:free', $values);
         self::assertNotContains('no-embed-model', $values);
-        self::assertNotContains('paid-embed-model', $values);
     }
 
-    public function testEmbeddingFiltersModelsWithoutEmbeddingModality(): void
+    public function testEmbeddingReturnsKnownModels(): void
     {
-        $service = $this->createService($this->clientWithModels([
-            [
-                'id' => 'has-embedding',
-                'context_length' => 8192,
-                'pricing' => [
-                    'prompt' => '0',
-                    'completion' => '0',
-                ],
-                'output_modalities' => ['embeddings'],
-            ],
-            [
-                'id' => 'text-only',
-                'context_length' => 8192,
-                'pricing' => [
-                    'prompt' => '0',
-                    'completion' => '0',
-                ],
-                'output_modalities' => ['text'],
-            ],
-            [
-                'id' => 'no-modalities',
-                'context_length' => 8192,
-                'pricing' => [
-                    'prompt' => '0',
-                    'completion' => '0',
-                ],
-            ],
-        ]));
+        // Embedding models are hardcoded — no API call needed
+        $service = $this->createService(new MockHttpClient());
 
         $models = $service->discoverEmbeddingModels();
 
-        self::assertCount(1, $models);
-        $first = $models->first();
-        self::assertInstanceOf(ModelId::class, $first);
-        self::assertSame('has-embedding', $first->value);
-    }
-
-    public function testEmbeddingFiltersPaidModels(): void
-    {
-        $service = $this->createService($this->clientWithModels([
-            [
-                'id' => 'free-embed',
-                'context_length' => 8192,
-                'pricing' => [
-                    'prompt' => '0',
-                    'completion' => '0',
-                ],
-                'output_modalities' => ['embeddings'],
-            ],
-            [
-                'id' => 'paid-embed',
-                'context_length' => 8192,
-                'pricing' => [
-                    'prompt' => '0.001',
-                    'completion' => '0',
-                ],
-                'output_modalities' => ['embeddings'],
-            ],
-        ]));
-
-        $models = $service->discoverEmbeddingModels();
-
-        self::assertCount(1, $models);
-        $first = $models->first();
-        self::assertInstanceOf(ModelId::class, $first);
-        self::assertSame('free-embed', $first->value);
+        self::assertCount(2, $models);
+        $values = array_map(static fn (ModelId $m): string => $m->value, $models->toArray());
+        self::assertContains('nvidia/llama-nemotron-embed-vl-1b-v2:free', $values);
+        self::assertContains('qwen/qwen3-embedding-0.6b:free', $values);
     }
 
     public function testEmbeddingFiltersBlockedModels(): void
     {
         $service = $this->createService(
-            $this->clientWithModels([
-                [
-                    'id' => 'good-embed',
-                    'context_length' => 8192,
-                    'pricing' => [
-                        'prompt' => '0',
-                        'completion' => '0',
-                    ],
-                    'output_modalities' => ['embeddings'],
-                ],
-                [
-                    'id' => 'blocked-embed',
-                    'context_length' => 8192,
-                    'pricing' => [
-                        'prompt' => '0',
-                        'completion' => '0',
-                    ],
-                    'output_modalities' => ['embeddings'],
-                ],
-            ]),
-            blockedModels: 'blocked-embed',
+            new MockHttpClient(),
+            blockedModels: 'nvidia/llama-nemotron-embed-vl-1b-v2:free',
         );
 
         $models = $service->discoverEmbeddingModels();
@@ -1041,24 +964,26 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertCount(1, $models);
         $first = $models->first();
         self::assertInstanceOf(ModelId::class, $first);
-        self::assertSame('good-embed', $first->value);
+        self::assertSame('qwen/qwen3-embedding-0.6b:free', $first->value);
     }
 
     public function testEmbeddingCachesResults(): void
     {
-        $callCount = 0;
-        $factory = function () use (&$callCount): MockResponse {
-            $callCount++;
+        $cache = new ArrayAdapter();
+        $service = $this->createService(new MockHttpClient(), cache: $cache);
 
-            return new MockResponse($this->embeddingModelsJson());
-        };
+        // First call populates cache
+        $models1 = $service->discoverEmbeddingModels();
 
-        $service = $this->createService(new MockHttpClient($factory));
+        // Verify cache is populated
+        $cacheItem = $cache->getItem(self::EMBEDDING_CACHE_KEY);
+        self::assertTrue($cacheItem->isHit());
 
-        $service->discoverEmbeddingModels();
-        $service->discoverEmbeddingModels();
+        // Second call returns same results from cache
+        $models2 = $service->discoverEmbeddingModels();
 
-        self::assertSame(1, $callCount);
+        self::assertCount(2, $models1);
+        self::assertCount(2, $models2);
     }
 
     public function testEmbeddingCacheStoresModelIds(): void
@@ -1073,53 +998,27 @@ final class ModelDiscoveryServiceTest extends TestCase
 
         /** @var list<string> $cached */
         $cached = $cacheItem->get();
-        self::assertContains('embedding-model-1', $cached);
-        self::assertContains('embedding-model-2', $cached);
+        self::assertContains('nvidia/llama-nemotron-embed-vl-1b-v2:free', $cached);
+        self::assertContains('qwen/qwen3-embedding-0.6b:free', $cached);
     }
 
-    public function testEmbeddingCircuitBreakerIsIndependent(): void
+    public function testEmbeddingNeverTriggersCircuitBreaker(): void
     {
         $cache = new ArrayAdapter();
         $clock = new MockClock('2026-01-01 00:00:00');
 
-        // Open the FREE models breaker
-        $this->setBreakerState($cache, CircuitBreakerState::Open, openedAt: $clock->now()->getTimestamp());
-
-        // Embedding breaker should still be closed — API call should happen
-        $apiCallCount = 0;
-        $factory = function () use (&$apiCallCount): MockResponse {
-            $apiCallCount++;
-
-            return new MockResponse($this->embeddingModelsJson());
-        };
-
-        $service = $this->createService(new MockHttpClient($factory), cache: $cache, clock: $clock);
-        $models = $service->discoverEmbeddingModels();
-
-        self::assertSame(1, $apiCallCount);
-        self::assertCount(2, $models);
-    }
-
-    public function testEmbeddingBreakerOpensIndependently(): void
-    {
-        $cache = new ArrayAdapter();
-        $clock = new MockClock('2026-01-01 00:00:00');
-
-        // Three failures on embedding should open its own breaker
+        // Even with a failing HTTP client, embedding discovery uses hardcoded models
+        // and never makes API calls, so the breaker should never open
         for ($i = 0; $i < 3; $i++) {
             $service = $this->createService($this->failingClient(), cache: $cache, clock: $clock);
             $service->discoverEmbeddingModels();
         }
 
-        // Verify embedding breaker is open
+        // Verify embedding breaker is NOT open (no API failures occurred)
         $embeddingBreakerItem = $cache->getItem(self::EMBEDDING_BREAKER_KEY);
-        self::assertTrue($embeddingBreakerItem->isHit());
+        self::assertFalse($embeddingBreakerItem->isHit());
 
-        /** @var array{state: string, failures: int, opened_at: ?int} $data */
-        $data = $embeddingBreakerItem->get();
-        self::assertSame(CircuitBreakerState::Open->value, $data['state']);
-
-        // Verify free models breaker is still closed (not in cache)
+        // Verify free models breaker is also still closed
         $freeBreakerItem = $cache->getItem(self::BREAKER_KEY);
         self::assertFalse($freeBreakerItem->isHit());
     }
@@ -1166,28 +1065,6 @@ final class ModelDiscoveryServiceTest extends TestCase
         self::assertCount(0, $models);
     }
 
-    public function testEmbeddingDoesNotFilterByContextLength(): void
-    {
-        $service = $this->createService($this->clientWithModels([
-            [
-                'id' => 'small-context-embed',
-                'context_length' => 512,
-                'pricing' => [
-                    'prompt' => '0',
-                    'completion' => '0',
-                ],
-                'output_modalities' => ['embeddings'],
-            ],
-        ]));
-
-        $models = $service->discoverEmbeddingModels();
-
-        self::assertCount(1, $models);
-        $first = $models->first();
-        self::assertInstanceOf(ModelId::class, $first);
-        self::assertSame('small-context-embed', $first->value);
-    }
-
     public function testEmbeddingLoggerInfoOnSuccessfulDiscovery(): void
     {
         $logger = $this->createMock(LoggerInterface::class);
@@ -1206,19 +1083,12 @@ final class ModelDiscoveryServiceTest extends TestCase
         $service->discoverEmbeddingModels();
     }
 
-    public function testEmbeddingReturnsEmptyWhenNoEmbeddingModelsExist(): void
+    public function testEmbeddingReturnsEmptyWhenAllKnownModelsBlocked(): void
     {
-        $service = $this->createService($this->clientWithModels([
-            [
-                'id' => 'text-model',
-                'context_length' => 32768,
-                'pricing' => [
-                    'prompt' => '0',
-                    'completion' => '0',
-                ],
-                'output_modalities' => ['text'],
-            ],
-        ]));
+        $service = $this->createService(
+            new MockHttpClient(),
+            blockedModels: 'nvidia/llama-nemotron-embed-vl-1b-v2:free, qwen/qwen3-embedding-0.6b:free',
+        );
 
         $models = $service->discoverEmbeddingModels();
 
@@ -1429,13 +1299,12 @@ final class ModelDiscoveryServiceTest extends TestCase
         return json_encode([
             'data' => [
                 [
-                    'id' => 'embedding-model-1',
+                    'id' => 'nvidia/llama-nemotron-embed-vl-1b-v2:free',
                     'context_length' => 8192,
                     'pricing' => [
                         'prompt' => '0',
                         'completion' => '0',
                     ],
-                    'output_modalities' => ['embeddings'],
                 ],
                 [
                     'id' => 'no-embed-model',
@@ -1444,25 +1313,14 @@ final class ModelDiscoveryServiceTest extends TestCase
                         'prompt' => '0',
                         'completion' => '0',
                     ],
-                    'output_modalities' => ['text'],
                 ],
                 [
-                    'id' => 'paid-embed-model',
-                    'context_length' => 8192,
-                    'pricing' => [
-                        'prompt' => '0.001',
-                        'completion' => '0',
-                    ],
-                    'output_modalities' => ['embeddings'],
-                ],
-                [
-                    'id' => 'embedding-model-2',
+                    'id' => 'qwen/qwen3-embedding-0.6b:free',
                     'context_length' => 4096,
                     'pricing' => [
                         'prompt' => '0',
                         'completion' => '0',
                     ],
-                    'output_modalities' => ['embeddings'],
                 ],
             ],
         ], JSON_THROW_ON_ERROR);

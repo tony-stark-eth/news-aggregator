@@ -22,7 +22,13 @@
 	}
 
 	root /app/public
-	encode zstd br gzip
+
+	# Disable compression for SSE endpoints (compression buffers the entire response)
+	@notSSE {
+		not path /chat/stream
+		not path /.well-known/mercure*
+	}
+	encode @notSSE zstd br gzip
 
 	mercure {
 		# Publisher JWT key

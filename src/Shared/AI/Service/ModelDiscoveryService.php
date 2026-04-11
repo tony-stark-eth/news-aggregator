@@ -342,25 +342,24 @@ final class ModelDiscoveryService implements ModelDiscoveryServiceInterface
 
     private function fetchEmbeddingModels(): ModelIdCollection
     {
-        ['models' => $models, 'blockedList' => $blockedList] = $this->fetchModelData();
+        // OpenRouter does not list embedding models in /api/v1/models at all.
+        // Use hardcoded known free embedding models, filtering only by blocked list.
+        $knownEmbeddingModels = [
+            'nvidia/llama-nemotron-embed-vl-1b-v2:free',
+            'qwen/qwen3-embedding-0.6b:free',
+        ];
+
+        $blockedList = $this->blockedModels !== ''
+            ? array_map('trim', explode(',', $this->blockedModels))
+            : [];
 
         $embeddingModels = [];
-        foreach ($models as $model) {
-            if (! $this->isFreeModel($model)) {
+        foreach ($knownEmbeddingModels as $modelId) {
+            if (in_array($modelId, $blockedList, true)) {
                 continue;
             }
 
-            if (in_array($model['id'], $blockedList, true)) {
-                continue;
-            }
-
-            /** @var list<string> $modalities */
-            $modalities = $model['output_modalities'] ?? [];
-            if (! in_array('embeddings', $modalities, true)) {
-                continue;
-            }
-
-            $embeddingModels[] = new ModelId($model['id']);
+            $embeddingModels[] = new ModelId($modelId);
         }
 
         return new ModelIdCollection($embeddingModels);

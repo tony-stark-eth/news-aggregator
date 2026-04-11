@@ -6,7 +6,6 @@ namespace App\Tests\Unit\Shared\Controller;
 
 use App\Article\Repository\ArticleRepositoryInterface;
 use App\Shared\AI\Service\ModelQualityTrackerInterface;
-use App\Shared\AI\ValueObject\ModelQualityCategory;
 use App\Shared\AI\ValueObject\ModelQualityStatsMap;
 use App\Shared\Controller\PipelineStatusController;
 use App\Shared\Service\QueueDepthServiceInterface;
@@ -85,17 +84,21 @@ final class PipelineStatusControllerTest extends TestCase
 
         $this->queueDepthService->method('getEnrichQueueDepth')->willReturn(3);
         $this->modelQualityTracker->method('getStatsByCategory')
-            ->with(ModelQualityCategory::Enrichment)
             ->willReturn(new ModelQualityStatsMap([]));
 
         $expectedResponse = new Response('ok');
         $this->controllerHelper->expects(self::once())
             ->method('render')
             ->with('settings/pipelines.html.twig', self::callback(static function (array $params): bool {
+                /** @var array{total: int, enabled: int} $feedStats */
+                $feedStats = $params['feedStats'];
+                /** @var array{successRate: float} $fullTextStats */
+                $fullTextStats = $params['fullTextStats'];
+
                 return isset($params['feedStats'], $params['sources'], $params['fullTextStats'], $params['enrichmentStats'], $params['enrichQueueDepth'], $params['modelStats'], $params['embeddingStats'])
-                    && $params['feedStats']['total'] === 5
-                    && $params['feedStats']['enabled'] === 4
-                    && $params['fullTextStats']['successRate'] === 94.1
+                    && $feedStats['total'] === 5
+                    && $feedStats['enabled'] === 4
+                    && $fullTextStats['successRate'] === 94.1
                     && $params['enrichQueueDepth'] === 3;
             }))
             ->willReturn($expectedResponse);
@@ -146,7 +149,10 @@ final class PipelineStatusControllerTest extends TestCase
         $this->controllerHelper->expects(self::once())
             ->method('render')
             ->with('settings/pipelines.html.twig', self::callback(static function (array $params): bool {
-                return $params['fullTextStats']['successRate'] === 0.0;
+                /** @var array{successRate: float} $fullTextStats */
+                $fullTextStats = $params['fullTextStats'];
+
+                return $fullTextStats['successRate'] === 0.0;
             }))
             ->willReturn(new Response('ok'));
 

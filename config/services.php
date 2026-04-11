@@ -11,6 +11,7 @@ use App\Chat\Service\ArticleChatService;
 use App\Chat\Service\ArticleChatServiceInterface;
 use App\Chat\Service\ChatModelResolver;
 use App\Chat\Service\ChatModelResolverInterface;
+use App\Chat\Service\EmbeddingService;
 use App\Chat\Service\StreamingChatService;
 use App\Chat\Service\StreamingChatServiceInterface;
 use App\Chat\Store\ConversationMessageStore;
@@ -202,6 +203,10 @@ return static function (ContainerConfigurator $container): void {
     // Wire OPENROUTER_BLOCKED_MODELS env var for ModelDiscoveryService
     $services->set(ModelDiscoveryService::class)
         ->arg('$blockedModels', '%env(string:OPENROUTER_BLOCKED_MODELS)%');
+
+    // Wire OpenRouter API key for embedding requests
+    $services->set(EmbeddingService::class)
+        ->arg('$openRouterApiKey', '%env(string:OPENROUTER_API_KEY)%');
 
     // Wire AI stats controller with blocked models and paid fallback model
     $services->set(AiStatsController::class)

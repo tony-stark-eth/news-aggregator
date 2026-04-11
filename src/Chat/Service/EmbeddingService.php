@@ -18,11 +18,19 @@ final readonly class EmbeddingService implements EmbeddingServiceInterface
         private ModelDiscoveryServiceInterface $modelDiscovery,
         private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
+        #[\SensitiveParameter]
+        private string $openRouterApiKey = '',
     ) {
     }
 
     public function embed(string $text): ?array
     {
+        if ($this->openRouterApiKey === '') {
+            $this->logger->debug('Embedding skipped: no OpenRouter API key configured');
+
+            return null;
+        }
+
         $trimmed = trim($text);
         if ($trimmed === '') {
             return null;
@@ -56,6 +64,9 @@ final readonly class EmbeddingService implements EmbeddingServiceInterface
     {
         try {
             $response = $this->httpClient->request('POST', 'https://openrouter.ai/api/v1/embeddings', [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $this->openRouterApiKey,
+                ],
                 'json' => [
                     'model' => $model->value,
                     'input' => $text,

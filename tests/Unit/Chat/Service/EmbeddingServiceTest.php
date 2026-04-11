@@ -48,10 +48,25 @@ final class EmbeddingServiceTest extends TestCase
                 self::callback(static fn (array $ctx): bool => $ctx['model'] === 'test-model' && $ctx['dimensions'] === 3),
             );
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
         $result = $service->embed('test text');
 
         self::assertSame($expectedEmbedding, $result);
+    }
+
+    public function testEmbedReturnsNullWhenNoApiKey(): void
+    {
+        $httpClient = new MockHttpClient();
+        $discovery = $this->createStub(ModelDiscoveryServiceInterface::class);
+        $tracker = $this->createStub(ModelQualityTrackerInterface::class);
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('debug')
+            ->with(self::stringContains('no OpenRouter API key'));
+
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+
+        self::assertNull($service->embed('some text'));
     }
 
     public function testEmbedReturnsNullForEmptyText(): void
@@ -65,7 +80,7 @@ final class EmbeddingServiceTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::never())->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
 
         self::assertNull($service->embed(''));
     }
@@ -81,7 +96,7 @@ final class EmbeddingServiceTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::never())->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
 
         self::assertNull($service->embed('   '));
     }
@@ -100,7 +115,7 @@ final class EmbeddingServiceTest extends TestCase
         $logger->expects(self::once())->method('warning')
             ->with('No embedding models available');
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
 
         self::assertNull($service->embed('some text'));
     }
@@ -143,7 +158,7 @@ final class EmbeddingServiceTest extends TestCase
                 self::callback(static fn (array $ctx): bool => $ctx['model'] === 'working-model' && $ctx['dimensions'] === 2),
             );
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
         $result = $service->embed('test text');
 
         self::assertSame($expectedEmbedding, $result);
@@ -173,7 +188,7 @@ final class EmbeddingServiceTest extends TestCase
         // Two per-model failure warnings + one "all failed" warning
         $logger->expects(self::exactly(3))->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
 
         self::assertNull($service->embed('test text'));
     }
@@ -203,7 +218,7 @@ final class EmbeddingServiceTest extends TestCase
                 $warningMessages[] = $message;
             });
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
 
         self::assertNull($service->embed('test text'));
         self::assertStringContainsString('Embedding request failed', $warningMessages[0]);
@@ -228,7 +243,7 @@ final class EmbeddingServiceTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::atLeastOnce())->method('warning');
 
-        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger);
+        $service = new EmbeddingService($httpClient, $discovery, $tracker, $logger, 'test-api-key');
 
         self::assertNull($service->embed('test text'));
     }

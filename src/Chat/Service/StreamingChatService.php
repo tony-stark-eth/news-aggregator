@@ -14,8 +14,6 @@ use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\PlatformInterface;
-use Symfony\AI\Platform\Result\ResultInterface;
-use Symfony\AI\Platform\Result\StreamResult;
 
 final readonly class StreamingChatService implements StreamingChatServiceInterface
 {
@@ -101,9 +99,16 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
                     'stream' => true,
                 ]);
 
-                yield from $this->yieldTokens($result->getResult(), $collector);
-                $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
+                foreach ($result->asStream() as $chunk) {
+                    if (\is_string($chunk)) {
+                        $collector->append($chunk);
+                        yield $this->sseEvent('token', [
+                            'text' => $chunk,
+                        ]);
+                    }
+                }
 
+                $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
                 $this->persistConversation($ctx, $collector->getText());
 
                 yield $this->sseEvent('done', [
@@ -114,54 +119,30 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
                 return;
             } catch (\Throwable $e) {
                 $this->qualityTracker->recordRejection($model, ModelQualityCategory::Chat);
-                $isLast = $index === \count($modelChain) - 1;
-
-                if ($isLast) {
-                    $this->logger->error('Streaming chat failed, all models exhausted: {error}', [
-                        'error' => $e->getMessage(),
-                        'model' => $model,
-                    ]);
-
-                    yield $this->sseEvent('error', [
-                        'message' => 'Failed to generate response',
-                    ]);
-
-                    return;
-                }
-
-                $this->logger->info('Chat model {model} failed, trying next: {error}', [
-                    'model' => $model,
-                    'error' => $e->getMessage(),
-                ]);
+                $this->logModelFailure($model, $e, $index === \count($modelChain) - 1);
             }
         }
+
+        yield $this->sseEvent('error', [
+            'message' => 'Failed to generate response',
+        ]);
     }
 
-    /**
-     * @return \Generator<int, string>
-     */
-    private function yieldTokens(ResultInterface $result, AnswerCollector $collector): \Generator
+    private function logModelFailure(string $model, \Throwable $e, bool $isLast): void
     {
-        if (! $result instanceof StreamResult) {
-            $content = $result->getContent();
-            $text = \is_string($content) ? $content : '';
-            $collector->append($text);
-            yield $this->sseEvent('token', [
-                'text' => $text,
+        if ($isLast) {
+            $this->logger->error('Streaming chat failed, all models exhausted: {error}', [
+                'error' => $e->getMessage(),
+                'model' => $model,
             ]);
 
             return;
         }
 
-        foreach ($result->getContent() as $chunk) {
-            if (! \is_string($chunk)) {
-                continue;
-            }
-            $collector->append($chunk);
-            yield $this->sseEvent('token', [
-                'text' => $chunk,
-            ]);
-        }
+        $this->logger->info('Chat model {model} failed, trying next: {error}', [
+            'model' => $model,
+            'error' => $e->getMessage(),
+        ]);
     }
 
     private function persistConversation(StreamContext $ctx, string $answer): void

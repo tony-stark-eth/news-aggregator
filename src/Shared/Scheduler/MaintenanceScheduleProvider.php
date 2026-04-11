@@ -25,6 +25,12 @@ final class MaintenanceScheduleProvider implements ScheduleProviderInterface
             RecurringMessage::every('1 day', new RunCommandMessage('app:cleanup')),
         );
 
+        // Backfill embeddings for articles that don't have one yet.
+        // Processes 200 per run; becomes a no-op once all articles are embedded.
+        $schedule->add(
+            RecurringMessage::every('30 minutes', new RunCommandMessage('app:embed-articles --limit=200')),
+        );
+
         return $schedule;
     }
 }

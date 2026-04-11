@@ -95,17 +95,20 @@ final class ChatController
     private function createStreamedResponse(string $userMessage, string $conversationId): StreamedResponse
     {
         $response = new StreamedResponse(function () use ($userMessage, $conversationId): void {
+            // Disable all output buffering so each SSE event flushes immediately
+            while (\ob_get_level() > 0) {
+                ob_end_flush();
+            }
+
             foreach ($this->streamingService->stream($userMessage, $conversationId) as $chunk) {
                 echo $chunk;
-                if (\ob_get_level() > 0) {
-                    ob_flush();
-                }
                 flush();
             }
         });
 
         $response->headers->set('Content-Type', 'text/event-stream');
-        $response->headers->set('Cache-Control', 'no-cache');
+        $response->headers->set('Cache-Control', 'no-cache, no-store');
+        $response->headers->set('Connection', 'keep-alive');
         $response->headers->set('X-Accel-Buffering', 'no');
 
         return $response;
