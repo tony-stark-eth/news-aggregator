@@ -18,19 +18,28 @@ final readonly class ChatModelResolver implements ChatModelResolverInterface
 
     public function resolveModel(): string
     {
+        $chain = $this->resolveModelChain();
+
+        return $chain[0] ?? self::FALLBACK_MODEL;
+    }
+
+    /**
+     * @return list<non-empty-string>
+     */
+    public function resolveModelChain(): array
+    {
         $models = $this->modelDiscovery->discoverToolCallingModels();
+
+        /** @var list<non-empty-string> $modelIds */
         $modelIds = array_map(
             static fn (ModelId $m): string => $m->value,
             $models->toArray(),
         );
 
         if ($modelIds === []) {
-            return self::FALLBACK_MODEL;
+            return [self::FALLBACK_MODEL];
         }
 
-        $primary = $modelIds[0];
-        \assert($primary !== '');
-
-        return $primary;
+        return $modelIds;
     }
 }
