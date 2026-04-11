@@ -65,7 +65,7 @@ final class StreamingChatServiceTest extends TestCase
             ));
 
         $resolver = $this->createMock(ChatModelResolverInterface::class);
-        $resolver->expects(self::once())->method('resolveModel')->willReturn('test/model');
+        $resolver->expects(self::once())->method('resolveModelChain')->willReturn(['test/model']);
 
         $tracker = $this->createMock(ModelQualityTrackerInterface::class);
         $tracker->expects(self::once())->method('recordAcceptance')
@@ -125,8 +125,9 @@ final class StreamingChatServiceTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())->method('error')
             ->with(
-                self::stringContains('Streaming chat failed'),
-                self::callback(static fn (array $ctx): bool => $ctx['error'] === 'API down'),
+                self::stringContains('all models exhausted'),
+                self::callback(static fn (array $ctx): bool => $ctx['error'] === 'API down'
+                    && $ctx['model'] === 'test/model'),
             );
 
         $service = $this->buildService($store, $platform, $searchTool, tracker: $tracker, logger: $logger);
@@ -135,6 +136,79 @@ final class StreamingChatServiceTest extends TestCase
         self::assertCount(1, $chunks);
         self::assertStringContainsString('event: error', $chunks[0]);
         self::assertStringContainsString('"message":"Failed to generate response"', $chunks[0]);
+    }
+
+    public function testStreamFailsOverToNextModelOnError(): void
+    {
+        $store = $this->createMock(ConversationMessageStoreInterface::class);
+        $store->expects(self::once())->method('load')->willReturn(new MessageBag());
+        $store->expects(self::once())->method('save');
+
+        $searchTool = $this->createStub(ArticleSearchToolInterface::class);
+        $searchTool->method('search')->willReturn([]);
+
+        $platform = $this->createMock(PlatformInterface::class);
+        $platform->expects(self::exactly(2))->method('invoke')
+            ->willReturnOnConsecutiveCalls(
+                self::throwException(new \RuntimeException('Rate limited')),
+                $this->createDeferredForText(new TextResult('Fallback response')),
+            );
+
+        $resolver = $this->createMock(ChatModelResolverInterface::class);
+        $resolver->method('resolveModelChain')->willReturn(['model/first', 'model/second']);
+
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::once())->method('recordRejection')
+            ->with('model/first', ModelQualityCategory::Chat);
+        $tracker->expects(self::once())->method('recordAcceptance')
+            ->with('model/second', ModelQualityCategory::Chat);
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(
+                self::stringContains('failed, trying next'),
+                self::callback(static fn (array $ctx): bool => $ctx['model'] === 'model/first'
+                    && $ctx['error'] === 'Rate limited'),
+            );
+
+        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger);
+        $chunks = iterator_to_array($service->stream('Hello', 'conv-failover'), false);
+
+        self::assertCount(2, $chunks);
+        self::assertStringContainsString('"text":"Fallback response"', $chunks[0]);
+        self::assertStringContainsString('event: done', $chunks[1]);
+    }
+
+    public function testStreamFailoverExhaustsAllModels(): void
+    {
+        $store = $this->createStub(ConversationMessageStoreInterface::class);
+        $store->method('load')->willReturn(new MessageBag());
+
+        $searchTool = $this->createStub(ArticleSearchToolInterface::class);
+        $searchTool->method('search')->willReturn([]);
+
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')->willThrowException(new \RuntimeException('All broken'));
+
+        $resolver = $this->createMock(ChatModelResolverInterface::class);
+        $resolver->method('resolveModelChain')->willReturn(['model/a', 'model/b', 'model/c']);
+
+        $tracker = $this->createMock(ModelQualityTrackerInterface::class);
+        $tracker->expects(self::exactly(3))->method('recordRejection');
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::exactly(2))->method('info');
+        $logger->expects(self::once())->method('error')
+            ->with(
+                self::stringContains('all models exhausted'),
+                self::callback(static fn (array $ctx): bool => $ctx['model'] === 'model/c'),
+            );
+
+        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger);
+        $chunks = iterator_to_array($service->stream('Hello', 'conv-exhaust'), false);
+
+        self::assertCount(1, $chunks);
+        self::assertStringContainsString('event: error', $chunks[0]);
     }
 
     public function testStreamHandlesSearchFailure(): void
@@ -398,6 +472,7 @@ final class StreamingChatServiceTest extends TestCase
     {
         $resolver = $this->createStub(ChatModelResolverInterface::class);
         $resolver->method('resolveModel')->willReturn('test/model');
+        $resolver->method('resolveModelChain')->willReturn(['test/model']);
 
         return $resolver;
     }

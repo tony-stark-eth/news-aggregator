@@ -80,34 +80,48 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
     private function streamFromPlatform(MessageBag $messages, StreamContext $ctx): \Generator
     {
         $collector = new AnswerCollector();
-        $model = $this->modelResolver->resolveModel();
+        $modelChain = $this->modelResolver->resolveModelChain();
 
-        try {
-            $result = $this->platform->invoke($model, $messages, [
-                'stream' => true,
-            ]);
+        foreach ($modelChain as $index => $model) {
+            try {
+                $result = $this->platform->invoke($model, $messages, [
+                    'stream' => true,
+                ]);
 
-            yield from $this->yieldTokens($result->getResult(), $collector);
-            $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
-        } catch (\Throwable $e) {
-            $this->qualityTracker->recordRejection($model, ModelQualityCategory::Chat);
-            $this->logger->error('Streaming chat failed: {error}', [
-                'error' => $e->getMessage(),
-            ]);
+                yield from $this->yieldTokens($result->getResult(), $collector);
+                $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
 
-            yield $this->sseEvent('error', [
-                'message' => 'Failed to generate response',
-            ]);
+                $this->persistConversation($ctx, $collector->getText());
 
-            return;
+                yield $this->sseEvent('done', [
+                    'citedArticles' => $ctx->articles,
+                    'conversationId' => $ctx->conversationId,
+                ]);
+
+                return;
+            } catch (\Throwable $e) {
+                $this->qualityTracker->recordRejection($model, ModelQualityCategory::Chat);
+                $isLast = $index === \count($modelChain) - 1;
+
+                if ($isLast) {
+                    $this->logger->error('Streaming chat failed, all models exhausted: {error}', [
+                        'error' => $e->getMessage(),
+                        'model' => $model,
+                    ]);
+
+                    yield $this->sseEvent('error', [
+                        'message' => 'Failed to generate response',
+                    ]);
+
+                    return;
+                }
+
+                $this->logger->info('Chat model {model} failed, trying next: {error}', [
+                    'model' => $model,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
-
-        $this->persistConversation($ctx, $collector->getText());
-
-        yield $this->sseEvent('done', [
-            'citedArticles' => $ctx->articles,
-            'conversationId' => $ctx->conversationId,
-        ]);
     }
 
     /**

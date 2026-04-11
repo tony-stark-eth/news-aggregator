@@ -38,4 +38,33 @@ final class ChatModelResolverTest extends TestCase
 
         self::assertSame('openrouter/free', $resolver->resolveModel());
     }
+
+    public function testResolveModelChainReturnsAllDiscoveredModels(): void
+    {
+        $discovery = $this->createMock(ModelDiscoveryServiceInterface::class);
+        $discovery->expects(self::once())->method('discoverToolCallingModels')
+            ->willReturn(new ModelIdCollection([
+                new ModelId('google/gemini-flash'),
+                new ModelId('openai/gpt-4o-mini'),
+                new ModelId('meta/llama-3'),
+            ]));
+
+        $resolver = new ChatModelResolver($discovery);
+
+        self::assertSame(
+            ['google/gemini-flash', 'openai/gpt-4o-mini', 'meta/llama-3'],
+            $resolver->resolveModelChain(),
+        );
+    }
+
+    public function testResolveModelChainReturnsFallbackWhenNoModels(): void
+    {
+        $discovery = $this->createMock(ModelDiscoveryServiceInterface::class);
+        $discovery->expects(self::once())->method('discoverToolCallingModels')
+            ->willReturn(new ModelIdCollection([]));
+
+        $resolver = new ChatModelResolver($discovery);
+
+        self::assertSame(['openrouter/free'], $resolver->resolveModelChain());
+    }
 }
