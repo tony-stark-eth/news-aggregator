@@ -9,6 +9,7 @@ use App\Article\Service\ScoringServiceInterface;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\RuleBasedEnrichmentService;
+use App\Enrichment\Service\SentimentScoringServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\ValueObject\EnrichmentResult;
 use App\Shared\Entity\Category;
@@ -53,7 +54,10 @@ final class RuleBasedEnrichmentServiceTest extends TestCase
         $scoring = $this->createStub(ScoringServiceInterface::class);
         $scoring->method('score')->willReturn(0.5);
 
-        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $scoring, $categoryRepo);
+        $sentimentScoring = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentScoring->method('score')->willReturn(null);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
         $service->enrich($article, $item, $source);
 
         self::assertSame($category, $article->getCategory());
@@ -84,7 +88,10 @@ final class RuleBasedEnrichmentServiceTest extends TestCase
         $scoring = $this->createStub(ScoringServiceInterface::class);
         $scoring->method('score')->willReturn(0.3);
 
-        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $scoring, $categoryRepo);
+        $sentimentScoring = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentScoring->method('score')->willReturn(null);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
         $service->enrich($article, $item, $source);
 
         self::assertSame($sourceCategory, $article->getCategory());
@@ -114,7 +121,10 @@ final class RuleBasedEnrichmentServiceTest extends TestCase
         $scoring = $this->createStub(ScoringServiceInterface::class);
         $scoring->method('score')->willReturn(0.6);
 
-        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $scoring, $categoryRepo);
+        $sentimentScoring = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentScoring->method('score')->willReturn(null);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
         $service->enrich($article, $item, $source);
 
         self::assertSame('Generated summary.', $article->getSummary());
@@ -141,7 +151,10 @@ final class RuleBasedEnrichmentServiceTest extends TestCase
         $scoring = $this->createStub(ScoringServiceInterface::class);
         $scoring->method('score')->willReturn(0.4);
 
-        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $scoring, $categoryRepo);
+        $sentimentScoring = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentScoring->method('score')->willReturn(null);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
         $service->enrich($article, $item, $source);
 
         self::assertNull($article->getSummary());
@@ -171,7 +184,10 @@ final class RuleBasedEnrichmentServiceTest extends TestCase
         $scoring = $this->createStub(ScoringServiceInterface::class);
         $scoring->method('score')->willReturn(0.7);
 
-        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $scoring, $categoryRepo);
+        $sentimentScoring = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentScoring->method('score')->willReturn(null);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
         $service->enrich($article, $item, $source);
 
         self::assertSame(['Google', 'AI'], $article->getKeywords());
@@ -200,7 +216,10 @@ final class RuleBasedEnrichmentServiceTest extends TestCase
         $scoring = $this->createStub(ScoringServiceInterface::class);
         $scoring->method('score')->willReturn(0.3);
 
-        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $scoring, $categoryRepo);
+        $sentimentScoring = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentScoring->method('score')->willReturn(null);
+
+        $service = new RuleBasedEnrichmentService($categorization, $summarization, $keywords, $sentimentScoring, $scoring, $categoryRepo);
         $service->enrich($article, $item, $source);
 
         self::assertNull($article->getKeywords());

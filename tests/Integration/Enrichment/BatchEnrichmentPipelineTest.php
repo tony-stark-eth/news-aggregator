@@ -15,6 +15,7 @@ use App\Enrichment\Service\ArticleTranslationService;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\KeywordFilterService;
+use App\Enrichment\Service\SentimentScoringServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\Service\TranslationServiceInterface;
 use App\Enrichment\ValueObject\BatchTranslationResult;
@@ -85,11 +86,15 @@ final class BatchEnrichmentPipelineTest extends TestCase
         $keywordFallback = $this->createMock(KeywordExtractionServiceInterface::class);
         $keywordFallback->expects(self::never())->method('extract');
 
+        $sentimentFallback = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentFallback->method('score')->willReturn(null);
+
         $combinedEnrichment = new AiCombinedEnrichmentService(
             $platform,
             $categorizationFallback,
             $summarizationFallback,
             $keywordFallback,
+            $sentimentFallback,
             $qualityGate,
             $qualityTracker,
             $textCleanup,
@@ -195,11 +200,15 @@ final class BatchEnrichmentPipelineTest extends TestCase
         $keywordFallback = $this->createStub(KeywordExtractionServiceInterface::class);
         $keywordFallback->method('extract')->willReturn([]);
 
+        $sentimentFallback = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentFallback->method('score')->willReturn(null);
+
         $combinedEnrichment = new AiCombinedEnrichmentService(
             $platform,
             $categorizationFallback,
             $summarizationFallback,
             $keywordFallback,
+            $sentimentFallback,
             $qualityGate,
             $qualityTracker,
             $textCleanup,

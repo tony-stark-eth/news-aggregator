@@ -37,6 +37,7 @@ PROMPT;
         private CategorizationServiceInterface $categorizationFallback,
         private SummarizationServiceInterface $summarizationFallback,
         private KeywordExtractionServiceInterface $keywordExtractionFallback,
+        private SentimentScoringServiceInterface $sentimentFallback,
         private AiQualityGateServiceInterface $qualityGate,
         private ModelQualityTrackerInterface $qualityTracker,
         private AiTextCleanupServiceInterface $textCleanup,
@@ -124,6 +125,7 @@ PROMPT;
         if ($keywords === []) {
             $keywords = $this->keywordExtractionFallback->extract($title, $contentText);
         }
+        $sentimentScore ??= $this->sentimentFallback->score($title, $contentText);
 
         $method = $anyFieldFromAi ? EnrichmentMethod::Ai : EnrichmentMethod::RuleBased;
 
@@ -236,6 +238,7 @@ PROMPT;
             ? $this->summarizationFallback->summarize($contentText, $title)
             : null;
         $keywords = $this->keywordExtractionFallback->extract($title, $contentText);
+        $sentimentScore = $this->sentimentFallback->score($title, $contentText);
 
         $method = $catResult->method === EnrichmentMethod::Ai
             || ($sumResult instanceof EnrichmentResult && $sumResult->method === EnrichmentMethod::Ai)
@@ -250,6 +253,7 @@ PROMPT;
             $keywords,
             $method,
             $modelUsed,
+            $sentimentScore,
         );
     }
 }

@@ -18,6 +18,7 @@ final readonly class RuleBasedEnrichmentService implements RuleBasedEnrichmentSe
         private CategorizationServiceInterface $categorization,
         private SummarizationServiceInterface $summarization,
         private KeywordExtractionServiceInterface $keywordExtraction,
+        private SentimentScoringServiceInterface $sentimentScoring,
         private ScoringServiceInterface $scoring,
         private CategoryRepositoryInterface $categoryRepository,
     ) {
@@ -28,6 +29,7 @@ final readonly class RuleBasedEnrichmentService implements RuleBasedEnrichmentSe
         $this->applyCategory($article, $item, $source);
         $this->applySummary($article, $item);
         $this->applyKeywords($article, $item);
+        $this->applySentiment($article, $item);
 
         $article->setEnrichmentMethod(EnrichmentMethod::RuleBased);
         $article->setScore($this->scoring->score($article));
@@ -68,6 +70,15 @@ final readonly class RuleBasedEnrichmentService implements RuleBasedEnrichmentSe
 
         if ($keywords !== []) {
             $article->setKeywords($keywords);
+        }
+    }
+
+    private function applySentiment(Article $article, FeedItem $item): void
+    {
+        $score = $this->sentimentScoring->score($item->title, $item->contentText);
+
+        if ($score !== null) {
+            $article->setSentimentScore($score);
         }
     }
 }

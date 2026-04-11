@@ -10,6 +10,7 @@ use App\Enrichment\Service\AiTextCleanupService;
 use App\Enrichment\Service\CategorizationServiceInterface;
 use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\KeywordFilterService;
+use App\Enrichment\Service\SentimentScoringServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\ValueObject\CombinedEnrichmentResult;
 use App\Enrichment\ValueObject\EnrichmentResult;
@@ -962,11 +963,15 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
             static fn (float $score): bool => $score >= -1.0 && $score <= 1.0,
         );
 
+        $sentimentFallback = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentFallback->method('score')->willReturn(null);
+
         return new AiCombinedEnrichmentService(
             $platform,
             $categorization,
             $summarization,
             $keywordExtraction,
+            $sentimentFallback,
             $qualityGate,
             $tracker ?? $this->createStub(ModelQualityTrackerInterface::class),
             new AiTextCleanupService(),
@@ -998,11 +1003,15 @@ final class AiCombinedEnrichmentServiceTest extends TestCase
             static fn (float $score): bool => $score >= -1.0 && $score <= 1.0,
         );
 
+        $sentimentFallback = $this->createStub(SentimentScoringServiceInterface::class);
+        $sentimentFallback->method('score')->willReturn(null);
+
         return new AiCombinedEnrichmentService(
             $platform,
             $categorization,
             $summarization,
             $keywordExtraction,
+            $sentimentFallback,
             $qualityGate,
             $this->createStub(ModelQualityTrackerInterface::class),
             new AiTextCleanupService(),
