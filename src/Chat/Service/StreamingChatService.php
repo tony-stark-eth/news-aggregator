@@ -54,7 +54,7 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
     }
 
     /**
-     * @return list<array{id: int, title: string, summary: string|null, url: string}>
+     * @return list<array{id: int, title: string, summary: string|null, url: string, searchSource?: string}>
      */
     private function searchArticles(string $query): array
     {
@@ -180,7 +180,7 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
     }
 
     /**
-     * @param list<array{id: int, title: string, summary: string|null, url: string}> $articles
+     * @param list<array{id: int, title: string, summary: string|null, url: string, searchSource?: string}> $articles
      */
     private function buildSystemPrompt(array $articles): string
     {
@@ -205,18 +205,20 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
     }
 
     /**
-     * @param list<array{id: int, title: string, summary: string|null, url: string}> $articles
+     * @param list<array{id: int, title: string, summary: string|null, url: string, searchSource?: string}> $articles
      */
     private function formatArticleContext(array $articles): string
     {
         $context = "\n\nRelevant articles:\n";
         foreach ($articles as $article) {
+            $foundVia = $article['searchSource'] ?? 'keyword';
             $context .= \sprintf(
-                "\n[Article #%d] %s\nURL: %s\nSummary: %s\n",
+                "\n[Article #%d] %s\nURL: %s\nSummary: %s\n[Found via: %s]\n",
                 $article['id'],
                 $article['title'],
                 $article['url'],
                 $article['summary'] ?? 'No summary available',
+                $foundVia,
             );
         }
 

@@ -91,6 +91,7 @@ final class StreamingChatServiceTest extends TestCase
         self::assertStringContainsString('"conversationId":"conv-1"', $doneChunks[0]);
         self::assertStringContainsString('"citedArticles":', $doneChunks[0]);
         self::assertStringContainsString('"id":42', $doneChunks[0]);
+        self::assertStringContainsString('"searchSource":"hybrid"', $doneChunks[0]);
     }
 
     public function testStreamHandlesNonStreamResult(): void
@@ -337,7 +338,8 @@ final class StreamingChatServiceTest extends TestCase
                         && str_contains($content, '[Article #42]')
                         && str_contains($content, 'Test Article')
                         && str_contains($content, 'https://example.com/42')
-                        && str_contains($content, 'A summary');
+                        && str_contains($content, 'A summary')
+                        && str_contains($content, '[Found via: hybrid]');
                 }),
                 self::anything(),
             )
@@ -386,6 +388,7 @@ final class StreamingChatServiceTest extends TestCase
                 'publishedAt' => null,
                 'url' => 'https://example.com/99',
                 'score' => 0.5,
+                'searchSource' => 'keyword',
             ],
         ];
 
@@ -502,6 +505,7 @@ final class StreamingChatServiceTest extends TestCase
                 'publishedAt' => null,
                 'url' => 'https://a.com',
                 'score' => 0.5,
+                'searchSource' => 'keyword',
             ],
             [
                 'id' => 2,
@@ -511,6 +515,7 @@ final class StreamingChatServiceTest extends TestCase
                 'publishedAt' => null,
                 'url' => 'https://b.com',
                 'score' => 0.5,
+                'searchSource' => 'semantic',
             ],
         ];
 
@@ -546,7 +551,7 @@ final class StreamingChatServiceTest extends TestCase
     }
 
     /**
-     * @return list<array{id: int, title: string, summary: string|null, keywords: list<string>, publishedAt: string|null, url: string, score: float}>
+     * @return list<array{id: int, title: string, summary: string|null, keywords: list<string>, publishedAt: string|null, url: string, score: float, searchSource: string}>
      */
     private function sampleArticles(): array
     {
@@ -559,6 +564,7 @@ final class StreamingChatServiceTest extends TestCase
                 'publishedAt' => '2026-01-01T00:00:00+00:00',
                 'url' => 'https://example.com/42',
                 'score' => 0.95,
+                'searchSource' => 'hybrid',
             ],
         ];
     }
