@@ -29,6 +29,7 @@ final readonly class ArticleEnrichmentService implements ArticleEnrichmentServic
         $this->applyCategory($article, $result, $source);
         $this->applySummaryAndMethod($article, $result);
         $this->applyKeywords($article, $result);
+        $this->applySentiment($article, $result);
 
         $this->articleTranslation->applyTranslations($article, $source);
         $article->setScore($this->scoring->score($article));
@@ -62,6 +63,13 @@ final readonly class ArticleEnrichmentService implements ArticleEnrichmentServic
     {
         if ($result->keywords !== []) {
             $article->setKeywords($result->keywords);
+        }
+    }
+
+    private function applySentiment(Article $article, CombinedEnrichmentResult $result): void
+    {
+        if ($result->sentimentScore !== null) {
+            $article->setSentimentScore($result->sentimentScore);
         }
     }
 }

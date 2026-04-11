@@ -72,6 +72,11 @@ final readonly class AiQualityGateService implements AiQualityGateServiceInterfa
         return $this->categoryRepository->findBySlug($categorySlug) instanceof Category;
     }
 
+    public function validateSentiment(float $score): bool
+    {
+        return $score >= -1.0 && $score <= 1.0;
+    }
+
     private function containsReasoningArtifacts(string $summary): bool
     {
         $lower = mb_strtolower($summary);

@@ -9,4 +9,6 @@ interface AiQualityGateServiceInterface
     public function validateSummary(string $summary, string $title): bool;
 
     public function validateCategorization(string $categorySlug): bool;
+
+    public function validateSentiment(float $score): bool;
 }

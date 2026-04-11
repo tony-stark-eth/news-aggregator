@@ -17,6 +17,7 @@ final readonly class CombinedEnrichmentResult
         public array $keywords,
         public EnrichmentMethod $method,
         public ?string $modelUsed = null,
+        public ?float $sentimentScore = null,
     ) {
     }
 }

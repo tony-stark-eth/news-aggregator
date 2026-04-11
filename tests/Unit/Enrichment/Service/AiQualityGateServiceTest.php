@@ -284,6 +284,27 @@ final class AiQualityGateServiceTest extends TestCase
         ));
     }
 
+    public function testValidSentimentPasses(): void
+    {
+        self::assertTrue($this->gate->validateSentiment(0.5));
+        self::assertTrue($this->gate->validateSentiment(-0.5));
+        self::assertTrue($this->gate->validateSentiment(0.0));
+    }
+
+    public function testSentimentBoundariesPass(): void
+    {
+        self::assertTrue($this->gate->validateSentiment(-1.0));
+        self::assertTrue($this->gate->validateSentiment(1.0));
+    }
+
+    public function testSentimentOutOfRangeFails(): void
+    {
+        self::assertFalse($this->gate->validateSentiment(-1.01));
+        self::assertFalse($this->gate->validateSentiment(1.01));
+        self::assertFalse($this->gate->validateSentiment(5.0));
+        self::assertFalse($this->gate->validateSentiment(-5.0));
+    }
+
     public function testCleanSummaryStillPasses(): void
     {
         self::assertTrue($this->gate->validateSummary(

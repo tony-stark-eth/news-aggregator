@@ -32,6 +32,7 @@ final class ArticleEnrichmentServiceTest extends TestCase
             ['Google', 'AI'],
             EnrichmentMethod::Ai,
             'model-1',
+            0.65,
         );
 
         $combined = $this->createStub(CombinedEnrichmentServiceInterface::class);
@@ -60,6 +61,7 @@ final class ArticleEnrichmentServiceTest extends TestCase
         self::assertSame('A summary of the article.', $article->getSummary());
         self::assertSame(['Google', 'AI'], $article->getKeywords());
         self::assertSame(0.42, $article->getScore());
+        self::assertSame(0.65, $article->getSentimentScore());
     }
 
     public function testFallsBackToSourceCategoryWhenSlugNotFound(): void
@@ -128,6 +130,39 @@ final class ArticleEnrichmentServiceTest extends TestCase
 
         self::assertSame(EnrichmentMethod::Ai, $article->getEnrichmentMethod());
         self::assertSame('actual-model-id', $article->getAiModelUsed());
+    }
+
+    public function testSentimentScoreNotPersistedWhenNull(): void
+    {
+        $combinedResult = new CombinedEnrichmentResult(
+            'tech',
+            null,
+            [],
+            EnrichmentMethod::RuleBased,
+        );
+
+        $combined = $this->createStub(CombinedEnrichmentServiceInterface::class);
+        $combined->method('enrich')->willReturn($combinedResult);
+
+        $translation = $this->createStub(ArticleTranslationServiceInterface::class);
+        $scoring = $this->createStub(ScoringServiceInterface::class);
+        $scoring->method('score')->willReturn(0.0);
+
+        $category = new Category('Technology', 'tech', 1, '#000');
+        $categoryRepo = $this->createStub(CategoryRepositoryInterface::class);
+        $categoryRepo->method('findBySlug')->willReturn($category);
+
+        $source = $this->createStub(Source::class);
+        $source->method('getCategory')->willReturn($category);
+
+        $service = new ArticleEnrichmentService($combined, $translation, $scoring, $categoryRepo);
+
+        $article = $this->createArticle('Title', 'https://example.com/article');
+        $item = new FeedItem('Title', 'https://example.com/article', null, null, null);
+
+        $service->enrich($article, $item, $source);
+
+        self::assertNull($article->getSentimentScore());
     }
 
     private function createArticle(string $title, string $url): Article
