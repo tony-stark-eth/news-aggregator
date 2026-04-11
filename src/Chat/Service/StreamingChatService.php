@@ -34,9 +34,18 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
      */
     public function stream(string $userMessage, string $conversationId): \Generator
     {
+        yield $this->sseEvent('status', [
+            'text' => 'Searching articles...',
+        ]);
+
         $this->store->setConversationId($conversationId);
         $history = $this->store->load();
         $articles = $this->searchArticles($userMessage);
+
+        $articleCount = \count($articles);
+        yield $this->sseEvent('status', [
+            'text' => \sprintf('Found %d relevant article%s. Connecting to AI...', $articleCount, $articleCount === 1 ? '' : 's'),
+        ]);
 
         $ctx = new StreamContext($conversationId, $userMessage, $history, $articles);
         $messages = $this->buildMessages($ctx);
@@ -83,6 +92,10 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
         $modelChain = $this->modelResolver->resolveModelChain();
 
         foreach ($modelChain as $index => $model) {
+            yield $this->sseEvent('status', [
+                'text' => \sprintf('Trying model %d of %d...', $index + 1, \count($modelChain)),
+            ]);
+
             try {
                 $result = $this->platform->invoke($model, $messages, [
                     'stream' => true,
