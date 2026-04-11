@@ -334,6 +334,17 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
         ];
     }
 
+    public function findIdsWithoutEmbeddings(int $limit): array
+    {
+        /** @var list<int> */
+        return $this->createQueryBuilder('a')
+            ->select('a.id')
+            ->where('a.embedding IS NULL')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getSingleColumnResult();
+    }
+
     public function getEmbeddingStats(): array
     {
         $conn = $this->getEntityManager()->getConnection();

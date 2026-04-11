@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Chat\Store;
 
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use Psr\Clock\ClockInterface;
 use Symfony\AI\Chat\MessageNormalizer;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -71,11 +72,70 @@ final class ConversationMessageStore implements ConversationMessageStoreInterfac
         return new MessageBag(...$messages);
     }
 
+    public function listConversations(int $limit = 20): array
+    {
+        $rows = $this->connection->fetchAllAssociative(
+            'SELECT conversation_id, added_at, messages FROM chat_messages ORDER BY added_at DESC LIMIT ?',
+            [$limit],
+            [ParameterType::INTEGER],
+        );
+
+        $result = [];
+
+        foreach ($rows as $row) {
+            /** @var array{conversation_id: string, added_at: int|string, messages: string} $row */
+            $preview = $this->extractLastUserMessage($row['messages']);
+
+            $result[] = [
+                'conversationId' => $row['conversation_id'],
+                'lastMessageAt' => (int) $row['added_at'],
+                'preview' => $preview,
+            ];
+        }
+
+        return $result;
+    }
+
     public function drop(): void
     {
         $this->connection->executeStatement(
             'DELETE FROM chat_messages WHERE conversation_id = ?',
             [$this->conversationId],
         );
+    }
+
+    private function extractLastUserMessage(string $messagesJson): string
+    {
+        try {
+            /** @var list<array{type?: string, content?: string, contentAsBase64?: list<array{content?: string}>}> $messages */
+            $messages = json_decode($messagesJson, true, 512, \JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return '';
+        }
+
+        $lastUserContent = '';
+
+        foreach ($messages as $message) {
+            if (! str_contains($message['type'] ?? '', 'UserMessage')) {
+                continue;
+            }
+
+            $lastUserContent = $this->extractUserText($message);
+        }
+
+        return mb_strlen($lastUserContent) > 100
+            ? mb_substr($lastUserContent, 0, 100) . '...'
+            : $lastUserContent;
+    }
+
+    /**
+     * @param array{content?: string, contentAsBase64?: list<array{content?: string}>} $message
+     */
+    private function extractUserText(array $message): string
+    {
+        // Symfony AI stores user text in contentAsBase64[].content
+        $text = $message['contentAsBase64'][0]['content'] ?? '';
+
+        return $text !== '' ? $text : ($message['content'] ?? '');
     }
 }

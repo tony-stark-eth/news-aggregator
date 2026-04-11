@@ -83,4 +83,9 @@ interface ArticleRepositoryInterface
      * @return array{total: int, with_embedding: int, without_embedding: int}
      */
     public function getEmbeddingStats(): array;
+
+    /**
+     * @return list<int>
+     */
+    public function findIdsWithoutEmbeddings(int $limit): array;
 }

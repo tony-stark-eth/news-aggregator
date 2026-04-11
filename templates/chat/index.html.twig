@@ -32,7 +32,20 @@
 <div class="flex flex-col h-[calc(100vh-4rem)] max-w-3xl mx-auto">
     <div class="flex items-center justify-between mb-2 flex-shrink-0">
         <h1 class="text-2xl font-bold">News Assistant</h1>
-        <button id="chat-new" class="btn btn-outline btn-sm">New Conversation</button>
+        <div class="flex gap-2">
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" id="chat-history-btn" class="btn btn-outline btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    History
+                </label>
+                <ul tabindex="0" id="chat-history-list" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-72 max-h-64 overflow-y-auto">
+                    <li class="text-base-content/50 text-center text-sm p-2">Loading...</li>
+                </ul>
+            </div>
+            <button id="chat-new" class="btn btn-outline btn-sm">New Conversation</button>
+        </div>
     </div>
 
     <div id="chat-messages" class="flex-1 min-h-0 bg-base-200 rounded-box p-4 overflow-y-auto mb-2 space-y-4">
@@ -312,6 +325,82 @@
         messagesEl.appendChild(emptyEl);
         showEmpty();
         input.focus();
+    });
+
+    // Conversation history
+    const historyBtn = document.getElementById('chat-history-btn');
+    const historyList = document.getElementById('chat-history-list');
+
+    function formatTimestamp(ts) {
+        const d = new Date(ts * 1000);
+        const now = new Date();
+        const diffMs = now.getTime() - d.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        if (diffMins < 60) return diffMins + 'm ago';
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return diffHours + 'h ago';
+        const diffDays = Math.floor(diffHours / 24);
+        return diffDays + 'd ago';
+    }
+
+    async function loadConversations() {
+        historyList.innerHTML = '<li class="text-base-content/50 text-center text-sm p-2">Loading...</li>';
+        try {
+            const resp = await fetch('/chat/conversations');
+            const data = await resp.json();
+            if (!Array.isArray(data) || data.length === 0) {
+                historyList.innerHTML = '<li class="text-base-content/50 text-center text-sm p-2">No conversations yet</li>';
+                return;
+            }
+            historyList.innerHTML = '';
+            data.forEach(function(conv) {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.className = 'flex flex-col gap-0.5 py-1.5';
+                const preview = document.createElement('span');
+                preview.className = 'text-sm truncate';
+                preview.textContent = conv.preview || '(empty)';
+                const time = document.createElement('span');
+                time.className = 'text-xs opacity-50';
+                time.textContent = formatTimestamp(conv.lastMessageAt);
+                a.appendChild(preview);
+                a.appendChild(time);
+                a.addEventListener('click', function() {
+                    loadConversation(conv.conversationId);
+                    document.activeElement.blur();
+                });
+                li.appendChild(a);
+                historyList.appendChild(li);
+            });
+        } catch (err) {
+            historyList.innerHTML = '<li class="text-base-content/50 text-center text-sm p-2">Failed to load</li>';
+        }
+    }
+
+    async function loadConversation(id) {
+        if (isStreaming) return;
+        try {
+            const resp = await fetch('/chat/history/' + encodeURIComponent(id));
+            const data = await resp.json();
+            conversationId = data.conversationId;
+            messagesEl.innerHTML = '';
+            messagesEl.appendChild(emptyEl);
+            if (data.messages && data.messages.length > 0) {
+                hideEmpty();
+                data.messages.forEach(function(msg) {
+                    createBubble(msg.role, msg.content);
+                });
+            } else {
+                showEmpty();
+            }
+            input.focus();
+        } catch (err) {
+            // silently fail
+        }
+    }
+
+    historyBtn.addEventListener('click', function() {
+        loadConversations();
     });
 
     input.focus();

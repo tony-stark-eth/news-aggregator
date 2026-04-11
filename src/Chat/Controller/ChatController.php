@@ -100,9 +100,30 @@ final class ChatController
                 ob_end_flush();
             }
 
+            $keepaliveHandler = null;
+            if (\function_exists('pcntl_async_signals')) {
+                pcntl_async_signals(true);
+                $keepaliveHandler = static function (): void {
+                    echo ": keepalive\n\n";
+                    flush();
+                    pcntl_alarm(5);
+                };
+                pcntl_signal(\SIGALRM, $keepaliveHandler);
+                pcntl_alarm(5);
+            }
+
             foreach ($this->streamingService->stream($userMessage, $conversationId) as $chunk) {
                 echo $chunk;
                 flush();
+                // Reset alarm on each chunk
+                if ($keepaliveHandler !== null) {
+                    pcntl_alarm(5);
+                }
+            }
+
+            if ($keepaliveHandler !== null) {
+                pcntl_alarm(0);
+                pcntl_signal(\SIGALRM, \SIG_DFL);
             }
         });
 

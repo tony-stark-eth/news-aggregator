@@ -6,6 +6,12 @@
 	frankenphp {
 		{$FRANKENPHP_CONFIG}
 	}
+
+	servers {
+		timeouts {
+			idle 120s
+		}
+	}
 }
 
 {$CADDY_EXTRA_CONFIG}
