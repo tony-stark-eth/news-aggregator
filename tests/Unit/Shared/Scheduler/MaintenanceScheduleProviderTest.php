@@ -32,7 +32,7 @@ final class MaintenanceScheduleProviderTest extends TestCase
 
         self::assertContains('app:search-reindex', $commands);
         self::assertContains('app:cleanup', $commands);
-        self::assertContains('app:embed-articles --limit=200', $commands);
+        self::assertContains('app:embed-articles --limit=500', $commands);
     }
 
     /**

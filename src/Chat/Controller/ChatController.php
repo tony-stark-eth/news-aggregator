@@ -11,7 +11,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class ChatController
@@ -69,7 +68,7 @@ final class ChatController
     }
 
     #[Route('/chat/stream', name: 'app_chat_stream', methods: ['POST'])]
-    public function stream(Request $request): Response
+    public function stream(Request $request): JsonResponse
     {
         set_time_limit(120);
 
@@ -89,29 +88,21 @@ final class ChatController
 
         $conversationId = $this->resolveConversationId($data, $request);
 
-        return $this->createStreamedResponse($userMessage, $conversationId);
-    }
+        try {
+            $this->streamingService->stream($userMessage, $conversationId);
+        } catch (\Throwable $e) {
+            $this->logger->error('Chat stream failed: {error}', [
+                'error' => $e->getMessage(),
+            ]);
 
-    private function createStreamedResponse(string $userMessage, string $conversationId): StreamedResponse
-    {
-        $response = new StreamedResponse(function () use ($userMessage, $conversationId): void {
-            // Disable all output buffering so each SSE event flushes immediately
-            while (\ob_get_level() > 0) {
-                ob_end_flush();
-            }
+            return new JsonResponse([
+                'error' => 'Failed to process chat request',
+            ], Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
 
-            foreach ($this->streamingService->stream($userMessage, $conversationId) as $chunk) {
-                echo $chunk;
-                flush();
-            }
-        });
-
-        $response->headers->set('Content-Type', 'text/event-stream');
-        $response->headers->set('Cache-Control', 'no-cache, no-store');
-        $response->headers->set('Connection', 'keep-alive');
-        $response->headers->set('X-Accel-Buffering', 'no');
-
-        return $response;
+        return new JsonResponse([
+            'conversationId' => $conversationId,
+        ]);
     }
 
     /**

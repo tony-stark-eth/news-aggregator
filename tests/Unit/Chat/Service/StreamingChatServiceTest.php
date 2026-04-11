@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Chat\Service;
 
+use App\Chat\Mercure\ChatStreamPublisherInterface;
 use App\Chat\Service\ChatModelResolverInterface;
 use App\Chat\Service\StreamingChatService;
 use App\Chat\Store\ConversationMessageStoreInterface;
@@ -27,7 +28,7 @@ use Symfony\AI\Platform\ResultConverterInterface;
 #[CoversClass(StreamingChatService::class)]
 final class StreamingChatServiceTest extends TestCase
 {
-    public function testStreamYieldsTokenAndDoneEvents(): void
+    public function testStreamPublishesTokenAndDoneEvents(): void
     {
         $articles = $this->sampleArticles();
 
@@ -37,7 +38,7 @@ final class StreamingChatServiceTest extends TestCase
         $store->expects(self::once())->method('save')
             ->with(self::callback(static function (MessageBag $bag): bool {
                 $messages = $bag->getMessages();
-                // Must persist user + assistant messages
+
                 return \count($messages) >= 2;
             }));
 
@@ -51,7 +52,6 @@ final class StreamingChatServiceTest extends TestCase
             ->with(
                 'test/model',
                 self::callback(static function (MessageBag $bag): bool {
-                    // Must include system prompt + user message
                     $sys = $bag->getSystemMessage();
 
                     return $sys instanceof SystemMessage
@@ -71,27 +71,43 @@ final class StreamingChatServiceTest extends TestCase
         $tracker->expects(self::once())->method('recordAcceptance')
             ->with('test/model', ModelQualityCategory::Chat);
 
-        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker);
-        $chunks = iterator_to_array($service->stream('What happened?', 'conv-1'), false);
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
 
-        $statusChunks = $this->filterByEvent($chunks, 'status');
-        $tokenChunks = $this->filterByEvent($chunks, 'token');
-        $doneChunks = $this->filterByEvent($chunks, 'done');
+        /** @var list<string> $statusTexts */
+        $statusTexts = [];
+        $publisher->expects(self::exactly(3))->method('publishStatus')
+            ->willReturnCallback(static function (string $id, string $text) use (&$statusTexts): void {
+                $statusTexts[] = $text;
+            });
 
-        self::assertCount(3, $statusChunks);
-        self::assertStringContainsString('Searching articles', $statusChunks[0]);
-        self::assertStringContainsString('Found 1 relevant article', $statusChunks[1]);
-        self::assertStringContainsString('Trying model 1 of 1', $statusChunks[2]);
+        /** @var list<string> $tokenTexts */
+        $tokenTexts = [];
+        $publisher->expects(self::exactly(2))->method('publishToken')
+            ->willReturnCallback(static function (string $id, string $text) use (&$tokenTexts): void {
+                $tokenTexts[] = $text;
+            });
 
-        self::assertCount(2, $tokenChunks);
-        self::assertStringContainsString('"text":"Hello"', $tokenChunks[0]);
-        self::assertStringContainsString('"text":" world"', $tokenChunks[1]);
+        /** @var list<array<string, mixed>> $doneArticles */
+        $doneArticles = [];
+        $publisher->expects(self::once())->method('publishDone')
+            ->willReturnCallback(static function (string $id, array $cited) use (&$doneArticles): void {
+                $doneArticles = $cited;
+            });
 
-        self::assertCount(1, $doneChunks);
-        self::assertStringContainsString('"conversationId":"conv-1"', $doneChunks[0]);
-        self::assertStringContainsString('"citedArticles":', $doneChunks[0]);
-        self::assertStringContainsString('"id":42', $doneChunks[0]);
-        self::assertStringContainsString('"searchSource":"hybrid"', $doneChunks[0]);
+        $publisher->expects(self::never())->method('publishError');
+
+        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, publisher: $publisher);
+        $service->stream('What happened?', 'conv-1');
+
+        self::assertStringContainsString('Searching articles', $statusTexts[0]);
+        self::assertStringContainsString('Found 1 relevant article', $statusTexts[1]);
+        self::assertStringContainsString('Trying model 1 of 1', $statusTexts[2]);
+        self::assertSame('Hello', $tokenTexts[0]);
+        self::assertSame(' world', $tokenTexts[1]);
+        self::assertCount(1, $doneArticles);
+        self::assertIsArray($doneArticles[0]);
+        self::assertSame(42, $doneArticles[0]['id']);
+        self::assertSame('hybrid', $doneArticles[0]['searchSource']);
     }
 
     public function testStreamHandlesSingleChunkResponse(): void
@@ -109,17 +125,14 @@ final class StreamingChatServiceTest extends TestCase
                 new StreamResult($this->textGenerator(['Full answer'])),
             ));
 
-        $service = $this->buildService($store, $platform, $searchTool);
-        $chunks = iterator_to_array($service->stream('Hello', 'conv-2'), false);
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
+        $publisher->expects(self::exactly(3))->method('publishStatus');
+        $publisher->expects(self::once())->method('publishToken')->with('conv-2', 'Full answer');
+        $publisher->expects(self::once())->method('publishDone')
+            ->with('conv-2', []);
 
-        $tokenChunks = $this->filterByEvent($chunks, 'token');
-        $doneChunks = $this->filterByEvent($chunks, 'done');
-
-        self::assertCount(3, $this->filterByEvent($chunks, 'status'));
-        self::assertCount(1, $tokenChunks);
-        self::assertStringContainsString('"text":"Full answer"', $tokenChunks[0]);
-        self::assertCount(1, $doneChunks);
-        self::assertStringContainsString('"citedArticles":[]', $doneChunks[0]);
+        $service = $this->buildService($store, $platform, $searchTool, publisher: $publisher);
+        $service->stream('Hello', 'conv-2');
     }
 
     public function testStreamHandlesPlatformException(): void
@@ -145,14 +158,15 @@ final class StreamingChatServiceTest extends TestCase
                     && $ctx['model'] === 'test/model'),
             );
 
-        $service = $this->buildService($store, $platform, $searchTool, tracker: $tracker, logger: $logger);
-        $chunks = iterator_to_array($service->stream('Hello', 'conv-3'), false);
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
+        $publisher->expects(self::exactly(3))->method('publishStatus');
+        $publisher->expects(self::never())->method('publishToken');
+        $publisher->expects(self::never())->method('publishDone');
+        $publisher->expects(self::once())->method('publishError')
+            ->with('conv-3', 'Failed to generate response');
 
-        $errorChunks = $this->filterByEvent($chunks, 'error');
-
-        self::assertCount(3, $this->filterByEvent($chunks, 'status'));
-        self::assertCount(1, $errorChunks);
-        self::assertStringContainsString('"message":"Failed to generate response"', $errorChunks[0]);
+        $service = $this->buildService($store, $platform, $searchTool, tracker: $tracker, logger: $logger, publisher: $publisher);
+        $service->stream('Hello', 'conv-3');
     }
 
     public function testStreamFailsOverToNextModelOnError(): void
@@ -188,21 +202,16 @@ final class StreamingChatServiceTest extends TestCase
                     && $ctx['error'] === 'Rate limited'),
             );
 
-        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger);
-        $chunks = iterator_to_array($service->stream('Hello', 'conv-failover'), false);
-
-        $statusChunks = $this->filterByEvent($chunks, 'status');
-        $tokenChunks = $this->filterByEvent($chunks, 'token');
-        $doneChunks = $this->filterByEvent($chunks, 'done');
-
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
         // 2 from stream() + 2 from streamFromPlatform() (one per model attempt)
-        self::assertCount(4, $statusChunks);
-        self::assertStringContainsString('Trying model 1 of 2', $statusChunks[2]);
-        self::assertStringContainsString('Trying model 2 of 2', $statusChunks[3]);
+        $publisher->expects(self::exactly(4))->method('publishStatus');
+        $publisher->expects(self::once())->method('publishToken')
+            ->with('conv-failover', 'Fallback response');
+        $publisher->expects(self::once())->method('publishDone')
+            ->with('conv-failover', []);
 
-        self::assertCount(1, $tokenChunks);
-        self::assertStringContainsString('"text":"Fallback response"', $tokenChunks[0]);
-        self::assertCount(1, $doneChunks);
+        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger, publisher: $publisher);
+        $service->stream('Hello', 'conv-failover');
     }
 
     public function testStreamFailoverExhaustsAllModels(): void
@@ -230,16 +239,14 @@ final class StreamingChatServiceTest extends TestCase
                 self::callback(static fn (array $ctx): bool => $ctx['model'] === 'model/c'),
             );
 
-        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger);
-        $chunks = iterator_to_array($service->stream('Hello', 'conv-exhaust'), false);
-
-        $statusChunks = $this->filterByEvent($chunks, 'status');
-        $errorChunks = $this->filterByEvent($chunks, 'error');
-
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
         // 2 from stream() + 3 from streamFromPlatform() (one per model)
-        self::assertCount(5, $statusChunks);
-        self::assertCount(1, $errorChunks);
-        self::assertStringContainsString('event: error', $errorChunks[0]);
+        $publisher->expects(self::exactly(5))->method('publishStatus');
+        $publisher->expects(self::once())->method('publishError')
+            ->with('conv-exhaust', 'Failed to generate response');
+
+        $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger, publisher: $publisher);
+        $service->stream('Hello', 'conv-exhaust');
     }
 
     public function testStreamHandlesSearchFailure(): void
@@ -263,18 +270,22 @@ final class StreamingChatServiceTest extends TestCase
                 self::callback(static fn (array $ctx): bool => $ctx['error'] === 'Search broken'),
             );
 
-        $service = $this->buildService($store, $platform, $searchTool, logger: $logger);
-        $chunks = iterator_to_array($service->stream('Query', 'conv-4'), false);
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
+        /** @var list<string> $searchStatusTexts */
+        $searchStatusTexts = [];
+        $publisher->expects(self::exactly(3))->method('publishStatus')
+            ->willReturnCallback(static function (string $id, string $text) use (&$searchStatusTexts): void {
+                $searchStatusTexts[] = $text;
+            });
+        $publisher->expects(self::once())->method('publishToken');
+        $publisher->expects(self::once())->method('publishDone')
+            ->with('conv-4', []);
 
-        $statusChunks = $this->filterByEvent($chunks, 'status');
-        $tokenChunks = $this->filterByEvent($chunks, 'token');
-        $doneChunks = $this->filterByEvent($chunks, 'done');
+        $service = $this->buildService($store, $platform, $searchTool, logger: $logger, publisher: $publisher);
+        $service->stream('Query', 'conv-4');
 
-        self::assertCount(3, $statusChunks);
-        self::assertStringContainsString('Found 0 relevant articles', $statusChunks[1]);
-        self::assertCount(1, $tokenChunks);
-        self::assertCount(1, $doneChunks);
-        self::assertStringContainsString('"citedArticles":[]', $doneChunks[0]);
+        self::assertStringContainsString('Searching articles', $searchStatusTexts[0]);
+        self::assertStringContainsString('Found 0 relevant articles', $searchStatusTexts[1]);
     }
 
     public function testStreamIncludesHistoryInMessages(): void
@@ -307,12 +318,13 @@ final class StreamingChatServiceTest extends TestCase
             )
             ->willReturn($this->createDeferredForText(new TextResult('Reply')));
 
-        $service = $this->buildService($store, $platform, $searchTool);
-        $chunks = iterator_to_array($service->stream('Follow up', 'conv-5'), false);
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
+        $publisher->expects(self::exactly(3))->method('publishStatus');
+        $publisher->expects(self::once())->method('publishToken');
+        $publisher->expects(self::once())->method('publishDone');
 
-        self::assertCount(3, $this->filterByEvent($chunks, 'status'));
-        self::assertCount(1, $this->filterByEvent($chunks, 'token'));
-        self::assertCount(1, $this->filterByEvent($chunks, 'done'));
+        $service = $this->buildService($store, $platform, $searchTool, publisher: $publisher);
+        $service->stream('Follow up', 'conv-5');
     }
 
     public function testStreamSystemPromptIncludesArticleContext(): void
@@ -348,7 +360,7 @@ final class StreamingChatServiceTest extends TestCase
             ->willReturn($this->createDeferredForText(new TextResult('Answer')));
 
         $service = $this->buildService($store, $platform, $searchTool);
-        iterator_to_array($service->stream('Query', 'conv-6'), false);
+        $service->stream('Query', 'conv-6');
     }
 
     public function testStreamSystemPromptWithoutArticles(): void
@@ -376,7 +388,7 @@ final class StreamingChatServiceTest extends TestCase
             ->willReturn($this->createDeferredForText(new TextResult('No data')));
 
         $service = $this->buildService($store, $platform, $searchTool);
-        iterator_to_array($service->stream('Query', 'conv-7'), false);
+        $service->stream('Query', 'conv-7');
     }
 
     public function testStreamWithNullSummaryArticle(): void
@@ -415,7 +427,7 @@ final class StreamingChatServiceTest extends TestCase
             ->willReturn($this->createDeferredForText(new TextResult('Response')));
 
         $service = $this->buildService($store, $platform, $searchTool);
-        iterator_to_array($service->stream('Query', 'conv-8'), false);
+        $service->stream('Query', 'conv-8');
     }
 
     public function testStreamCollectsFullAnswerForPersistence(): void
@@ -427,7 +439,6 @@ final class StreamingChatServiceTest extends TestCase
                 $messages = $bag->getMessages();
                 $lastMessage = $messages[\count($messages) - 1];
 
-                // The assistant message should contain the full concatenated answer
                 return $lastMessage instanceof AssistantMessage
                     && $lastMessage->getContent() === 'Hello world';
             }));
@@ -442,7 +453,7 @@ final class StreamingChatServiceTest extends TestCase
             ));
 
         $service = $this->buildService($store, $platform, $searchTool);
-        iterator_to_array($service->stream('Test', 'conv-9'), false);
+        $service->stream('Test', 'conv-9');
     }
 
     public function testStreamSkipsNonStringChunks(): void
@@ -463,18 +474,23 @@ final class StreamingChatServiceTest extends TestCase
         $platform->method('invoke')
             ->willReturn($this->createDeferredForStream(new StreamResult($generator)));
 
-        $service = $this->buildService($store, $platform, $searchTool);
-        $chunks = iterator_to_array($service->stream('Test', 'conv-10'), false);
-
-        $tokenChunks = $this->filterByEvent($chunks, 'token');
-
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
+        /** @var list<string> $nonStringTokenTexts */
+        $nonStringTokenTexts = [];
         // 2 token events (the int chunk is skipped)
-        self::assertCount(2, $tokenChunks);
-        self::assertStringContainsString('"text":"Text chunk"', $tokenChunks[0]);
-        self::assertStringContainsString('"text":" more text"', $tokenChunks[1]);
+        $publisher->expects(self::exactly(2))->method('publishToken')
+            ->willReturnCallback(static function (string $id, string $text) use (&$nonStringTokenTexts): void {
+                $nonStringTokenTexts[] = $text;
+            });
+
+        $service = $this->buildService($store, $platform, $searchTool, publisher: $publisher);
+        $service->stream('Test', 'conv-10');
+
+        self::assertSame('Text chunk', $nonStringTokenTexts[0]);
+        self::assertSame(' more text', $nonStringTokenTexts[1]);
     }
 
-    public function testStreamYieldsStatusEventsWithCorrectPluralization(): void
+    public function testStreamPublishesStatusEventsWithCorrectPluralization(): void
     {
         $store = $this->createStub(ConversationMessageStoreInterface::class);
         $store->method('load')->willReturn(new MessageBag());
@@ -486,17 +502,22 @@ final class StreamingChatServiceTest extends TestCase
         $platform->method('invoke')
             ->willReturn($this->createDeferredForText(new TextResult('Answer')));
 
-        $service = $this->buildService($store, $platform, $searchTool);
-        $chunks = iterator_to_array($service->stream('Query', 'conv-plural'), false);
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
+        $statusTexts = [];
+        $publisher->expects(self::exactly(3))->method('publishStatus')
+            ->willReturnCallback(static function (string $id, string $text) use (&$statusTexts): void {
+                $statusTexts[] = $text;
+            });
 
-        $statusChunks = $this->filterByEvent($chunks, 'status');
+        $service = $this->buildService($store, $platform, $searchTool, publisher: $publisher);
+        $service->stream('Query', 'conv-plural');
 
         // 1 article = singular
-        self::assertStringContainsString('Found 1 relevant article.', $statusChunks[1]);
-        self::assertStringNotContainsString('articles', $statusChunks[1]);
+        self::assertStringContainsString('Found 1 relevant article.', $statusTexts[1]);
+        self::assertStringNotContainsString('articles', $statusTexts[1]);
     }
 
-    public function testStreamYieldsStatusEventsWithPluralArticles(): void
+    public function testStreamPublishesStatusEventsWithPluralArticles(): void
     {
         $articles = [
             [
@@ -531,25 +552,17 @@ final class StreamingChatServiceTest extends TestCase
         $platform->method('invoke')
             ->willReturn($this->createDeferredForText(new TextResult('Answer')));
 
-        $service = $this->buildService($store, $platform, $searchTool);
-        $chunks = iterator_to_array($service->stream('Query', 'conv-plural2'), false);
+        $publisher = $this->createMock(ChatStreamPublisherInterface::class);
+        $statusTexts = [];
+        $publisher->expects(self::exactly(3))->method('publishStatus')
+            ->willReturnCallback(static function (string $id, string $text) use (&$statusTexts): void {
+                $statusTexts[] = $text;
+            });
 
-        $statusChunks = $this->filterByEvent($chunks, 'status');
+        $service = $this->buildService($store, $platform, $searchTool, publisher: $publisher);
+        $service->stream('Query', 'conv-plural2');
 
-        self::assertStringContainsString('Found 2 relevant articles.', $statusChunks[1]);
-    }
-
-    /**
-     * @param list<string> $chunks
-     *
-     * @return list<string>
-     */
-    private function filterByEvent(array $chunks, string $event): array
-    {
-        return array_values(array_filter(
-            $chunks,
-            static fn (string $chunk): bool => str_contains($chunk, \sprintf('event: %s', $event)),
-        ));
+        self::assertStringContainsString('Found 2 relevant articles.', $statusTexts[1]);
     }
 
     /**
@@ -578,6 +591,7 @@ final class StreamingChatServiceTest extends TestCase
         ?ChatModelResolverInterface $resolver = null,
         ?ModelQualityTrackerInterface $tracker = null,
         ?LoggerInterface $logger = null,
+        ?ChatStreamPublisherInterface $publisher = null,
     ): StreamingChatService {
         return new StreamingChatService(
             $store,
@@ -586,6 +600,7 @@ final class StreamingChatServiceTest extends TestCase
             $resolver ?? $this->defaultResolver(),
             $tracker ?? $this->createStub(ModelQualityTrackerInterface::class),
             $logger ?? $this->createStub(LoggerInterface::class),
+            $publisher ?? $this->createStub(ChatStreamPublisherInterface::class),
         );
     }
 

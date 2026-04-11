@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Chat\Store;
 
 use App\Chat\Store\ConversationMessageStore;
 use Doctrine\DBAL\Connection;
+use Doctrine\DBAL\ParameterType;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\AI\Platform\Message\Message;
@@ -79,5 +80,157 @@ final class ConversationMessageStoreTest extends TestCase
 
         $store = new ConversationMessageStore($connection, $clock);
         $store->setup();
+    }
+
+    public function testListConversationsReturnsFormattedResults(): void
+    {
+        $clock = new MockClock();
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::once())->method('fetchAllAssociative')
+            ->with(
+                'SELECT conversation_id, added_at, messages FROM chat_messages ORDER BY added_at DESC LIMIT ?',
+                [20],
+                [ParameterType::INTEGER],
+            )
+            ->willReturn([
+                [
+                    'conversation_id' => 'conv-1',
+                    'added_at' => 1712764800,
+                    'messages' => json_encode([
+                        [
+                            'type' => 'Symfony\\AI\\Platform\\Message\\UserMessage',
+                            'content' => '',
+                            'contentAsBase64' => [[
+                                'content' => 'First question',
+                            ]],
+                        ],
+                        [
+                            'type' => 'Symfony\\AI\\Platform\\Message\\AssistantMessage',
+                            'content' => 'First answer',
+                        ],
+                        [
+                            'type' => 'Symfony\\AI\\Platform\\Message\\UserMessage',
+                            'content' => '',
+                            'contentAsBase64' => [[
+                                'content' => 'Second question',
+                            ]],
+                        ],
+                    ]),
+                ],
+            ]);
+
+        $store = new ConversationMessageStore($connection, $clock);
+        $result = $store->listConversations();
+
+        self::assertCount(1, $result);
+        self::assertSame('conv-1', $result[0]['conversationId']);
+        self::assertSame(1712764800, $result[0]['lastMessageAt']);
+        self::assertSame('Second question', $result[0]['preview']);
+    }
+
+    public function testListConversationsReturnsEmptyForNoRows(): void
+    {
+        $clock = new MockClock();
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::once())->method('fetchAllAssociative')
+            ->willReturn([]);
+
+        $store = new ConversationMessageStore($connection, $clock);
+        $result = $store->listConversations();
+
+        self::assertSame([], $result);
+    }
+
+    public function testListConversationsTruncatesLongPreview(): void
+    {
+        $clock = new MockClock();
+        $connection = $this->createMock(Connection::class);
+        $longMessage = str_repeat('a', 150);
+        $connection->expects(self::once())->method('fetchAllAssociative')
+            ->willReturn([
+                [
+                    'conversation_id' => 'conv-long',
+                    'added_at' => 1712764800,
+                    'messages' => json_encode([
+                        [
+                            'type' => 'Symfony\\AI\\Platform\\Message\\UserMessage',
+                            'content' => '',
+                            'contentAsBase64' => [[
+                                'content' => $longMessage,
+                            ]],
+                        ],
+                    ]),
+                ],
+            ]);
+
+        $store = new ConversationMessageStore($connection, $clock);
+        $result = $store->listConversations();
+
+        self::assertSame(103, mb_strlen($result[0]['preview']));
+        self::assertStringEndsWith('...', $result[0]['preview']);
+    }
+
+    public function testListConversationsHandlesInvalidJson(): void
+    {
+        $clock = new MockClock();
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::once())->method('fetchAllAssociative')
+            ->willReturn([
+                [
+                    'conversation_id' => 'conv-bad',
+                    'added_at' => 1712764800,
+                    'messages' => 'not json',
+                ],
+            ]);
+
+        $store = new ConversationMessageStore($connection, $clock);
+        $result = $store->listConversations();
+
+        self::assertSame('', $result[0]['preview']);
+    }
+
+    public function testListConversationsWithCustomLimit(): void
+    {
+        $clock = new MockClock();
+        $connection = $this->createMock(Connection::class);
+        $connection->expects(self::once())->method('fetchAllAssociative')
+            ->with(
+                self::anything(),
+                [5],
+                [ParameterType::INTEGER],
+            )
+            ->willReturn([]);
+
+        $store = new ConversationMessageStore($connection, $clock);
+        $store->listConversations(5);
+    }
+
+    public function testListConversationsHandlesMultibytePreview(): void
+    {
+        $clock = new MockClock();
+        $connection = $this->createMock(Connection::class);
+        $longMb = str_repeat("\u{00FC}", 110); // u-umlaut, 2 bytes each
+        $connection->expects(self::once())->method('fetchAllAssociative')
+            ->willReturn([
+                [
+                    'conversation_id' => 'conv-mb',
+                    'added_at' => 1712764800,
+                    'messages' => json_encode([
+                        [
+                            'type' => 'Symfony\\AI\\Platform\\Message\\UserMessage',
+                            'content' => '',
+                            'contentAsBase64' => [[
+                                'content' => $longMb,
+                            ]],
+                        ],
+                    ]),
+                ],
+            ]);
+
+        $store = new ConversationMessageStore($connection, $clock);
+        $result = $store->listConversations();
+
+        self::assertSame(103, mb_strlen($result[0]['preview']));
+        self::assertStringEndsWith('...', $result[0]['preview']);
     }
 }

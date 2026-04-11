@@ -13,6 +13,7 @@ final readonly class ChatModelResolver implements ChatModelResolverInterface
 
     public function __construct(
         private ModelDiscoveryServiceInterface $modelDiscovery,
+        private string $paidFallbackModel = '',
     ) {
     }
 
@@ -37,7 +38,12 @@ final readonly class ChatModelResolver implements ChatModelResolverInterface
         );
 
         if ($modelIds === []) {
-            return [self::FALLBACK_MODEL];
+            $modelIds = [self::FALLBACK_MODEL];
+        }
+
+        // Append paid fallback as last resort
+        if ($this->paidFallbackModel !== '') {
+            $modelIds[] = $this->paidFallbackModel;
         }
 
         return $modelIds;

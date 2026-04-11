@@ -6,6 +6,14 @@
 	frankenphp {
 		{$FRANKENPHP_CONFIG}
 	}
+
+	servers {
+		timeouts {
+			idle 120s
+		}
+		# Required for SSE streaming — allows response to be sent before request processing completes
+		enable_full_duplex
+	}
 }
 
 {$CADDY_EXTRA_CONFIG}

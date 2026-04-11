@@ -7,6 +7,8 @@ use App\Article\Mercure\MercurePublisherServiceInterface;
 use App\Article\Service\AiDeduplicationService;
 use App\Article\Service\DeduplicationService;
 use App\Article\Service\DeduplicationServiceInterface;
+use App\Chat\Mercure\ChatStreamPublisher;
+use App\Chat\Mercure\ChatStreamPublisherInterface;
 use App\Chat\Service\ArticleChatService;
 use App\Chat\Service\ArticleChatServiceInterface;
 use App\Chat\Service\ChatModelResolver;
@@ -238,6 +240,9 @@ return static function (ContainerConfigurator $container): void {
     // Mercure publisher: real implementation when Hub is available
     $services->alias(MercurePublisherServiceInterface::class, MercurePublisherService::class);
 
+    // Chat stream publisher: publishes chat tokens to Mercure
+    $services->alias(ChatStreamPublisherInterface::class, ChatStreamPublisher::class);
+
     // RuleBasedEnrichmentService: explicitly bind rule-based implementations (not AI decorators)
     $services->set(RuleBasedEnrichmentService::class)
         ->arg('$categorization', service(RuleBasedCategorizationService::class))
@@ -258,7 +263,10 @@ return static function (ContainerConfigurator $container): void {
 
     $services->alias(ArticleChatServiceInterface::class, ArticleChatService::class);
 
-    // Chat: model resolver extracts model selection logic
+    // Chat: model resolver with paid fallback for rate-limited free models
+    $services->set(ChatModelResolver::class)
+        ->arg('$paidFallbackModel', '%env(string:OPENROUTER_PAID_FALLBACK_MODEL)%');
+
     $services->alias(ChatModelResolverInterface::class, ChatModelResolver::class);
 
     // Chat: streaming service uses platform directly (bypasses Agent for real SSE streaming)

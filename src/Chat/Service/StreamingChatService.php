@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Chat\Service;
 
+use App\Chat\Mercure\ChatStreamPublisherInterface;
 use App\Chat\Store\ConversationMessageStoreInterface;
 use App\Chat\Tool\ArticleSearchToolInterface;
 use App\Chat\ValueObject\AnswerCollector;
@@ -24,31 +25,28 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
         private ChatModelResolverInterface $modelResolver,
         private ModelQualityTrackerInterface $qualityTracker,
         private LoggerInterface $logger,
+        private ChatStreamPublisherInterface $publisher,
     ) {
     }
 
-    /**
-     * @return \Generator<int, string>
-     */
-    public function stream(string $userMessage, string $conversationId): \Generator
+    public function stream(string $userMessage, string $conversationId): void
     {
-        yield $this->sseEvent('status', [
-            'text' => 'Searching articles...',
-        ]);
+        $this->publisher->publishStatus($conversationId, 'Searching articles...');
 
         $this->store->setConversationId($conversationId);
         $history = $this->store->load();
         $articles = $this->searchArticles($userMessage);
 
         $articleCount = \count($articles);
-        yield $this->sseEvent('status', [
-            'text' => \sprintf('Found %d relevant article%s. Connecting to AI...', $articleCount, $articleCount === 1 ? '' : 's'),
-        ]);
+        $this->publisher->publishStatus(
+            $conversationId,
+            \sprintf('Found %d relevant article%s. Connecting to AI...', $articleCount, $articleCount === 1 ? '' : 's'),
+        );
 
         $ctx = new StreamContext($conversationId, $userMessage, $history, $articles);
         $messages = $this->buildMessages($ctx);
 
-        yield from $this->streamFromPlatform($messages, $ctx);
+        $this->streamFromPlatform($messages, $ctx);
     }
 
     /**
@@ -81,18 +79,16 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
         return $messages;
     }
 
-    /**
-     * @return \Generator<int, string>
-     */
-    private function streamFromPlatform(MessageBag $messages, StreamContext $ctx): \Generator
+    private function streamFromPlatform(MessageBag $messages, StreamContext $ctx): void
     {
         $collector = new AnswerCollector();
         $modelChain = $this->modelResolver->resolveModelChain();
 
         foreach ($modelChain as $index => $model) {
-            yield $this->sseEvent('status', [
-                'text' => \sprintf('Trying model %d of %d...', $index + 1, \count($modelChain)),
-            ]);
+            $this->publisher->publishStatus(
+                $ctx->conversationId,
+                \sprintf('Trying model %d of %d...', $index + 1, \count($modelChain)),
+            );
 
             try {
                 $result = $this->platform->invoke($model, $messages, [
@@ -102,19 +98,14 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
                 foreach ($result->asStream() as $chunk) {
                     if (\is_string($chunk)) {
                         $collector->append($chunk);
-                        yield $this->sseEvent('token', [
-                            'text' => $chunk,
-                        ]);
+                        $this->publisher->publishToken($ctx->conversationId, $chunk);
                     }
                 }
 
                 $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
                 $this->persistConversation($ctx, $collector->getText());
 
-                yield $this->sseEvent('done', [
-                    'citedArticles' => $ctx->articles,
-                    'conversationId' => $ctx->conversationId,
-                ]);
+                $this->publisher->publishDone($ctx->conversationId, $ctx->articles);
 
                 return;
             } catch (\Throwable $e) {
@@ -123,9 +114,7 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
             }
         }
 
-        yield $this->sseEvent('error', [
-            'message' => 'Failed to generate response',
-        ]);
+        $this->publisher->publishError($ctx->conversationId, 'Failed to generate response');
     }
 
     private function logModelFailure(string $model, \Throwable $e, bool $isLast): void
@@ -150,14 +139,6 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
         $ctx->history->add(Message::ofUser($ctx->userMessage));
         $ctx->history->add(Message::ofAssistant($answer));
         $this->store->save($ctx->history);
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     */
-    private function sseEvent(string $event, array $data): string
-    {
-        return \sprintf("event: %s\ndata: %s\n\n", $event, json_encode($data, \JSON_THROW_ON_ERROR));
     }
 
     /**
