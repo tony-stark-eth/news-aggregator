@@ -72,8 +72,8 @@
 
         const bubble = document.createElement('div');
         bubble.className = role === 'user'
-            ? 'chat-bubble chat-bubble-primary whitespace-pre-wrap'
-            : 'chat-bubble chat-bubble-secondary whitespace-pre-wrap';
+            ? 'chat-bubble chat-bubble-primary whitespace-pre-wrap break-words'
+            : 'chat-bubble chat-bubble-secondary whitespace-pre-wrap break-words';
 
         if (content) bubble.textContent = content;
 
