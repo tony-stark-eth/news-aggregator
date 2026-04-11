@@ -7,12 +7,12 @@ namespace App\Tests\Unit\Shared\Controller;
 use App\Shared\Controller\SentimentApiController;
 use App\Shared\Service\SettingsService;
 use App\Shared\Service\SettingsServiceInterface;
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-#[CoversClass(SentimentApiController::class)]
+#[CoversNothing]
 final class SentimentApiControllerTest extends TestCase
 {
     public function testValidValuePersistsAndReturnsJson(): void
