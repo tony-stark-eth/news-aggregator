@@ -10,13 +10,13 @@ use App\Shared\AI\ValueObject\ModelQualityStatsMap;
 use App\Shared\Controller\PipelineStatusController;
 use App\Shared\Service\QueueDepthServiceInterface;
 use App\Source\Repository\SourceRepositoryInterface;
-use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 
-#[CoversClass(PipelineStatusController::class)]
+#[CoversNothing]
 final class PipelineStatusControllerTest extends TestCase
 {
     private ControllerHelper&MockObject $controllerHelper;
