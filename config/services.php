@@ -35,8 +35,10 @@ use App\Enrichment\Service\KeywordExtractionServiceInterface;
 use App\Enrichment\Service\RuleBasedCategorizationService;
 use App\Enrichment\Service\RuleBasedEnrichmentService;
 use App\Enrichment\Service\RuleBasedKeywordExtractionService;
+use App\Enrichment\Service\RuleBasedSentimentScoringService;
 use App\Enrichment\Service\RuleBasedSummarizationService;
 use App\Enrichment\Service\RuleBasedTranslationService;
+use App\Enrichment\Service\SentimentScoringServiceInterface;
 use App\Enrichment\Service\SummarizationServiceInterface;
 use App\Enrichment\Service\TranslationServiceInterface;
 use App\Notification\Command\LoadAlertRulesCommand;
@@ -242,6 +244,9 @@ return static function (ContainerConfigurator $container): void {
 
     // Chat stream publisher: publishes chat tokens to Mercure
     $services->alias(ChatStreamPublisherInterface::class, ChatStreamPublisher::class);
+
+    // SentimentScoringServiceInterface → RuleBasedSentimentScoringService
+    $services->alias(SentimentScoringServiceInterface::class, RuleBasedSentimentScoringService::class);
 
     // RuleBasedEnrichmentService: explicitly bind rule-based implementations (not AI decorators)
     $services->set(RuleBasedEnrichmentService::class)
