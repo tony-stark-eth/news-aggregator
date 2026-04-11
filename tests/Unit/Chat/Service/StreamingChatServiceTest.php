@@ -74,15 +74,23 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker);
         $chunks = iterator_to_array($service->stream('What happened?', 'conv-1'), false);
 
-        self::assertCount(3, $chunks);
-        self::assertStringContainsString('event: token', $chunks[0]);
-        self::assertStringContainsString('"text":"Hello"', $chunks[0]);
-        self::assertStringContainsString('event: token', $chunks[1]);
-        self::assertStringContainsString('"text":" world"', $chunks[1]);
-        self::assertStringContainsString('event: done', $chunks[2]);
-        self::assertStringContainsString('"conversationId":"conv-1"', $chunks[2]);
-        self::assertStringContainsString('"citedArticles":', $chunks[2]);
-        self::assertStringContainsString('"id":42', $chunks[2]);
+        $statusChunks = $this->filterByEvent($chunks, 'status');
+        $tokenChunks = $this->filterByEvent($chunks, 'token');
+        $doneChunks = $this->filterByEvent($chunks, 'done');
+
+        self::assertCount(3, $statusChunks);
+        self::assertStringContainsString('Searching articles', $statusChunks[0]);
+        self::assertStringContainsString('Found 1 relevant article', $statusChunks[1]);
+        self::assertStringContainsString('Trying model 1 of 1', $statusChunks[2]);
+
+        self::assertCount(2, $tokenChunks);
+        self::assertStringContainsString('"text":"Hello"', $tokenChunks[0]);
+        self::assertStringContainsString('"text":" world"', $tokenChunks[1]);
+
+        self::assertCount(1, $doneChunks);
+        self::assertStringContainsString('"conversationId":"conv-1"', $doneChunks[0]);
+        self::assertStringContainsString('"citedArticles":', $doneChunks[0]);
+        self::assertStringContainsString('"id":42', $doneChunks[0]);
     }
 
     public function testStreamHandlesNonStreamResult(): void
@@ -101,10 +109,14 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool);
         $chunks = iterator_to_array($service->stream('Hello', 'conv-2'), false);
 
-        self::assertCount(2, $chunks);
-        self::assertStringContainsString('"text":"Full answer"', $chunks[0]);
-        self::assertStringContainsString('event: done', $chunks[1]);
-        self::assertStringContainsString('"citedArticles":[]', $chunks[1]);
+        $tokenChunks = $this->filterByEvent($chunks, 'token');
+        $doneChunks = $this->filterByEvent($chunks, 'done');
+
+        self::assertCount(3, $this->filterByEvent($chunks, 'status'));
+        self::assertCount(1, $tokenChunks);
+        self::assertStringContainsString('"text":"Full answer"', $tokenChunks[0]);
+        self::assertCount(1, $doneChunks);
+        self::assertStringContainsString('"citedArticles":[]', $doneChunks[0]);
     }
 
     public function testStreamHandlesPlatformException(): void
@@ -133,9 +145,11 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool, tracker: $tracker, logger: $logger);
         $chunks = iterator_to_array($service->stream('Hello', 'conv-3'), false);
 
-        self::assertCount(1, $chunks);
-        self::assertStringContainsString('event: error', $chunks[0]);
-        self::assertStringContainsString('"message":"Failed to generate response"', $chunks[0]);
+        $errorChunks = $this->filterByEvent($chunks, 'error');
+
+        self::assertCount(3, $this->filterByEvent($chunks, 'status'));
+        self::assertCount(1, $errorChunks);
+        self::assertStringContainsString('"message":"Failed to generate response"', $errorChunks[0]);
     }
 
     public function testStreamFailsOverToNextModelOnError(): void
@@ -174,9 +188,18 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger);
         $chunks = iterator_to_array($service->stream('Hello', 'conv-failover'), false);
 
-        self::assertCount(2, $chunks);
-        self::assertStringContainsString('"text":"Fallback response"', $chunks[0]);
-        self::assertStringContainsString('event: done', $chunks[1]);
+        $statusChunks = $this->filterByEvent($chunks, 'status');
+        $tokenChunks = $this->filterByEvent($chunks, 'token');
+        $doneChunks = $this->filterByEvent($chunks, 'done');
+
+        // 2 from stream() + 2 from streamFromPlatform() (one per model attempt)
+        self::assertCount(4, $statusChunks);
+        self::assertStringContainsString('Trying model 1 of 2', $statusChunks[2]);
+        self::assertStringContainsString('Trying model 2 of 2', $statusChunks[3]);
+
+        self::assertCount(1, $tokenChunks);
+        self::assertStringContainsString('"text":"Fallback response"', $tokenChunks[0]);
+        self::assertCount(1, $doneChunks);
     }
 
     public function testStreamFailoverExhaustsAllModels(): void
@@ -207,8 +230,13 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger);
         $chunks = iterator_to_array($service->stream('Hello', 'conv-exhaust'), false);
 
-        self::assertCount(1, $chunks);
-        self::assertStringContainsString('event: error', $chunks[0]);
+        $statusChunks = $this->filterByEvent($chunks, 'status');
+        $errorChunks = $this->filterByEvent($chunks, 'error');
+
+        // 2 from stream() + 3 from streamFromPlatform() (one per model)
+        self::assertCount(5, $statusChunks);
+        self::assertCount(1, $errorChunks);
+        self::assertStringContainsString('event: error', $errorChunks[0]);
     }
 
     public function testStreamHandlesSearchFailure(): void
@@ -235,10 +263,15 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool, logger: $logger);
         $chunks = iterator_to_array($service->stream('Query', 'conv-4'), false);
 
-        self::assertCount(2, $chunks);
-        self::assertStringContainsString('event: token', $chunks[0]);
-        self::assertStringContainsString('event: done', $chunks[1]);
-        self::assertStringContainsString('"citedArticles":[]', $chunks[1]);
+        $statusChunks = $this->filterByEvent($chunks, 'status');
+        $tokenChunks = $this->filterByEvent($chunks, 'token');
+        $doneChunks = $this->filterByEvent($chunks, 'done');
+
+        self::assertCount(3, $statusChunks);
+        self::assertStringContainsString('Found 0 relevant articles', $statusChunks[1]);
+        self::assertCount(1, $tokenChunks);
+        self::assertCount(1, $doneChunks);
+        self::assertStringContainsString('"citedArticles":[]', $doneChunks[0]);
     }
 
     public function testStreamIncludesHistoryInMessages(): void
@@ -274,7 +307,9 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool);
         $chunks = iterator_to_array($service->stream('Follow up', 'conv-5'), false);
 
-        self::assertCount(2, $chunks);
+        self::assertCount(3, $this->filterByEvent($chunks, 'status'));
+        self::assertCount(1, $this->filterByEvent($chunks, 'token'));
+        self::assertCount(1, $this->filterByEvent($chunks, 'done'));
     }
 
     public function testStreamSystemPromptIncludesArticleContext(): void
@@ -426,10 +461,88 @@ final class StreamingChatServiceTest extends TestCase
         $service = $this->buildService($store, $platform, $searchTool);
         $chunks = iterator_to_array($service->stream('Test', 'conv-10'), false);
 
-        // 2 token events + 1 done event (the int chunk is skipped)
-        self::assertCount(3, $chunks);
-        self::assertStringContainsString('"text":"Text chunk"', $chunks[0]);
-        self::assertStringContainsString('"text":" more text"', $chunks[1]);
+        $tokenChunks = $this->filterByEvent($chunks, 'token');
+
+        // 2 token events (the int chunk is skipped)
+        self::assertCount(2, $tokenChunks);
+        self::assertStringContainsString('"text":"Text chunk"', $tokenChunks[0]);
+        self::assertStringContainsString('"text":" more text"', $tokenChunks[1]);
+    }
+
+    public function testStreamYieldsStatusEventsWithCorrectPluralization(): void
+    {
+        $store = $this->createStub(ConversationMessageStoreInterface::class);
+        $store->method('load')->willReturn(new MessageBag());
+
+        $searchTool = $this->createStub(ArticleSearchToolInterface::class);
+        $searchTool->method('search')->willReturn($this->sampleArticles());
+
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')
+            ->willReturn($this->createDeferredForText(new TextResult('Answer')));
+
+        $service = $this->buildService($store, $platform, $searchTool);
+        $chunks = iterator_to_array($service->stream('Query', 'conv-plural'), false);
+
+        $statusChunks = $this->filterByEvent($chunks, 'status');
+
+        // 1 article = singular
+        self::assertStringContainsString('Found 1 relevant article.', $statusChunks[1]);
+        self::assertStringNotContainsString('articles', $statusChunks[1]);
+    }
+
+    public function testStreamYieldsStatusEventsWithPluralArticles(): void
+    {
+        $articles = [
+            [
+                'id' => 1,
+                'title' => 'A',
+                'summary' => 's',
+                'keywords' => [],
+                'publishedAt' => null,
+                'url' => 'https://a.com',
+                'score' => 0.5,
+            ],
+            [
+                'id' => 2,
+                'title' => 'B',
+                'summary' => 's',
+                'keywords' => [],
+                'publishedAt' => null,
+                'url' => 'https://b.com',
+                'score' => 0.5,
+            ],
+        ];
+
+        $store = $this->createStub(ConversationMessageStoreInterface::class);
+        $store->method('load')->willReturn(new MessageBag());
+
+        $searchTool = $this->createStub(ArticleSearchToolInterface::class);
+        $searchTool->method('search')->willReturn($articles);
+
+        $platform = $this->createStub(PlatformInterface::class);
+        $platform->method('invoke')
+            ->willReturn($this->createDeferredForText(new TextResult('Answer')));
+
+        $service = $this->buildService($store, $platform, $searchTool);
+        $chunks = iterator_to_array($service->stream('Query', 'conv-plural2'), false);
+
+        $statusChunks = $this->filterByEvent($chunks, 'status');
+
+        self::assertStringContainsString('Found 2 relevant articles.', $statusChunks[1]);
+    }
+
+    /**
+     * @param list<string> $chunks
+     *
+     * @return list<string>
+     */
+    private function filterByEvent(array $chunks, string $event): array
+    {
+        return array_values(array_filter(
+            $chunks,
+            static fn (string $chunk): bool => str_contains($chunk, \sprintf('event: %s', $event)),
+        ));
     }
 
     /**

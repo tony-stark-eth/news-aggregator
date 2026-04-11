@@ -86,9 +86,14 @@
 
     function createTypingIndicator() {
         const { wrapper, bubble } = createBubble('assistant', '');
-        bubble.innerHTML = '<span class="loading loading-dots loading-sm"></span>';
+        bubble.innerHTML = '<span class="loading loading-dots loading-sm"></span> <span id="typing-status" class="text-xs opacity-70"></span>';
         wrapper.id = 'typing-indicator';
         return wrapper;
+    }
+
+    function updateTypingStatus(text) {
+        const el = document.getElementById('typing-status');
+        if (el) el.textContent = text;
     }
 
     function removeTypingIndicator() {
@@ -165,14 +170,13 @@
                 return;
             }
 
-            removeTypingIndicator();
-            const { wrapper, bubble } = createBubble('assistant', '');
-
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
             let fullText = '';
             let citedArticles = [];
+            let assistantBubble = null;
+            let assistantWrapper = null;
 
             while (true) {
                 const { done, value } = await reader.read();
@@ -191,26 +195,48 @@
                             const data = JSON.parse(dataLine.slice(6));
                             i++;
 
-                            if (event === 'token') {
+                            if (event === 'status') {
+                                updateTypingStatus(data.text || '');
+                                scrollToBottom();
+                            } else if (event === 'token') {
+                                if (!assistantBubble) {
+                                    removeTypingIndicator();
+                                    const created = createBubble('assistant', '');
+                                    assistantWrapper = created.wrapper;
+                                    assistantBubble = created.bubble;
+                                }
                                 fullText += data.text;
-                                bubble.textContent = fullText;
+                                assistantBubble.textContent = fullText;
                                 scrollToBottom();
                             } else if (event === 'done') {
                                 conversationId = data.conversationId;
                                 citedArticles = data.citedArticles || [];
                             } else if (event === 'error') {
-                                bubble.textContent = 'Error: ' + (data.message || 'Stream failed');
+                                removeTypingIndicator();
+                                if (!assistantBubble) {
+                                    const created = createBubble('assistant', '');
+                                    assistantWrapper = created.wrapper;
+                                    assistantBubble = created.bubble;
+                                }
+                                assistantBubble.textContent = 'Error: ' + (data.message || 'Stream failed');
                             }
                         }
                     }
                 }
             }
 
-            if (fullText === '') {
-                bubble.textContent = 'No response received.';
+            removeTypingIndicator();
+
+            if (!assistantBubble) {
+                const created = createBubble('assistant', 'No response received.');
+                assistantWrapper = created.wrapper;
+            } else if (fullText === '') {
+                assistantBubble.textContent = 'No response received.';
             }
 
-            renderCitedArticles(citedArticles, wrapper);
+            if (assistantWrapper) {
+                renderCitedArticles(citedArticles, assistantWrapper);
+            }
         } catch (err) {
             removeTypingIndicator();
             createBubble('assistant', 'Error: Connection failed. Please try again.');
