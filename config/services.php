@@ -263,7 +263,10 @@ return static function (ContainerConfigurator $container): void {
 
     $services->alias(ArticleChatServiceInterface::class, ArticleChatService::class);
 
-    // Chat: model resolver extracts model selection logic
+    // Chat: model resolver with paid fallback for rate-limited free models
+    $services->set(ChatModelResolver::class)
+        ->arg('$paidFallbackModel', '%env(string:OPENROUTER_PAID_FALLBACK_MODEL)%');
+
     $services->alias(ChatModelResolverInterface::class, ChatModelResolver::class);
 
     // Chat: streaming service uses platform directly (bypasses Agent for real SSE streaming)
