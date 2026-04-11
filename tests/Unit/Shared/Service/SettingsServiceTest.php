@@ -113,6 +113,10 @@ final class SettingsServiceTest extends TestCase
         self::assertArrayHasKey('retention_logs', $all);
         self::assertFalse($all['retention_logs']['isOverridden']);
         self::assertSame('30', $all['retention_logs']['value']);
+
+        self::assertArrayHasKey('sentiment_slider', $all);
+        self::assertFalse($all['sentiment_slider']['isOverridden']);
+        self::assertSame('0', $all['sentiment_slider']['value']);
     }
 
     public function testGetAllReturnsDefaultsWhenNoDbOverrides(): void
@@ -202,6 +206,28 @@ final class SettingsServiceTest extends TestCase
         $service = $this->createService();
 
         self::assertSame(60, $service->getRetentionLogs());
+    }
+
+    public function testGetSentimentSliderReturnsDefaultZero(): void
+    {
+        $this->repository->method('findByKey')->willReturn(null);
+
+        $service = $this->createService();
+
+        self::assertSame(0, $service->getSentimentSlider());
+    }
+
+    public function testGetSentimentSliderReturnsDbOverride(): void
+    {
+        $setting = new Setting('sentiment_slider', '5');
+        $this->repository->expects(self::once())
+            ->method('findByKey')
+            ->with('sentiment_slider')
+            ->willReturn($setting);
+
+        $service = $this->createService();
+
+        self::assertSame(5, $service->getSentimentSlider());
     }
 
     private function createService(): SettingsService

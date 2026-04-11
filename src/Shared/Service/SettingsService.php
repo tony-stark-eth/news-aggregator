@@ -17,6 +17,8 @@ final readonly class SettingsService implements SettingsServiceInterface
 
     public const string KEY_RETENTION_LOGS = 'retention_logs';
 
+    public const string KEY_SENTIMENT_SLIDER = 'sentiment_slider';
+
     /**
      * @var array<string, string>
      */
@@ -34,6 +36,7 @@ final readonly class SettingsService implements SettingsServiceInterface
             self::KEY_FETCH_DEFAULT_INTERVAL => (string) $fetchDefaultInterval,
             self::KEY_RETENTION_ARTICLES => (string) $retentionArticles,
             self::KEY_RETENTION_LOGS => (string) $retentionLogs,
+            self::KEY_SENTIMENT_SLIDER => '0',
         ];
     }
 
@@ -102,5 +105,10 @@ final readonly class SettingsService implements SettingsServiceInterface
     public function getRetentionLogs(): int
     {
         return (int) $this->get(self::KEY_RETENTION_LOGS);
+    }
+
+    public function getSentimentSlider(): int
+    {
+        return (int) $this->get(self::KEY_SENTIMENT_SLIDER);
     }
 }
