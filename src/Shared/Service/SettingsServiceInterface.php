@@ -22,4 +22,6 @@ interface SettingsServiceInterface
     public function getRetentionArticles(): int;
 
     public function getRetentionLogs(): int;
+
+    public function getSentimentSlider(): int;
 }
