@@ -88,4 +88,9 @@ interface ArticleRepositoryInterface
      * @return list<int>
      */
     public function findIdsWithoutEmbeddings(int $limit): array;
+
+    /**
+     * @return list<Article>
+     */
+    public function findWithoutSentiment(int $limit): array;
 }

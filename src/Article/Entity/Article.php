@@ -18,6 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_article_fingerprint', columns: ['fingerprint'])]
 #[ORM\Index(name: 'idx_article_published_at', columns: ['published_at'])]
 #[ORM\Index(name: 'idx_article_url', columns: ['url'])]
+#[ORM\Index(name: 'idx_article_sentiment_score', columns: ['sentiment_score'])]
 class Article
 {
     #[ORM\Id]
@@ -45,6 +46,9 @@ class Article
 
     #[ORM\Column(type: Types::FLOAT, nullable: true)]
     private ?float $score = null;
+
+    #[ORM\Column(type: Types::FLOAT, nullable: true)]
+    private ?float $sentimentScore = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
@@ -181,6 +185,20 @@ class Article
         }
 
         $this->score = $score;
+    }
+
+    public function getSentimentScore(): ?float
+    {
+        return $this->sentimentScore;
+    }
+
+    public function setSentimentScore(?float $sentimentScore): void
+    {
+        if ($sentimentScore !== null && ($sentimentScore < -1.0 || $sentimentScore > 1.0)) {
+            throw new \InvalidArgumentException(sprintf('Sentiment score must be between -1.0 and 1.0, got %f', $sentimentScore));
+        }
+
+        $this->sentimentScore = $sentimentScore;
     }
 
     public function getSource(): Source

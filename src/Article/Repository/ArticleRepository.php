@@ -345,6 +345,17 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             ->getSingleColumnResult();
     }
 
+    public function findWithoutSentiment(int $limit): array
+    {
+        /** @var list<Article> */
+        return $this->createQueryBuilder('a')
+            ->where('a.sentimentScore IS NULL')
+            ->orderBy('a.publishedAt', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function getEmbeddingStats(): array
     {
         $conn = $this->getEntityManager()->getConnection();
