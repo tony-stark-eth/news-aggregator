@@ -357,6 +357,17 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             ->getResult();
     }
 
+    public function findIdsWithoutSentiment(int $limit): array
+    {
+        /** @var list<int> */
+        return $this->createQueryBuilder('a')
+            ->select('a.id')
+            ->where('a.sentimentScore IS NULL')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getSingleColumnResult();
+    }
+
     public function getEmbeddingStats(): array
     {
         $conn = $this->getEntityManager()->getConnection();
@@ -382,6 +393,34 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             'total' => (int) $result['total'],
             'with_embedding' => (int) $result['with_embedding'],
             'without_embedding' => (int) $result['without_embedding'],
+        ];
+    }
+
+    public function getSentimentStats(): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        /** @var array{total: int|string, scored: int|string, unscored: int|string}|false $result */
+        $result = $conn->executeQuery('
+            SELECT
+                COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE sentiment_score IS NOT NULL) AS scored,
+                COUNT(*) FILTER (WHERE sentiment_score IS NULL) AS unscored
+            FROM article
+        ')->fetchAssociative();
+
+        if ($result === false) {
+            return [
+                'total' => 0,
+                'scored' => 0,
+                'unscored' => 0,
+            ];
+        }
+
+        return [
+            'total' => (int) $result['total'],
+            'scored' => (int) $result['scored'],
+            'unscored' => (int) $result['unscored'],
         ];
     }
 

@@ -227,5 +227,37 @@
             </div>
         </div>
 
+        {# ── Sentiment Pipeline ── #}
+        <div class="collapse collapse-arrow bg-base-100 shadow-sm" tabindex="0">
+            <input type="checkbox" checked />
+            <div class="collapse-title text-lg font-semibold flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Sentiment Pipeline
+                {% if sentimentStats.scored > 0 %}
+                    <span class="badge badge-success badge-sm">active</span>
+                {% else %}
+                    <span class="badge badge-ghost badge-sm">inactive</span>
+                {% endif %}
+            </div>
+            <div class="collapse-content">
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Total Articles', value: sentimentStats.total, color: 'base-content'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Scored', value: sentimentStats.scored, color: 'success'} %}
+                    {% include 'components/_stat_widget.html.twig' with {label: 'Unscored', value: sentimentStats.unscored, color: 'base-content/50'} %}
+                </div>
+
+                {% if sentimentStats.total > 0 %}
+                    <progress class="progress progress-warning w-full" value="{{ sentimentStats.scored }}" max="{{ sentimentStats.total }}"></progress>
+                    <div class="text-xs text-base-content/50 mt-1">
+                        {% if sentimentStats.scored == 0 %}
+                            No articles scored yet. Run <code>app:backfill-sentiment</code> or wait for scheduled backfill.
+                        {% else %}
+                            {{ sentimentStats.scored }} of {{ sentimentStats.total }} articles have sentiment scores
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
 {% endblock %}

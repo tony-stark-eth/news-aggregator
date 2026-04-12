@@ -93,4 +93,14 @@ interface ArticleRepositoryInterface
      * @return list<Article>
      */
     public function findWithoutSentiment(int $limit): array;
+
+    /**
+     * @return list<int>
+     */
+    public function findIdsWithoutSentiment(int $limit): array;
+
+    /**
+     * @return array{total: int, scored: int, unscored: int}
+     */
+    public function getSentimentStats(): array;
 }

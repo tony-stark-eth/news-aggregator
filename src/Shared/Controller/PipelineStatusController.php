@@ -46,6 +46,7 @@ final class PipelineStatusController
             'enrichQueueDepth' => $this->queueDepthService->getEnrichQueueDepth(),
             'modelStats' => $this->modelQualityTracker->getStatsByCategory(ModelQualityCategory::Enrichment),
             'embeddingStats' => $this->articleRepository->getEmbeddingStats(),
+            'sentimentStats' => $this->articleRepository->getSentimentStats(),
         ]);
     }
 
