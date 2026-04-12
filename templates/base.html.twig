@@ -65,18 +65,9 @@
                     <li><a href="{{ path('app_chat') }}">Chat</a></li>
                     <li><a href="{{ path('app_ai_stats') }}">AI Stats</a></li>
                     <li><a href="{{ path('app_settings') }}">Settings</a></li>
-                    <li class="px-2 py-1">
-                        <div class="flex items-center gap-1">
-                            <span class="text-sm">&#x1F480;</span>
-                            <input type="range" min="-10" max="10" value="{{ nav.sentimentSlider }}"
-                                   class="range range-xs flex-1 sentiment-slider-mobile"
-                                   data-sentiment-url="{{ path('api_settings_sentiment') }}">
-                            <span class="text-sm">&#x1F308;</span>
-                        </div>
-                    </li>
                 </ul>
             </div>
-            <a href="{{ path('app_dashboard') }}" class="btn btn-ghost text-xl">News Aggregator</a>
+            <a href="{{ path('app_dashboard') }}" class="btn btn-ghost text-lg sm:text-xl"><span class="hidden sm:inline">News Aggregator</span><span class="sm:hidden">News</span></a>
         </div>
         <div class="navbar-center hidden md:flex">
             <form action="{{ path('app_search') }}" method="GET" class="form-control">
@@ -86,14 +77,14 @@
                 </label>
             </form>
         </div>
-        <div class="navbar-end gap-2">
-            <div class="hidden md:flex items-center gap-1" title="Sentiment filter">
-                <span class="text-sm" id="sentiment-label-left">&#x1F480;</span>
+        <div class="navbar-end gap-1 sm:gap-2">
+            <div class="flex items-center gap-0.5 sm:gap-1" title="Sentiment filter">
+                <span class="text-xs hidden sm:inline">&#x1F480;</span>
                 <input type="range" min="-10" max="10" value="{{ nav.sentimentSlider }}"
-                       class="range range-xs w-24" id="sentiment-slider"
+                       class="range range-xs w-12 sm:w-24" id="sentiment-slider"
                        data-sentiment-url="{{ path('api_settings_sentiment') }}"
                        style="--range-shdw: none;">
-                <span class="text-sm" id="sentiment-label-right">&#x1F308;</span>
+                <span class="text-xs hidden sm:inline">&#x1F308;</span>
             </div>
             <div class="dropdown dropdown-end">
                 <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-1" id="lang-selector-btn" title="Display language">

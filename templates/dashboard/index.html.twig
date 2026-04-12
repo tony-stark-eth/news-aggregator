@@ -39,10 +39,9 @@
 
     {# Sentiment filter notice — shown when slider != 0, dismissible #}
     {% if nav.sentimentSlider != 0 %}
-        <div class="alert alert-warning alert-sm mb-4 py-2 text-sm" id="sentiment-notice" data-sentiment-value="{{ nav.sentimentSlider }}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-            <span>Sentiment filter active ({{ nav.sentimentSlider > 0 ? '+' : '' }}{{ nav.sentimentSlider }}) — {% if nav.sentimentSlider|abs >= 6 %}filtering and re-ranking{% else %}re-ranking{% endif %} articles</span>
-            <button class="btn btn-ghost btn-xs" onclick="this.parentElement.classList.add('hidden'); localStorage.setItem('sentiment-notice-dismissed', '{{ nav.sentimentSlider }}')">✕</button>
+        <div class="flex items-center gap-2 bg-warning/10 border border-warning/30 rounded-lg px-3 py-1.5 mb-4 text-sm text-warning-content" id="sentiment-notice" data-sentiment-value="{{ nav.sentimentSlider }}">
+            <span>{{ nav.sentimentSlider > 0 ? '☀️' : '⚡' }} Sentiment {{ nav.sentimentSlider > 0 ? '+' : '' }}{{ nav.sentimentSlider }} — {% if nav.sentimentSlider|abs >= 6 %}filtering + ranking{% else %}re-ranking{% endif %}</span>
+            <button class="ml-auto text-base-content/50 hover:text-base-content" onclick="this.parentElement.classList.add('hidden'); localStorage.setItem('sentiment-notice-dismissed', '{{ nav.sentimentSlider }}')">✕</button>
         </div>
         <script>
             (function() {
@@ -116,7 +115,7 @@
     </noscript>
 
     {# Unread filter + Bookmarked filter + Mark all read #}
-    <div id="filter-bar" class="flex items-center gap-3 mb-4">
+    <div id="filter-bar" class="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
         {% include 'dashboard/_filter_bar.html.twig' with {
             currentCategory: currentCategory,
             currentSource: currentSource,

@@ -17,31 +17,21 @@ function postSentiment(url: string, value: number): void {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   }).then(() => {
-    window.dispatchEvent(
-      new CustomEvent("sentiment-changed", { detail: { value } }),
-    );
+    // Reload the page to reflect new sentiment ranking
+    window.location.reload();
   });
 }
 
-function syncSliders(source: HTMLInputElement): void {
-  const value = source.value;
-  const all = document.querySelectorAll<HTMLInputElement>(
-    "#sentiment-slider, .sentiment-slider-mobile",
-  );
-  for (const slider of all) {
-    if (slider !== source) {
-      slider.value = value;
-    }
-  }
-}
+function init(): void {
+  const slider = document.getElementById(
+    "sentiment-slider",
+  ) as HTMLInputElement | null;
+  if (!slider) return;
 
-function attachSlider(slider: HTMLInputElement): void {
   const url = slider.dataset["sentimentUrl"];
   if (!url) return;
 
   slider.addEventListener("input", () => {
-    syncSliders(slider);
-
     if (debounceTimer !== null) {
       clearTimeout(debounceTimer);
     }
@@ -50,22 +40,6 @@ function attachSlider(slider: HTMLInputElement): void {
       postSentiment(url, parseInt(slider.value, 10));
     }, DEBOUNCE_MS);
   });
-}
-
-function init(): void {
-  const desktop = document.getElementById(
-    "sentiment-slider",
-  ) as HTMLInputElement | null;
-  if (desktop) {
-    attachSlider(desktop);
-  }
-
-  const mobiles = document.querySelectorAll<HTMLInputElement>(
-    ".sentiment-slider-mobile",
-  );
-  for (const mobile of mobiles) {
-    attachSlider(mobile);
-  }
 }
 
 if (document.readyState === "loading") {
