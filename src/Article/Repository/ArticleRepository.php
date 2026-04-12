@@ -60,13 +60,22 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
      *
      * @return list<Article>
      */
-    public function findForDigest(?\DateTimeImmutable $since, array $categorySlugs, int $limit): array
+    public function findForDigest(?\DateTimeImmutable $since, array $categorySlugs, int $limit, ?int $sentimentSlider = null): array
     {
         $qb = $this->createQueryBuilder('a')
             ->join('a.source', 's')
             ->leftJoin('a.category', 'c')
-            ->orderBy('a.score', 'DESC')
             ->setMaxResults($limit);
+
+        if ($sentimentSlider !== null && $sentimentSlider !== 0) {
+            $sliderFactor = $sentimentSlider / 10.0;
+            $qb->addSelect('(COALESCE(a.sentimentScore, 0) * :sliderFactor) AS HIDDEN sentimentBoost')
+                ->setParameter('sliderFactor', $sliderFactor)
+                ->orderBy('sentimentBoost', 'DESC')
+                ->addOrderBy('a.score', 'DESC');
+        } else {
+            $qb->orderBy('a.score', 'DESC');
+        }
 
         if ($since instanceof \DateTimeImmutable) {
             $qb->andWhere('a.fetchedAt > :since')
@@ -393,6 +402,40 @@ final class ArticleRepository extends ServiceEntityRepository implements Article
             'total' => (int) $result['total'],
             'with_embedding' => (int) $result['with_embedding'],
             'without_embedding' => (int) $result['without_embedding'],
+        ];
+    }
+
+    public function getSentimentDistribution(\DateTimeImmutable $since): array
+    {
+        $conn = $this->getEntityManager()->getConnection();
+
+        /** @var array{average: string|null, positive: int|string, neutral: int|string, negative: int|string}|false $result */
+        $result = $conn->executeQuery('
+            SELECT
+                AVG(sentiment_score) AS average,
+                COUNT(*) FILTER (WHERE sentiment_score > 0.2) AS positive,
+                COUNT(*) FILTER (WHERE sentiment_score BETWEEN -0.2 AND 0.2) AS neutral,
+                COUNT(*) FILTER (WHERE sentiment_score < -0.2) AS negative
+            FROM article
+            WHERE sentiment_score IS NOT NULL AND fetched_at >= :since
+        ', [
+            'since' => $since->format('Y-m-d H:i:s'),
+        ])->fetchAssociative();
+
+        if ($result === false) {
+            return [
+                'average' => 0.0,
+                'positive' => 0,
+                'neutral' => 0,
+                'negative' => 0,
+            ];
+        }
+
+        return [
+            'average' => round((float) ($result['average'] ?? 0.0), 3),
+            'positive' => (int) $result['positive'],
+            'neutral' => (int) $result['neutral'],
+            'negative' => (int) $result['negative'],
         ];
     }
 

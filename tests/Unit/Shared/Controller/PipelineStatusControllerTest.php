@@ -14,6 +14,7 @@ use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Response;
 
 #[CoversNothing]
@@ -45,6 +46,7 @@ final class PipelineStatusControllerTest extends TestCase
             $this->articleRepository,
             $this->queueDepthService,
             $this->modelQualityTracker,
+            new MockClock(new \DateTimeImmutable('2026-04-12 12:00:00')),
         );
     }
 
@@ -81,6 +83,17 @@ final class PipelineStatusControllerTest extends TestCase
             'with_embedding' => 0,
             'without_embedding' => 100,
         ]);
+        $this->articleRepository->method('getSentimentStats')->willReturn([
+            'total' => 100,
+            'scored' => 40,
+            'unscored' => 60,
+        ]);
+        $this->articleRepository->method('getSentimentDistribution')->willReturn([
+            'average' => 0.15,
+            'positive' => 20,
+            'neutral' => 15,
+            'negative' => 5,
+        ]);
 
         $this->queueDepthService->method('getEnrichQueueDepth')->willReturn(3);
         $this->modelQualityTracker->method('getStatsByCategory')
@@ -95,7 +108,7 @@ final class PipelineStatusControllerTest extends TestCase
                 /** @var array{successRate: float} $fullTextStats */
                 $fullTextStats = $params['fullTextStats'];
 
-                return isset($params['feedStats'], $params['sources'], $params['fullTextStats'], $params['enrichmentStats'], $params['enrichQueueDepth'], $params['modelStats'], $params['embeddingStats'])
+                return isset($params['feedStats'], $params['sources'], $params['fullTextStats'], $params['enrichmentStats'], $params['enrichQueueDepth'], $params['modelStats'], $params['embeddingStats'], $params['sentimentStats'], $params['sentimentDistribution'])
                     && $feedStats['total'] === 5
                     && $feedStats['enabled'] === 4
                     && $fullTextStats['successRate'] === 94.1
@@ -140,6 +153,17 @@ final class PipelineStatusControllerTest extends TestCase
             'total' => 0,
             'with_embedding' => 0,
             'without_embedding' => 0,
+        ]);
+        $this->articleRepository->method('getSentimentStats')->willReturn([
+            'total' => 0,
+            'scored' => 0,
+            'unscored' => 0,
+        ]);
+        $this->articleRepository->method('getSentimentDistribution')->willReturn([
+            'average' => 0.0,
+            'positive' => 0,
+            'neutral' => 0,
+            'negative' => 0,
         ]);
 
         $this->queueDepthService->method('getEnrichQueueDepth')->willReturn(0);

@@ -37,6 +37,24 @@
         </div>
     {% endif %}
 
+    {# Sentiment filter notice — shown when slider != 0, dismissible #}
+    {% if nav.sentimentSlider != 0 %}
+        <div class="alert alert-warning alert-sm mb-4 py-2 text-sm" id="sentiment-notice" data-sentiment-value="{{ nav.sentimentSlider }}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>Sentiment filter active ({{ nav.sentimentSlider > 0 ? '+' : '' }}{{ nav.sentimentSlider }}) — {% if nav.sentimentSlider|abs >= 6 %}filtering and re-ranking{% else %}re-ranking{% endif %} articles</span>
+            <button class="btn btn-ghost btn-xs" onclick="this.parentElement.classList.add('hidden'); localStorage.setItem('sentiment-notice-dismissed', '{{ nav.sentimentSlider }}')">✕</button>
+        </div>
+        <script>
+            (function() {
+                var dismissed = localStorage.getItem('sentiment-notice-dismissed');
+                var notice = document.getElementById('sentiment-notice');
+                if (notice && dismissed === notice.dataset.sentimentValue) {
+                    notice.classList.add('hidden');
+                }
+            })();
+        </script>
+    {% endif %}
+
     {# Category tabs #}
     <div id="category-tabs" class="tabs tabs-boxed mb-4 flex flex-nowrap overflow-x-auto">
         <a hx-get="{{ path('app_dashboard', {source: currentSource}) }}"
