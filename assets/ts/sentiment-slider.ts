@@ -1,8 +1,8 @@
 /**
  * Sentiment slider — persists filter preference via POST to server.
  *
- * Debounces 300ms before sending. On change, dispatches a custom
- * "sentiment-changed" event so the dashboard can refresh.
+ * Debounces 300ms before sending. After POST, triggers htmx to reload
+ * the article feed. Double-click/tap resets to 0.
  */
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -17,7 +17,19 @@ function postSentiment(url: string, value: number): void {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   }).then(() => {
-    // Reload the page to reflect new sentiment ranking
+    // Trigger htmx to reload the article feed + notice
+    const feed = document.getElementById("article-feed");
+    if (feed) {
+      // Use htmx ajax to reload the current dashboard page into the body
+      const htmx = (window as unknown as Record<string, unknown>)["htmx"] as
+        | { ajax: (method: string, url: string, target: string) => void }
+        | undefined;
+      if (htmx) {
+        htmx.ajax("GET", window.location.href, "body");
+        return;
+      }
+    }
+    // Fallback if htmx not available or no feed element
     window.location.reload();
   });
 }
@@ -39,6 +51,17 @@ function init(): void {
     debounceTimer = setTimeout(() => {
       postSentiment(url, parseInt(slider.value, 10));
     }, DEBOUNCE_MS);
+  });
+
+  // Double-click/tap resets to 0
+  slider.addEventListener("dblclick", () => {
+    slider.value = "0";
+
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+    }
+
+    postSentiment(url, 0);
   });
 }
 
