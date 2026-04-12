@@ -17,6 +17,7 @@ A self-hosted RSS/Atom aggregator that uses free AI models to categorize, summar
 - Phase 1.5 (sync): full-text article fetch via Readability with per-domain rate limiting
 - Phase 2 (async): AI enrichment via OpenRouter free models -- articles upgrade in-place when complete
 - Keyword quality filter removes noise tokens, keeps named entities (people, orgs, places)
+- Sentiment scoring (-1.0 to +1.0) extracted in the same AI call at zero extra cost; rule-based keyword fallback
 - Multi-language translation to all configured display languages (EN/DE/FR) with originals preserved
 
 **Smart Alerts**
@@ -36,6 +37,8 @@ A self-hosted RSS/Atom aggregator that uses free AI models to categorize, summar
 **Scoring & Ranking**
 - Category weight, recency decay, source reliability, multi-source coverage bonus
 - AI confidence boost for enriched articles
+- Sentiment slider (-10 to +10) in navbar re-ranks articles by mood; extreme values filter opposite sentiment
+- Chat assistant tone adapts based on slider position (hopeful at +4+, critical at -4-)
 - Score explanation tooltip on every article
 - Periodic rescoring keeps rankings fresh
 
@@ -76,6 +79,7 @@ A self-hosted RSS/Atom aggregator that uses free AI models to categorize, summar
 | Smart alerts with AI | No | No | Paid | Paid | No | **Free** |
 | AI editorial digests | No | No | No | No | No | **Yes** |
 | Full-text fetch (Readability) | Yes | Partial | Yes | Yes | Yes | **Yes** |
+| Sentiment-based ranking | No | No | No | No | No | **AI + rule-based, slider UI** |
 | Content deduplication | Basic | No | No | No | No | **URL + title + fingerprint** |
 | Real-time push (SSE) | No | No | No | No | No | **Mercure SSE** |
 | Rule-based fallback | N/A | N/A | N/A | N/A | N/A | **Always active** |

@@ -12,6 +12,14 @@ Self-hosted, AI-enhanced RSS/Atom news aggregator built with Symfony 8 + Franken
 |---|---|
 | Alert rules with portfolio monitoring | Mobile-responsive layout |
 
+| ![Sentiment positive](docs/screenshots/sentiment-slider-positive.png) | ![Sentiment negative](docs/screenshots/sentiment-slider-negative.png) |
+|---|---|
+| Sentiment slider at +10 (optimistic) | Sentiment slider at -10 (critical) |
+
+| ![Chat](docs/screenshots/chat-working-with-sources.png) | ![Pipeline status](docs/screenshots/pipeline-sentiment-section.png) |
+|---|---|
+| RAG chat assistant with article sources | Pipeline status with sentiment scoring |
+
 ## Features
 
 - **RSS/Atom feed aggregation** from configurable sources
@@ -24,6 +32,8 @@ Self-hosted, AI-enhanced RSS/Atom news aggregator built with Symfony 8 + Franken
 - **Periodic digests** with AI-generated editorial summaries
 - **Full-text search** via SEAL + Loupe (zero infrastructure, SQLite-based) with auto-reindexing
 - **Inline article filter** — client-side search-as-you-type on the dashboard
+- **Sentiment scoring** — AI-extracted sentiment (-1.0 to +1.0) at zero extra cost, with rule-based keyword fallback
+- **Sentiment slider** — navbar range control (-10 to +10) re-ranks articles by mood; extreme values filter opposite sentiment; chat tone adapts
 - **Article scoring & ranking** based on recency, source reliability, and category weights
 - **Score explanation tooltip** — hover to see scoring breakdown
 - **Article bookmarks** — save for later, persist per-user, filter dashboard
@@ -239,7 +249,8 @@ Each fetched article goes through this pipeline:
 1. **Categorization** — assigns a category (politics, tech, business, science, sports)
 2. **Summarization** — generates a 1-2 sentence summary
 3. **Keyword extraction** — extracts 3-5 key entities (people, organizations, places, topics)
-4. **Translation** — translates title and summary if the source language differs from English
+4. **Sentiment scoring** — extracts sentiment from -1.0 to +1.0 (zero extra cost, same API call)
+5. **Translation** — translates title and summary if the source language differs from English
 
 All four steps use the same decorator pattern: AI tries first, rule-based fallback on failure. Keywords and translations are stored alongside the original content.
 
@@ -306,6 +317,29 @@ Runtime configuration is available at **Settings** in the sidebar. Settings use 
 
 Configurable values include display languages, fetch interval, article retention period, and log retention period.
 
+## Sentiment Slider
+
+Every article receives a sentiment score from -1.0 (negative) to +1.0 (positive) during AI enrichment -- extracted in the same API call at zero extra cost. Articles without AI enrichment use a rule-based fallback with ~30 positive/negative keyword lists (title weighted 2x, capped at +/-0.8).
+
+The navbar slider controls how sentiment affects your reading experience:
+
+| Slider Value | Behavior |
+|-------------|----------|
+| 0 (center) | No sentiment influence -- default ranking |
+| +/-1 to +/-5 | Boost articles matching your preferred sentiment |
+| +/-6 to +/-10 | Boost matching sentiment AND filter out opposite articles |
+
+![Sentiment slider positive](docs/screenshots/sentiment-slider-positive.png)
+
+The chat assistant also adapts its tone: hopeful and solution-focused at +4 and above, critical and risk-focused at -4 and below.
+
+Backfill existing articles:
+```bash
+make sf c="app:backfill-sentiment"
+```
+
+Monitor progress on the Pipeline Status page (`/settings/pipelines`).
+
 ## Data Retention
 
 Old articles and logs are pruned automatically by the `app:cleanup` command (run daily via the maintenance scheduler).
@@ -327,7 +361,7 @@ Domain-driven design with bounded contexts. See [docs/architecture.md](docs/arch
 ```
 Article    → core articles, scoring, deduplication
 Source     → feed management, fetching, health tracking
-Enrichment → rule-based + AI categorization/summarization
+Enrichment → rule-based + AI categorization/summarization/sentiment
 Notification → unified alert rules + Notifier dispatch
 Digest     → periodic AI-generated editorial summaries
 User       → authentication, per-user read state

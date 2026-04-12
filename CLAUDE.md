@@ -89,7 +89,7 @@ src/
 │   ├── Message/     # EnrichArticleMessage, FetchFullTextMessage, RescoreArticlesMessage
 │   ├── Service/     # ReadabilityExtractorService, ArticleContentFetcherService, DomainRateLimiterService
 │   └── MessageHandler/ # FetchSourceHandler (Phase 1), FetchFullTextHandler (Phase 1.5), EnrichArticleHandler (Phase 2)
-├── Enrichment/      # Rule-based + AI categorization/summarization/keywords/translation (decorator pattern)
+├── Enrichment/      # Rule-based + AI categorization/summarization/keywords/translation/sentiment (decorator pattern)
 ├── Source/          # Feed management, fetching (laminas-feed), health tracking
 │   └── Repository/  # SourceRepositoryInterface + Doctrine implementation
 ├── Notification/    # Unified alert rules (keyword/AI/both) + Notifier dispatch
@@ -136,6 +136,7 @@ src/
 - **Auto-reindex**: Doctrine listener indexes articles on persist/update; daily full reindex via maintenance scheduler
 - **Model quality tracking**: `ModelQualityTracker` records accept/reject per model across three categories (`enrichment`, `chat`, `embedding`). Chat and embedding services auto-instrument. `app:ai-model-stats` and `/stats/ai` show per-category quality tables.
 - **Blocked models**: `OPENROUTER_BLOCKED_MODELS` env var (comma-separated) for persistent manual overrides
+- **Sentiment scoring**: AI extracts sentiment (-1.0 to +1.0) in the same enrichment API call (zero extra cost). Rule-based fallback uses ~30 positive/negative keyword lists with title weighted 2x, capped at +/-0.8. DaisyUI range slider in navbar (-10 to +10) re-ranks dashboard articles by sentiment preference; values +/-6-10 also filter opposite sentiment. Chat system prompts adapt tone based on slider position. `app:backfill-sentiment` dispatches async Messenger jobs for existing articles. Pipeline status page tracks scoring progress.
 
 ## Key Environment Variables
 
