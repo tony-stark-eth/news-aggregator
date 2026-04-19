@@ -6,6 +6,7 @@ namespace App\Digest\Service;
 
 use App\Article\ValueObject\ArticleCollection;
 use App\Digest\ValueObject\GroupedArticles;
+use App\Shared\Service\SettingsServiceInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -27,6 +28,7 @@ PROMPT;
 
     public function __construct(
         private PlatformInterface $platform,
+        private SettingsServiceInterface $settingsService,
         private LoggerInterface $logger,
     ) {
     }
@@ -37,6 +39,7 @@ PROMPT;
 
         try {
             $prompt = sprintf(self::PROMPT_TEMPLATE, $articleText);
+            $prompt .= $this->getSentimentFraming();
             $input = new MessageBag(Message::ofUser($prompt));
             $result = $this->platform->invoke(self::MODEL, $input);
             $content = trim($result->asText());
@@ -68,6 +71,21 @@ PROMPT;
         }
 
         return implode("\n", $parts);
+    }
+
+    private function getSentimentFraming(): string
+    {
+        $slider = $this->settingsService->getSentimentSlider();
+
+        if ($slider > 3) {
+            return "\n\nTone: Emphasize hopeful developments, solutions, and constructive outcomes in your summaries.";
+        }
+
+        if ($slider < -3) {
+            return "\n\nTone: Emphasize risks, challenges, and critical analysis in your summaries.";
+        }
+
+        return '';
     }
 
     /**

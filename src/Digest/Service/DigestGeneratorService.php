@@ -9,18 +9,27 @@ use App\Article\Repository\ArticleRepositoryInterface;
 use App\Article\ValueObject\ArticleCollection;
 use App\Digest\Entity\DigestConfig;
 use App\Digest\ValueObject\GroupedArticles;
+use App\Shared\Service\SettingsServiceInterface;
 
 final readonly class DigestGeneratorService implements DigestGeneratorServiceInterface
 {
     public function __construct(
         private ArticleRepositoryInterface $articleRepository,
+        private SettingsServiceInterface $settingsService,
     ) {
     }
 
     public function collectArticles(DigestConfig $config): GroupedArticles
     {
+        $sentimentSlider = $this->settingsService->getSentimentSlider();
+
         /** @var list<Article> $articles */
-        $articles = $this->articleRepository->findForDigest($config->getLastRunAt(), $config->getCategories(), $config->getArticleLimit());
+        $articles = $this->articleRepository->findForDigest(
+            $config->getLastRunAt(),
+            $config->getCategories(),
+            $config->getArticleLimit(),
+            $sentimentSlider !== 0 ? $sentimentSlider : null,
+        );
 
         $grouped = [];
         foreach ($articles as $article) {

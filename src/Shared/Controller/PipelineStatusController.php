@@ -9,6 +9,7 @@ use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelQualityCategory;
 use App\Shared\Service\QueueDepthServiceInterface;
 use App\Source\Repository\SourceRepositoryInterface;
+use Psr\Clock\ClockInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -21,6 +22,7 @@ final class PipelineStatusController
         private readonly ArticleRepositoryInterface $articleRepository,
         private readonly QueueDepthServiceInterface $queueDepthService,
         private readonly ModelQualityTrackerInterface $modelQualityTracker,
+        private readonly ClockInterface $clock,
     ) {
     }
 
@@ -47,6 +49,9 @@ final class PipelineStatusController
             'modelStats' => $this->modelQualityTracker->getStatsByCategory(ModelQualityCategory::Enrichment),
             'embeddingStats' => $this->articleRepository->getEmbeddingStats(),
             'sentimentStats' => $this->articleRepository->getSentimentStats(),
+            'sentimentDistribution' => $this->articleRepository->getSentimentDistribution(
+                $this->clock->now()->modify('-7 days'),
+            ),
         ]);
     }
 

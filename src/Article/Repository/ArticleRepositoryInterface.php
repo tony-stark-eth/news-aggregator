@@ -25,7 +25,7 @@ interface ArticleRepositoryInterface
      *
      * @return list<Article>
      */
-    public function findForDigest(?\DateTimeImmutable $since, array $categorySlugs, int $limit): array;
+    public function findForDigest(?\DateTimeImmutable $since, array $categorySlugs, int $limit, ?int $sentimentSlider = null): array;
 
     /**
      * @return list<Article>
@@ -98,6 +98,11 @@ interface ArticleRepositoryInterface
      * @return list<int>
      */
     public function findIdsWithoutSentiment(int $limit): array;
+
+    /**
+     * @return array{average: float, positive: int, neutral: int, negative: int}
+     */
+    public function getSentimentDistribution(\DateTimeImmutable $since): array;
 
     /**
      * @return array{total: int, scored: int, unscored: int}

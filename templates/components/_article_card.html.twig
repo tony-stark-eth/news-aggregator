@@ -34,10 +34,16 @@
             </div>
             <div class="flex items-center gap-1">
                 {% include 'components/_bookmark_button.html.twig' with { article: article, isBookmarked: is_bookmarked } %}
+                {% if article.sentimentScore is not null and (article.sentimentScore >= 0.7 or article.sentimentScore <= -0.7) %}
+                    <div class="tooltip tooltip-left"
+                         data-tip="Sentiment: {{ article.sentimentScore > 0 ? '+' : '' }}{{ (article.sentimentScore * 100)|round }}%">
+                        <span class="text-sm">{{ article.sentimentScore >= 0.7 ? '☀️' : '⚡' }}</span>
+                    </div>
+                {% endif %}
                 {% if article.score %}
                     {% set breakdown = score_breakdown(article) %}
                     <div class="{{ breakdown ? 'tooltip tooltip-left' : '' }}"
-                         {% if breakdown %}data-tip="{{ (article.score * 100)|round }}% — Recency {{ breakdown.recency }}% | Category {{ breakdown.category }}% | Source {{ breakdown.source }}% | Enrichment {{ breakdown.enrichment }}%"{% endif %}>
+                         {% if breakdown %}data-tip="{{ (article.score * 100)|round }}% — Recency {{ breakdown.recency }}% | Category {{ breakdown.category }}% | Source {{ breakdown.source }}% | Enrichment {{ breakdown.enrichment }}%{{ article.sentimentScore is not null ? ' | Sentiment ' ~ (article.sentimentScore > 0 ? '+' : '') ~ (article.sentimentScore * 100)|round ~ '%' : '' }}"{% endif %}>
                         <span class="inline-block w-2 h-2 rounded-full {{ article.score > 0.7 ? 'bg-primary' : (article.score > 0.4 ? 'bg-secondary' : 'bg-base-300') }}"></span>
                     </div>
                 {% endif %}

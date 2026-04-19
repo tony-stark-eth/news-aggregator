@@ -256,6 +256,16 @@
                         {% endif %}
                     </div>
                 {% endif %}
+
+                {% if sentimentDistribution is defined and (sentimentDistribution.positive + sentimentDistribution.neutral + sentimentDistribution.negative) > 0 %}
+                    <div class="divider text-xs">7-Day Distribution</div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {% include 'components/_stat_widget.html.twig' with {label: 'Average', value: sentimentDistribution.average > 0 ? '+' ~ sentimentDistribution.average : sentimentDistribution.average, color: sentimentDistribution.average > 0 ? 'success' : (sentimentDistribution.average < 0 ? 'error' : 'base-content')} %}
+                        {% include 'components/_stat_widget.html.twig' with {label: 'Positive (>0.2)', value: sentimentDistribution.positive, color: 'success'} %}
+                        {% include 'components/_stat_widget.html.twig' with {label: 'Neutral', value: sentimentDistribution.neutral, color: 'base-content/50'} %}
+                        {% include 'components/_stat_widget.html.twig' with {label: 'Negative (<-0.2)', value: sentimentDistribution.negative, color: 'error'} %}
+                    </div>
+                {% endif %}
             </div>
         </div>
 

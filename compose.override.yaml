@@ -30,7 +30,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-17}&charset=${POSTGRES_CHARSET:-utf8}
       APP_ENV: "${APP_ENV:-dev}"
       APP_DEBUG: "0"
-    command: ["php", "bin/console", "messenger:consume", "async", "scheduler_fetch", "--time-limit=3600", "--memory-limit=128M", "-vv"]
+    command: ["sh", "-c", "php bin/console cache:clear --no-warmup -q && php bin/console cache:warmup -q && php bin/console messenger:consume async scheduler_fetch --time-limit=3600 --memory-limit=128M -vv"]
     depends_on:
       - php
 
@@ -47,10 +47,9 @@ services:
       OPENROUTER_BASE_URL: "${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}"
       MERCURE_URL: "https://php/.well-known/mercure"
       MERCURE_JWT_SECRET: "${MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}"
-    command: ["php", "bin/console", "messenger:consume", "async_enrich", "--time-limit=3600", "--memory-limit=256M", "-vv"]
+    command: ["sh", "-c", "php bin/console cache:clear --no-warmup -q && php bin/console cache:warmup -q && php bin/console messenger:consume async_enrich --time-limit=3600 --memory-limit=256M -vv"]
     depends_on:
       - php
-
 
   fulltext-worker:
     image: ${IMAGES_PREFIX:-}app-php-dev
@@ -65,7 +64,7 @@ services:
       FULL_TEXT_FETCH_TIMEOUT: "${FULL_TEXT_FETCH_TIMEOUT:-15}"
       FULL_TEXT_RATE_LIMIT_REQUESTS: "${FULL_TEXT_RATE_LIMIT_REQUESTS:-2}"
       FULL_TEXT_RATE_LIMIT_INTERVAL: "${FULL_TEXT_RATE_LIMIT_INTERVAL:-5}"
-    command: ["php", "bin/console", "messenger:consume", "async_fulltext", "--time-limit=3600", "--memory-limit=128M", "-vv"]
+    command: ["sh", "-c", "php bin/console cache:clear --no-warmup -q && php bin/console cache:warmup -q && php bin/console messenger:consume async_fulltext --time-limit=3600 --memory-limit=128M -vv"]
     depends_on:
       - php
 

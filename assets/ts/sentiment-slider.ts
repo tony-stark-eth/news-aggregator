@@ -1,8 +1,8 @@
 /**
  * Sentiment slider — persists filter preference via POST to server.
  *
- * Debounces 300ms before sending. On change, dispatches a custom
- * "sentiment-changed" event so the dashboard can refresh.
+ * Debounces 300ms before sending. After POST, triggers htmx to reload
+ * the article feed. Double-click/tap resets to 0.
  */
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -17,31 +17,33 @@ function postSentiment(url: string, value: number): void {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
   }).then(() => {
-    window.dispatchEvent(
-      new CustomEvent("sentiment-changed", { detail: { value } }),
-    );
+    // Trigger htmx to reload the article feed + notice
+    const feed = document.getElementById("article-feed");
+    if (feed) {
+      // Use htmx ajax to reload the current dashboard page into the body
+      const htmx = (window as unknown as Record<string, unknown>)["htmx"] as
+        | { ajax: (method: string, url: string, target: string) => void }
+        | undefined;
+      if (htmx) {
+        htmx.ajax("GET", window.location.href, "body");
+        return;
+      }
+    }
+    // Fallback if htmx not available or no feed element
+    window.location.reload();
   });
 }
 
-function syncSliders(source: HTMLInputElement): void {
-  const value = source.value;
-  const all = document.querySelectorAll<HTMLInputElement>(
-    "#sentiment-slider, .sentiment-slider-mobile",
-  );
-  for (const slider of all) {
-    if (slider !== source) {
-      slider.value = value;
-    }
-  }
-}
+function init(): void {
+  const slider = document.getElementById(
+    "sentiment-slider",
+  ) as HTMLInputElement | null;
+  if (!slider) return;
 
-function attachSlider(slider: HTMLInputElement): void {
   const url = slider.dataset["sentimentUrl"];
   if (!url) return;
 
   slider.addEventListener("input", () => {
-    syncSliders(slider);
-
     if (debounceTimer !== null) {
       clearTimeout(debounceTimer);
     }
@@ -50,22 +52,17 @@ function attachSlider(slider: HTMLInputElement): void {
       postSentiment(url, parseInt(slider.value, 10));
     }, DEBOUNCE_MS);
   });
-}
 
-function init(): void {
-  const desktop = document.getElementById(
-    "sentiment-slider",
-  ) as HTMLInputElement | null;
-  if (desktop) {
-    attachSlider(desktop);
-  }
+  // Double-click/tap resets to 0
+  slider.addEventListener("dblclick", () => {
+    slider.value = "0";
 
-  const mobiles = document.querySelectorAll<HTMLInputElement>(
-    ".sentiment-slider-mobile",
-  );
-  for (const mobile of mobiles) {
-    attachSlider(mobile);
-  }
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer);
+    }
+
+    postSentiment(url, 0);
+  });
 }
 
 if (document.readyState === "loading") {
