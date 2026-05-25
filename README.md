@@ -101,6 +101,19 @@ make start
 # (Accept the self-signed certificate on first visit)
 ```
 
+### Option C: Bare metal (Debian 13, no Docker)
+
+Full guide: [docs/bare-metal-setup.md](docs/bare-metal-setup.md)
+
+On a fresh Debian 13 host as **root**, download and run the one-shot installer (two commands — do not paste as one long line):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/tony-stark-eth/news-aggregator/main/docs/bare-metal/scripts/install.sh -o /root/install.sh
+ADMIN_EMAIL=admin@local ADMIN_PASSWORD=changeme bash /root/install.sh
+```
+
+At the end, open `http://<host>:8000`.
+
 ## Configuration
 
 Copy `.env.example` to `.env.local` and adjust:

@@ -1,0 +1,16 @@
+[Unit]
+Description=News Aggregator - Messenger worker (enrich)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=@@PROJECT_DIR@@
+ExecStart=/usr/bin/php bin/console messenger:consume async_enrich --time-limit=3600 --memory-limit=512M
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

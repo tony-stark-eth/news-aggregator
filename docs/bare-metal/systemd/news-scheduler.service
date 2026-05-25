@@ -1,0 +1,16 @@
+[Unit]
+Description=News Aggregator - Scheduler (fetch + maintenance)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=@@PROJECT_DIR@@
+ExecStart=/usr/bin/php bin/console messenger:consume scheduler_fetch scheduler_maintenance --time-limit=3600 --memory-limit=256M
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target

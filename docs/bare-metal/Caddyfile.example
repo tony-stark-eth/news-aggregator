@@ -1,0 +1,80 @@
+# Bare-metal Caddyfile for FrankenPHP.
+# install-project.sh copies this template to ~/.config/news-aggregator/Caddyfile
+# and substitutes @@CADDYFILE@@ in news-web.service.
+#
+# Required env vars (via .env.local / EnvironmentFile):
+#   APP_ROOT          — absolute path to the project (e.g. /home/app/news-aggregator)
+#   SERVER_NAME       — listen address (default: localhost)
+#   MERCURE_PUBLISHER_JWT_KEY / MERCURE_SUBSCRIBER_JWT_KEY
+
+{
+	skip_install_trust
+
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		{$FRANKENPHP_CONFIG}
+	}
+
+	servers {
+		timeouts {
+			idle 120s
+		}
+		enable_full_duplex
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$SERVER_NAME:localhost} {
+	log {
+		{$CADDY_SERVER_LOG_OPTIONS}
+		format filter {
+			request>uri query {
+				replace authorization REDACTED
+			}
+		}
+	}
+
+	root {env.APP_ROOT}/public
+
+	@notSSE {
+		not path /chat/stream
+		not path /.well-known/mercure*
+	}
+	encode @notSSE zstd br gzip
+
+	mercure {
+		publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG:HS256}
+		subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY} {env.MERCURE_SUBSCRIBER_JWT_ALG:HS256}
+		anonymous
+		subscriptions
+		{$MERCURE_EXTRA_DIRECTIVES}
+	}
+
+	vulcain
+
+	{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+	header ?Permissions-Policy "browsing-topics=()"
+
+	@phpRoute {
+		not path /.well-known/mercure*
+		not file {path}
+	}
+	rewrite @phpRoute index.php
+
+	@frontController path index.php
+	php @frontController {
+		{$FRANKENPHP_SITE_CONFIG}
+
+		worker {
+			file {env.APP_ROOT}/public/index.php
+			{$FRANKENPHP_WORKER_CONFIG}
+		}
+	}
+
+	file_server {
+		hide *.php
+	}
+}
