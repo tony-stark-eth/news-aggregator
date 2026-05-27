@@ -11,6 +11,13 @@ interface SourceRepositoryInterface
     public function findById(int $id): ?Source;
 
     /**
+     * @param list<int> $ids
+     *
+     * @return list<Source>
+     */
+    public function findByIds(array $ids): array;
+
+    /**
      * @return list<Source>
      */
     public function findAll(): array;

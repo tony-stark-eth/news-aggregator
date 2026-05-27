@@ -6,64 +6,74 @@ namespace App\Source\Controller;
 
 use App\Source\Entity\Source;
 use App\Source\Repository\SourceRepositoryInterface;
-use App\User\Entity\User;
+use App\Source\Service\SourceDeletionServiceInterface;
+use Doctrine\DBAL\Exception\ForeignKeyConstraintViolationException;
 use Symfony\Bundle\FrameworkBundle\Controller\ControllerHelper;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final class DeleteSourceController
 {
     public function __construct(
         private readonly ControllerHelper $controller,
+        private readonly SourceDeletionRequestGuard $requestGuard,
         private readonly SourceRepositoryInterface $sourceRepository,
-        private readonly UrlGeneratorInterface $urlGenerator,
+        private readonly SourceDeletionServiceInterface $sourceDeletionService,
     ) {
     }
 
     #[Route('/sources/{id}/delete', name: 'app_sources_delete', methods: ['POST'])]
     public function __invoke(Request $request, int $id): Response
     {
-        $user = $this->controller->getUser();
-        if (! $user instanceof User) {
-            return new RedirectResponse($this->urlGenerator->generate('app_login'));
+        $context = $this->requestGuard->authorize($request);
+        if ($context instanceof Response) {
+            return $context;
         }
 
-        $isHtmx = $request->headers->has('HX-Request');
-
-        $token = $request->headers->get('X-CSRF-Token')
-            ?? $request->request->getString('_token');
-        if (! $this->controller->isCsrfTokenValid('delete_source', $token)) {
-            if ($isHtmx) {
-                return new Response('Invalid CSRF token.', Response::HTTP_FORBIDDEN);
-            }
-
-            $this->controller->addFlash('error', 'Invalid CSRF token.');
-
-            return new RedirectResponse($this->urlGenerator->generate('app_sources'));
+        $csrfResponse = $this->requestGuard->validateCsrf(
+            $request,
+            'delete_source',
+            $context['isHtmx'],
+            $context['sourcesUrl'],
+        );
+        if ($csrfResponse instanceof Response) {
+            return $csrfResponse;
         }
 
         $source = $this->sourceRepository->findById($id);
         if (! $source instanceof Source) {
-            if ($isHtmx) {
-                return new Response('Source not found.', Response::HTTP_NOT_FOUND);
-            }
-
-            $this->controller->addFlash('error', 'Source not found.');
-
-            return new RedirectResponse($this->urlGenerator->generate('app_sources'));
+            return $this->notFoundResponse($context['isHtmx'], $context['sourcesUrl']);
         }
 
-        $this->sourceRepository->remove($source, flush: true);
+        try {
+            $this->sourceDeletionService->delete($source);
+        } catch (ForeignKeyConstraintViolationException) {
+            return SourceDeletionResponse::error(
+                $context['isHtmx'],
+                'Could not delete this source because related articles still exist. Run database migrations and try again.',
+                $context['sourcesUrl'],
+            );
+        }
 
-        if ($isHtmx) {
-            return new Response('');
+        if ($context['isHtmx']) {
+            return SourceDeletionResponse::success($context['isHtmx'], $context['sourcesUrl']);
         }
 
         $this->controller->addFlash('success', 'Source deleted.');
 
-        return new RedirectResponse($this->urlGenerator->generate('app_sources'));
+        return new RedirectResponse($context['sourcesUrl']);
+    }
+
+    private function notFoundResponse(bool $isHtmx, string $sourcesUrl): Response
+    {
+        if ($isHtmx) {
+            return SourceDeletionResponse::error($isHtmx, 'Source not found.', $sourcesUrl);
+        }
+
+        $this->controller->addFlash('error', 'Source not found.');
+
+        return new RedirectResponse($sourcesUrl);
     }
 }

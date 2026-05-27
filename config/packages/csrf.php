@@ -13,7 +13,7 @@ return static function (ContainerConfigurator $container): void {
             ],
         ],
         'csrf_protection' => [
-            'stateless_token_ids' => ['submit', 'authenticate', 'logout', 'mark_all_read', 'delete_alert_rule', 'delete_source'],
+            'stateless_token_ids' => ['submit', 'authenticate', 'logout', 'mark_all_read', 'delete_alert_rule', 'delete_source', 'delete_sources_bulk'],
         ],
     ]);
 };

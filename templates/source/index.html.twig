@@ -9,12 +9,18 @@
             <a href="{{ path('app_sources_export_opml') }}" class="btn btn-ghost btn-sm">Export OPML</a>
             <a href="{{ path('app_sources_import_opml') }}" class="btn btn-ghost btn-sm">Import OPML</a>
             <span id="fetch-all-btn">
-                <button hx-post="{{ path('app_sources_fetch_all') }}"
+                <button type="button"
+                        hx-post="{{ path('app_sources_fetch_all') }}"
                         hx-headers='{"X-CSRF-Token": "{{ csrf_token('fetch_all_sources') }}"}'
                         hx-target="#fetch-all-btn"
                         hx-swap="innerHTML"
                         class="btn btn-secondary btn-sm">Fetch All</button>
             </span>
+            <button type="submit"
+                    form="sources-bulk-form"
+                    data-bulk-delete-btn
+                    disabled
+                    class="btn btn-error btn-sm">Delete selected</button>
             <a href="{{ path('app_sources_new') }}" class="btn btn-primary btn-sm">New Source</a>
         </div>
     </div>
@@ -26,108 +32,192 @@
             action_url: path('app_sources_new')
         } %}
     {% else %}
-        <div class="overflow-x-auto">
-            <table class="table table-zebra">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Category</th>
-                        <th>Health</th>
-                        <th>Success Rate</th>
-                        <th>Reliability</th>
-                        <th>Last Fetched</th>
-                        <th>Interval</th>
-                        <th>Enabled</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for source in sources %}
+        <div id="sources-delete-feedback"></div>
+
+        <form id="sources-bulk-form"
+              data-sources-bulk
+              hx-post="{{ path('app_sources_delete_bulk') }}"
+              hx-headers='{"X-CSRF-Token": "{{ csrf_token('delete_sources_bulk') }}"}'
+              hx-confirm="Delete selected sources and all of their articles?"
+              hx-swap="none">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
                         <tr>
-                            <td>
-                                <div class="font-bold">{{ source.name }}</div>
-                                <div class="text-xs text-base-content/50 truncate max-w-xs">{{ source.feedUrl }}</div>
-                            </td>
-                            <td>
-                                <span class="badge badge-sm" style="background-color: {{ source.category.color }}; color: {{ source.category.color|contrast_text_color }};">
-                                    {{ source.category.name }}
-                                </span>
-                            </td>
-                            <td>
-                                {% include 'components/_source_health_badge.html.twig' with { health: source.healthStatus.value } %}
-                                {% if source.lastErrorMessage %}
-                                    <div class="collapse collapse-arrow bg-base-200 mt-1">
-                                        <input type="checkbox" class="min-h-0" />
-                                        <div class="collapse-title min-h-0 py-1 px-2 text-xs text-error">
-                                            Last error{% if source.lastErrorAt %} <time datetime="{{ source.lastErrorAt|date('c') }}" class="timeago">{{ source.lastErrorAt|date('Y-m-d H:i') }}</time>{% endif %}
-                                        </div>
-                                        <div class="collapse-content px-2">
-                                            <p class="text-xs text-base-content/70 break-all">{{ source.lastErrorMessage }}</p>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% set rate = source.successRate %}
-                                {% if rate is not null %}
-                                    {% set total = source.successCount + source.failureCount %}
-                                    <span class="badge badge-sm {% if rate >= 90 %}badge-success{% elseif rate >= 70 %}badge-warning{% else %}badge-error{% endif %}">
-                                        {{ rate }}% ({{ source.successCount }}/{{ total }})
-                                    </span>
-                                {% else %}
-                                    <span class="badge badge-ghost badge-sm">no data</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if source.reliabilityWeight is not null %}
-                                    <span class="badge badge-info badge-sm">{{ source.reliabilityWeight }}</span>
-                                {% else %}
-                                    <span class="text-base-content/30">default</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if source.lastFetchedAt %}
-                                    <time datetime="{{ source.lastFetchedAt|date('c') }}" class="timeago">{{ source.lastFetchedAt|date('Y-m-d H:i') }}</time>
-                                {% elseif source.enabled %}
-                                    <span class="badge badge-warning badge-sm">Never fetched</span>
-                                {% else %}
-                                    <span class="text-base-content/30">never</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if source.fetchIntervalMinutes %}
-                                    <span class="badge badge-info badge-sm">{{ source.fetchIntervalMinutes }}m</span>
-                                {% else %}
-                                    <span class="text-base-content/30">default</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if source.enabled %}
-                                    <span class="badge badge-success badge-sm">yes</span>
-                                {% else %}
-                                    <span class="badge badge-ghost badge-sm">no</span>
-                                {% endif %}
-                            </td>
-                            <td class="flex gap-1">
-                                <a href="{{ path('app_sources_edit', {id: source.id}) }}" class="btn btn-ghost btn-xs">Edit</a>
-                                <span id="fetch-btn-{{ source.id }}">
-                                    <button hx-post="{{ path('app_sources_fetch', {id: source.id}) }}"
-                                            hx-headers='{"X-CSRF-Token": "{{ csrf_token('trigger_fetch_source') }}"}'
-                                            hx-target="#fetch-btn-{{ source.id }}"
-                                            hx-swap="innerHTML"
-                                            class="btn btn-ghost btn-xs text-info">Fetch</button>
-                                </span>
-                                <button hx-post="{{ path('app_sources_delete', {id: source.id}) }}"
-                                        hx-headers='{"X-CSRF-Token": "{{ csrf_token('delete_source') }}"}'
-                                        hx-confirm="Delete this source?"
-                                        hx-target="closest tr"
-                                        hx-swap="outerHTML swap:300ms"
-                                        class="btn btn-ghost btn-xs text-error">Delete</button>
-                            </td>
+                            <th class="w-10">
+                                <input type="checkbox"
+                                       data-select-all-sources
+                                       class="checkbox checkbox-sm"
+                                       aria-label="Select all sources">
+                            </th>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Health</th>
+                            <th>Success Rate</th>
+                            <th>Reliability</th>
+                            <th>Last Fetched</th>
+                            <th>Interval</th>
+                            <th>Enabled</th>
+                            <th>Actions</th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        {% for source in sources %}
+                            <tr>
+                                <td>
+                                    <input type="checkbox"
+                                           name="ids[]"
+                                           value="{{ source.id }}"
+                                           data-source-select
+                                           class="checkbox checkbox-sm"
+                                           aria-label="Select {{ source.name }}">
+                                </td>
+                                <td>
+                                    <div class="font-bold">{{ source.name }}</div>
+                                    <div class="text-xs text-base-content/50 truncate max-w-xs">{{ source.feedUrl }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge badge-sm" style="background-color: {{ source.category.color }}; color: {{ source.category.color|contrast_text_color }};">
+                                        {{ source.category.name }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% include 'components/_source_health_badge.html.twig' with { health: source.healthStatus.value } %}
+                                    {% if source.lastErrorMessage %}
+                                        <div class="collapse collapse-arrow bg-base-200 mt-1">
+                                            <input type="checkbox" class="min-h-0" />
+                                            <div class="collapse-title min-h-0 py-1 px-2 text-xs text-error">
+                                                Last error{% if source.lastErrorAt %} <time datetime="{{ source.lastErrorAt|date('c') }}" class="timeago">{{ source.lastErrorAt|date('Y-m-d H:i') }}</time>{% endif %}
+                                            </div>
+                                            <div class="collapse-content px-2">
+                                                <p class="text-xs text-base-content/70 break-all">{{ source.lastErrorMessage }}</p>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set rate = source.successRate %}
+                                    {% if rate is not null %}
+                                        {% set total = source.successCount + source.failureCount %}
+                                        <span class="badge badge-sm {% if rate >= 90 %}badge-success{% elseif rate >= 70 %}badge-warning{% else %}badge-error{% endif %}">
+                                            {{ rate }}% ({{ source.successCount }}/{{ total }})
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-ghost badge-sm">no data</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if source.reliabilityWeight is not null %}
+                                        <span class="badge badge-info badge-sm">{{ source.reliabilityWeight }}</span>
+                                    {% else %}
+                                        <span class="text-base-content/30">default</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if source.lastFetchedAt %}
+                                        <time datetime="{{ source.lastFetchedAt|date('c') }}" class="timeago">{{ source.lastFetchedAt|date('Y-m-d H:i') }}</time>
+                                    {% elseif source.enabled %}
+                                        <span class="badge badge-warning badge-sm">Never fetched</span>
+                                    {% else %}
+                                        <span class="text-base-content/30">never</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if source.fetchIntervalMinutes %}
+                                        <span class="badge badge-info badge-sm">{{ source.fetchIntervalMinutes }}m</span>
+                                    {% else %}
+                                        <span class="text-base-content/30">default</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if source.enabled %}
+                                        <span class="badge badge-success badge-sm">yes</span>
+                                    {% else %}
+                                        <span class="badge badge-ghost badge-sm">no</span>
+                                    {% endif %}
+                                </td>
+                                <td class="flex gap-1">
+                                    <a href="{{ path('app_sources_edit', {id: source.id}) }}" class="btn btn-ghost btn-xs">Edit</a>
+                                    <span id="fetch-btn-{{ source.id }}">
+                                        <button type="button"
+                                                hx-post="{{ path('app_sources_fetch', {id: source.id}) }}"
+                                                hx-headers='{"X-CSRF-Token": "{{ csrf_token('trigger_fetch_source') }}"}'
+                                                hx-target="#fetch-btn-{{ source.id }}"
+                                                hx-swap="innerHTML"
+                                                class="btn btn-ghost btn-xs text-info">Fetch</button>
+                                    </span>
+                                    <button type="button"
+                                            hx-post="{{ path('app_sources_delete', {id: source.id}) }}"
+                                            hx-headers='{"X-CSRF-Token": "{{ csrf_token('delete_source') }}"}'
+                                            hx-confirm="Delete this source and all of its articles?"
+                                            hx-target="closest tr"
+                                            hx-swap="outerHTML swap:300ms"
+                                            class="btn btn-ghost btn-xs text-error">Delete</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </form>
+    {% endif %}
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    {% if sources is not empty %}
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const form = document.getElementById('sources-bulk-form');
+                const deleteBtn = document.querySelector('[data-bulk-delete-btn]');
+                if (!form || !deleteBtn) {
+                    return;
+                }
+
+                const rowChecks = () => Array.from(form.querySelectorAll('[data-source-select]'));
+                const selectAll = form.querySelector('[data-select-all-sources]');
+
+                const syncDeleteButton = () => {
+                    const checkedCount = rowChecks().filter((cb) => cb.checked).length;
+                    deleteBtn.disabled = checkedCount === 0;
+                    deleteBtn.textContent = checkedCount <= 1
+                        ? 'Delete selected'
+                        : `Delete selected (${checkedCount})`;
+                };
+
+                const syncSelectAll = () => {
+                    if (!selectAll) {
+                        return;
+                    }
+
+                    const checks = rowChecks();
+                    const checkedCount = checks.filter((cb) => cb.checked).length;
+                    selectAll.checked = checkedCount > 0 && checkedCount === checks.length;
+                    selectAll.indeterminate = checkedCount > 0 && checkedCount < checks.length;
+                };
+
+                form.addEventListener('change', (event) => {
+                    const target = event.target;
+                    if (!(target instanceof HTMLInputElement)) {
+                        return;
+                    }
+
+                    if (target.matches('[data-select-all-sources]')) {
+                        rowChecks().forEach((cb) => {
+                            cb.checked = target.checked;
+                        });
+                        syncDeleteButton();
+                        return;
+                    }
+
+                    if (target.matches('[data-source-select]')) {
+                        syncSelectAll();
+                        syncDeleteButton();
+                    }
+                });
+
+                syncDeleteButton();
+            });
+        </script>
     {% endif %}
 {% endblock %}

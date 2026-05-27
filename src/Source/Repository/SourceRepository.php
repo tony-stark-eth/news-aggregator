@@ -24,6 +24,25 @@ final class SourceRepository extends ServiceEntityRepository implements SourceRe
     }
 
     /**
+     * @param list<int> $ids
+     *
+     * @return list<Source>
+     */
+    public function findByIds(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        /** @var list<Source> */
+        return $this->createQueryBuilder('s')
+            ->where('s.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
      * @return list<Source>
      */
     public function findAll(): array
