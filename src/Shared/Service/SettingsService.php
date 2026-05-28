@@ -6,6 +6,7 @@ namespace App\Shared\Service;
 
 use App\Shared\Entity\Setting;
 use App\Shared\Repository\SettingRepositoryInterface;
+use App\Shared\ValueObject\AiProvider;
 
 final readonly class SettingsService implements SettingsServiceInterface
 {
@@ -19,6 +20,14 @@ final readonly class SettingsService implements SettingsServiceInterface
 
     public const string KEY_SENTIMENT_SLIDER = 'sentiment_slider';
 
+    public const string KEY_AI_PROVIDER = 'ai_provider';
+
+    public const string KEY_AI_OPENAI_BASE_URL = 'ai_openai_base_url';
+
+    public const string KEY_AI_OPENAI_API_KEY = 'ai_openai_api_key';
+
+    public const string KEY_AI_OPENAI_MODEL = 'ai_openai_model';
+
     /**
      * @var array<string, string>
      */
@@ -30,14 +39,27 @@ final readonly class SettingsService implements SettingsServiceInterface
         int $fetchDefaultInterval,
         int $retentionArticles,
         int $retentionLogs,
+        string $defaultAiProvider = 'openrouter',
+        string $defaultAiOpenAiBaseUrl = '',
+        string $defaultAiOpenAiApiKey = '',
+        string $defaultAiOpenAiModel = '',
     ) {
-        $this->defaults = [
+        $defaults = [
             self::KEY_DISPLAY_LANGUAGES => $displayLanguages,
             self::KEY_FETCH_DEFAULT_INTERVAL => (string) $fetchDefaultInterval,
             self::KEY_RETENTION_ARTICLES => (string) $retentionArticles,
             self::KEY_RETENTION_LOGS => (string) $retentionLogs,
             self::KEY_SENTIMENT_SLIDER => '0',
+            self::KEY_AI_PROVIDER => $defaultAiProvider,
+            self::KEY_AI_OPENAI_BASE_URL => $defaultAiOpenAiBaseUrl,
+            self::KEY_AI_OPENAI_MODEL => $defaultAiOpenAiModel,
         ];
+
+        if ($defaultAiOpenAiApiKey !== '') {
+            $defaults[self::KEY_AI_OPENAI_API_KEY] = $defaultAiOpenAiApiKey;
+        }
+
+        $this->defaults = $defaults;
     }
 
     public function get(string $key): string
@@ -49,6 +71,11 @@ final readonly class SettingsService implements SettingsServiceInterface
         }
 
         return $this->defaults[$key] ?? '';
+    }
+
+    public function hasDefault(string $key): bool
+    {
+        return \array_key_exists($key, $this->defaults);
     }
 
     public function set(string $key, string $value): void
@@ -84,6 +111,13 @@ final readonly class SettingsService implements SettingsServiceInterface
             ];
         }
 
+        if (isset($dbSettings[self::KEY_AI_OPENAI_API_KEY])) {
+            $result[self::KEY_AI_OPENAI_API_KEY] = [
+                'value' => '',
+                'isOverridden' => true,
+            ];
+        }
+
         return $result;
     }
 
@@ -110,5 +144,51 @@ final readonly class SettingsService implements SettingsServiceInterface
     public function getSentimentSlider(): int
     {
         return (int) $this->get(self::KEY_SENTIMENT_SLIDER);
+    }
+
+    public function getAiProvider(): AiProvider
+    {
+        return AiProvider::fromString($this->get(self::KEY_AI_PROVIDER));
+    }
+
+    public function getOpenAiBaseUrl(): string
+    {
+        return trim($this->get(self::KEY_AI_OPENAI_BASE_URL));
+    }
+
+    public function getOpenAiModel(): string
+    {
+        return trim($this->get(self::KEY_AI_OPENAI_MODEL));
+    }
+
+    public function getOpenAiApiKey(): string
+    {
+        $setting = $this->settingRepository->findByKey(self::KEY_AI_OPENAI_API_KEY);
+
+        if ($setting instanceof Setting) {
+            return $setting->getValue();
+        }
+
+        return $this->defaults[self::KEY_AI_OPENAI_API_KEY] ?? '';
+    }
+
+    public function hasOpenAiApiKey(): bool
+    {
+        return $this->getOpenAiApiKey() !== '';
+    }
+
+    public function isOpenAiConfigured(): bool
+    {
+        return $this->getOpenAiBaseUrl() !== ''
+            && $this->getOpenAiModel() !== ''
+            && $this->hasOpenAiApiKey();
+    }
+
+    public function isAiConfigured(string $openrouterApiKey): bool
+    {
+        return match ($this->getAiProvider()) {
+            AiProvider::OpenAi => $this->isOpenAiConfigured(),
+            AiProvider::OpenRouter => $openrouterApiKey !== '',
+        };
     }
 }

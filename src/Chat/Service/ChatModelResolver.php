@@ -6,6 +6,8 @@ namespace App\Chat\Service;
 
 use App\Shared\AI\Service\ModelDiscoveryServiceInterface;
 use App\Shared\AI\ValueObject\ModelId;
+use App\Shared\Service\SettingsServiceInterface;
+use App\Shared\ValueObject\AiProvider;
 
 final readonly class ChatModelResolver implements ChatModelResolverInterface
 {
@@ -13,6 +15,7 @@ final readonly class ChatModelResolver implements ChatModelResolverInterface
 
     public function __construct(
         private ModelDiscoveryServiceInterface $modelDiscovery,
+        private SettingsServiceInterface $settings,
         private string $paidFallbackModel = '',
     ) {
     }
@@ -29,6 +32,13 @@ final readonly class ChatModelResolver implements ChatModelResolverInterface
      */
     public function resolveModelChain(): array
     {
+        if ($this->settings->getAiProvider() === AiProvider::OpenAi && $this->settings->isOpenAiConfigured()) {
+            $model = $this->settings->getOpenAiModel();
+            \assert($model !== '');
+
+            return [$model];
+        }
+
         $models = $this->modelDiscovery->discoverToolCallingModels();
 
         /** @var list<non-empty-string> $modelIds */

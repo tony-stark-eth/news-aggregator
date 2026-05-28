@@ -12,6 +12,7 @@ use App\Shared\AI\Service\ModelQualityTrackerInterface;
 use App\Shared\AI\ValueObject\ModelId;
 use App\Shared\AI\ValueObject\ModelQualityCategory;
 use App\Shared\Service\SettingsServiceInterface;
+use App\Shared\ValueObject\AiProvider;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Agent;
 use Symfony\AI\Agent\InputProcessor\SystemPromptInputProcessor;
@@ -119,6 +120,14 @@ final readonly class ArticleChatService implements ArticleChatServiceInterface
      */
     private function buildPlatformAndModel(): array
     {
+        if ($this->settingsService->getAiProvider() === AiProvider::OpenAi
+            && $this->settingsService->isOpenAiConfigured()) {
+            $model = $this->settingsService->getOpenAiModel();
+            \assert($model !== '');
+
+            return [$this->innerPlatform, $model];
+        }
+
         $models = $this->modelDiscovery->discoverToolCallingModels();
         $modelIds = array_map(
             static fn (ModelId $m): string => $m->value,

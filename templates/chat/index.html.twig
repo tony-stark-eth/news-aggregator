@@ -203,6 +203,28 @@
         }
     }
 
+    function generateConversationId() {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID().replace(/-/g, '');
+        }
+
+        const bytes = new Uint8Array(16);
+        if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+            crypto.getRandomValues(bytes);
+        } else {
+            for (let i = 0; i < 16; i++) {
+                bytes[i] = Math.floor(Math.random() * 256);
+            }
+        }
+
+        bytes[6] = (bytes[6] & 0x0f) | 0x40;
+        bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+        return Array.from(bytes, function(b) {
+            return b.toString(16).padStart(2, '0');
+        }).join('');
+    }
+
     async function sendMessage(message) {
         createBubble('user', message);
         setLoading(true);
@@ -210,7 +232,7 @@
 
         // Generate conversationId client-side if needed
         if (!conversationId) {
-            conversationId = crypto.randomUUID().replace(/-/g, '');
+            conversationId = generateConversationId();
         }
 
         // 1. Subscribe to Mercure topic FIRST (before POST, so we don't miss early events)
@@ -318,7 +340,7 @@
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            form.dispatchEvent(new Event('submit'));
+            form.requestSubmit();
         }
     });
 

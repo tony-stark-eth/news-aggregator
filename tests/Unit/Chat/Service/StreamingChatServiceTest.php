@@ -152,6 +152,8 @@ final class StreamingChatServiceTest extends TestCase
             ->with('test/model', ModelQualityCategory::Chat);
 
         $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('info')
+            ->with(self::stringContains('retrying without stream'));
         $logger->expects(self::once())->method('error')
             ->with(
                 self::stringContains('all models exhausted'),
@@ -164,7 +166,7 @@ final class StreamingChatServiceTest extends TestCase
         $publisher->expects(self::never())->method('publishToken');
         $publisher->expects(self::never())->method('publishDone');
         $publisher->expects(self::once())->method('publishError')
-            ->with('conv-3', 'Failed to generate response');
+            ->with('conv-3', 'Failed to generate response: API down');
 
         $service = $this->buildService($store, $platform, $searchTool, tracker: $tracker, logger: $logger, publisher: $publisher);
         $service->stream('Hello', 'conv-3');
@@ -180,8 +182,9 @@ final class StreamingChatServiceTest extends TestCase
         $searchTool->method('search')->willReturn([]);
 
         $platform = $this->createMock(PlatformInterface::class);
-        $platform->expects(self::exactly(2))->method('invoke')
+        $platform->expects(self::exactly(3))->method('invoke')
             ->willReturnOnConsecutiveCalls(
+                self::throwException(new \RuntimeException('Rate limited')),
                 self::throwException(new \RuntimeException('Rate limited')),
                 $this->createDeferredForText(new TextResult('Fallback response')),
             );
@@ -196,15 +199,10 @@ final class StreamingChatServiceTest extends TestCase
             ->with('model/second', ModelQualityCategory::Chat);
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('info')
-            ->with(
-                self::stringContains('failed, trying next'),
-                self::callback(static fn (array $ctx): bool => $ctx['model'] === 'model/first'
-                    && $ctx['error'] === 'Rate limited'),
-            );
+        $logger->expects(self::exactly(2))->method('info');
 
         $publisher = $this->createMock(ChatStreamPublisherInterface::class);
-        // 2 from stream() + 2 from streamFromPlatform() (one per model attempt)
+        // 2 from stream() + 2 from streamFromPlatform() (stream fail + non-stream fail on first, success on second)
         $publisher->expects(self::exactly(4))->method('publishStatus');
         $publisher->expects(self::once())->method('publishToken')
             ->with('conv-failover', 'Fallback response');
@@ -233,7 +231,7 @@ final class StreamingChatServiceTest extends TestCase
         $tracker->expects(self::exactly(3))->method('recordRejection');
 
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::exactly(2))->method('info');
+        $logger->expects(self::exactly(5))->method('info');
         $logger->expects(self::once())->method('error')
             ->with(
                 self::stringContains('all models exhausted'),
@@ -241,10 +239,10 @@ final class StreamingChatServiceTest extends TestCase
             );
 
         $publisher = $this->createMock(ChatStreamPublisherInterface::class);
-        // 2 from stream() + 3 from streamFromPlatform() (one per model)
+        // 2 from stream() + 3 models × 1 status each
         $publisher->expects(self::exactly(5))->method('publishStatus');
         $publisher->expects(self::once())->method('publishError')
-            ->with('conv-exhaust', 'Failed to generate response');
+            ->with('conv-exhaust', 'Failed to generate response: All broken');
 
         $service = $this->buildService($store, $platform, $searchTool, $resolver, $tracker, $logger, publisher: $publisher);
         $service->stream('Hello', 'conv-exhaust');

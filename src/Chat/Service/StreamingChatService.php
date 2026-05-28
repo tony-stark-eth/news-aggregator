@@ -83,8 +83,8 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
 
     private function streamFromPlatform(MessageBag $messages, StreamContext $ctx): void
     {
-        $collector = new AnswerCollector();
         $modelChain = $this->modelResolver->resolveModelChain();
+        $lastError = null;
 
         foreach ($modelChain as $index => $model) {
             $this->publisher->publishStatus(
@@ -93,30 +93,93 @@ final readonly class StreamingChatService implements StreamingChatServiceInterfa
             );
 
             try {
-                $result = $this->platform->invoke($model, $messages, [
-                    'stream' => true,
-                ]);
-
-                foreach ($result->asStream() as $chunk) {
-                    if (\is_string($chunk)) {
-                        $collector->append($chunk);
-                        $this->publisher->publishToken($ctx->conversationId, $chunk);
-                    }
+                if ($this->attemptModel($model, $messages, $ctx)) {
+                    return;
                 }
-
-                $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
-                $this->persistConversation($ctx, $collector->getText());
-
-                $this->publisher->publishDone($ctx->conversationId, $ctx->articles);
-
-                return;
             } catch (\Throwable $e) {
-                $this->qualityTracker->recordRejection($model, ModelQualityCategory::Chat);
+                $lastError = $e;
                 $this->logModelFailure($model, $e, $index === \count($modelChain) - 1);
             }
         }
 
-        $this->publisher->publishError($ctx->conversationId, 'Failed to generate response');
+        $this->publisher->publishError($ctx->conversationId, $this->formatStreamError($lastError));
+    }
+
+    /**
+     * @param non-empty-string $model
+     */
+    private function attemptModel(string $model, MessageBag $messages, StreamContext $ctx): bool
+    {
+        foreach ([true, false] as $stream) {
+            $attemptCollector = new AnswerCollector();
+
+            try {
+                $this->invokeModel($model, $messages, $ctx, $attemptCollector, $stream);
+                $this->qualityTracker->recordAcceptance($model, ModelQualityCategory::Chat);
+                $this->persistConversation($ctx, $attemptCollector->getText());
+                $this->publisher->publishDone($ctx->conversationId, $ctx->articles);
+
+                return true;
+            } catch (\Throwable $e) {
+                if ($stream) {
+                    $this->logger->info('Chat streaming failed for {model}, retrying without stream: {error}', [
+                        'model' => $model,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                    continue;
+                }
+
+                $this->qualityTracker->recordRejection($model, ModelQualityCategory::Chat);
+
+                throw $e;
+            }
+        }
+
+        return false;
+    }
+
+    private function formatStreamError(?\Throwable $lastError): string
+    {
+        $message = 'Failed to generate response';
+        if ($lastError instanceof \Throwable && $lastError->getMessage() !== '') {
+            $message .= ': ' . mb_substr($lastError->getMessage(), 0, 200);
+        }
+
+        return $message;
+    }
+
+    /**
+     * @param non-empty-string $model
+     */
+    private function invokeModel(
+        string $model,
+        MessageBag $messages,
+        StreamContext $ctx,
+        AnswerCollector $collector,
+        bool $stream,
+    ): void {
+        $options = $stream ? [
+            'stream' => true,
+        ] : [];
+        $result = $this->platform->invoke($model, $messages, $options);
+
+        if ($stream) {
+            foreach ($result->asStream() as $chunk) {
+                if (\is_string($chunk)) {
+                    $collector->append($chunk);
+                    $this->publisher->publishToken($ctx->conversationId, $chunk);
+                }
+            }
+
+            return;
+        }
+
+        $text = $result->asText();
+        if ($text !== '') {
+            $collector->append($text);
+            $this->publisher->publishToken($ctx->conversationId, $text);
+        }
     }
 
     private function logModelFailure(string $model, \Throwable $e, bool $isLast): void

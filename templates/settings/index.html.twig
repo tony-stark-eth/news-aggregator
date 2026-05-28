@@ -3,19 +3,9 @@
 {% block body %}
     <h1 class="text-2xl font-bold mb-6">Settings</h1>
 
-    <div class="grid gap-4 max-w-lg">
-        <div class="card bg-base-100 shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-base">OpenRouter AI</h3>
-                {% if hasOpenrouterKey %}
-                    <span class="badge badge-success">Configured</span>
-                {% else %}
-                    <span class="badge badge-warning">Not configured</span>
-                    <p class="text-sm text-base-content/50">Set OPENROUTER_API_KEY in .env.local for AI features.</p>
-                {% endif %}
-            </div>
-        </div>
+    <div id="settings-save-feedback" aria-live="polite"></div>
 
+    <div class="grid gap-4 max-w-lg">
         <div class="card bg-base-100 shadow-sm">
             <div class="card-body">
                 <h3 class="card-title text-base">Notifications</h3>
@@ -44,10 +34,104 @@
               hx-post="{{ path('app_settings_save') }}"
               hx-target="#save-result"
               hx-swap="innerHTML"
+              hx-indicator="#save-spinner"
         >
             <div class="card-body">
-                <h3 class="card-title text-base">Display Settings</h3>
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('settings_save') }}">
+
+                <h3 class="card-title text-base">AI Provider</h3>
+
+                {% if aiConfigured %}
+                    <span class="badge badge-success mb-2">Configured</span>
+                {% else %}
+                    <span class="badge badge-warning mb-2">Not configured</span>
+                {% endif %}
+
+                <div class="form-control">
+                    <label class="label" for="setting-ai-provider">
+                        <span class="label-text">Provider</span>
+                        {% if settings.ai_provider.isOverridden %}
+                            <span class="badge badge-info badge-xs">overridden</span>
+                        {% else %}
+                            <span class="badge badge-ghost badge-xs">default</span>
+                        {% endif %}
+                    </label>
+                    <select id="setting-ai-provider" name="ai_provider" class="select select-bordered select-sm"
+                            onchange="document.getElementById('ai-openai-fields').hidden = this.value !== 'openai'">
+                        <option value="openrouter" {{ settings.ai_provider.value == 'openrouter' ? 'selected' : '' }}>OpenRouter (cloud)</option>
+                        <option value="openai" {{ settings.ai_provider.value == 'openai' ? 'selected' : '' }}>OpenAI-compatible API (vLLM, OpenAI, …)</option>
+                    </select>
+                </div>
+
+                <div id="ai-openai-fields" class="grid gap-3 mt-2" {% if settings.ai_provider.value != 'openai' %}hidden{% endif %}>
+                    <div class="form-control">
+                        <label class="label" for="setting-ai-openai-base-url">
+                            <span class="label-text">Base URL</span>
+                            {% if settings.ai_openai_base_url.isOverridden %}
+                                <span class="badge badge-info badge-xs">overridden</span>
+                            {% endif %}
+                        </label>
+                        <input type="url" id="setting-ai-openai-base-url" name="ai_openai_base_url"
+                               value="{{ settings.ai_openai_base_url.value }}"
+                               class="input input-bordered input-sm"
+                               placeholder="http://192.168.30.121:8000/v1">
+                        <label class="label">
+                            <span class="label-text-alt text-base-content/50">OpenAI-compatible endpoint (with or without /v1)</span>
+                        </label>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label" for="setting-ai-openai-model">
+                            <span class="label-text">Model</span>
+                            {% if settings.ai_openai_model.isOverridden %}
+                                <span class="badge badge-info badge-xs">overridden</span>
+                            {% endif %}
+                        </label>
+                        <input type="text" id="setting-ai-openai-model" name="ai_openai_model"
+                               value="{{ settings.ai_openai_model.value }}"
+                               class="input input-bordered input-sm"
+                               placeholder="your-model-id">
+                        <label class="label">
+                            <span class="label-text-alt text-base-content/50">Model ID as returned by GET /v1/models</span>
+                        </label>
+                    </div>
+
+                    <div class="form-control">
+                        <label class="label" for="setting-ai-openai-api-key">
+                            <span class="label-text">API Key</span>
+                            {% if openAiApiKeyConfigured %}
+                                <span class="badge badge-success badge-xs">set</span>
+                            {% endif %}
+                        </label>
+                        <input type="password" id="setting-ai-openai-api-key" name="ai_openai_api_key"
+                               class="input input-bordered input-sm"
+                               autocomplete="new-password"
+                               placeholder="{% if openAiApiKeyConfigured %}Leave blank to keep current key{% else %}Required{% endif %}">
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-outline"
+                            hx-post="{{ path('app_settings_test_ai_connection') }}"
+                            hx-include="#ai-openai-fields"
+                            hx-headers='{"X-CSRF-Token": "{{ csrf_token('test_ai_connection') }}"}'
+                            hx-target="#test-ai-connection-result"
+                            hx-swap="innerHTML"
+                        >
+                            Test Connection
+                        </button>
+                        <span id="test-ai-connection-result"></span>
+                    </div>
+                </div>
+
+                <p class="text-sm text-base-content/50 mt-1">
+                    OpenRouter uses <code class="text-xs">OPENROUTER_API_KEY</code> from <code class="text-xs">.env.local</code> when selected.
+                </p>
+
+                <hr class="my-4 border-base-300">
+
+                <h3 class="card-title text-base">Display Settings</h3>
 
                 <div class="form-control">
                     <label class="label" for="setting-display-languages">
@@ -122,7 +206,10 @@
                 </div>
 
                 <div class="card-actions mt-2 flex items-center gap-2">
-                    <button type="submit" class="btn btn-primary btn-sm">Save Settings</button>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        Save Settings
+                        <span id="save-spinner" class="htmx-indicator loading loading-spinner loading-xs"></span>
+                    </button>
                     <span id="save-result"></span>
                 </div>
             </div>

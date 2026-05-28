@@ -117,6 +117,9 @@ final class SettingsServiceTest extends TestCase
         self::assertArrayHasKey('sentiment_slider', $all);
         self::assertFalse($all['sentiment_slider']['isOverridden']);
         self::assertSame('0', $all['sentiment_slider']['value']);
+
+        self::assertArrayHasKey('ai_provider', $all);
+        self::assertSame('openrouter', $all['ai_provider']['value']);
     }
 
     public function testGetAllReturnsDefaultsWhenNoDbOverrides(): void
@@ -230,14 +233,53 @@ final class SettingsServiceTest extends TestCase
         self::assertSame(5, $service->getSentimentSlider());
     }
 
-    private function createService(): SettingsService
+    public function testIsOpenAiConfiguredWhenAllFieldsPresent(): void
     {
+        $this->repository->method('findByKey')->willReturnCallback(
+            static fn (string $key): ?Setting => match ($key) {
+                'ai_openai_base_url' => new Setting($key, 'http://vllm.local/v1'),
+                'ai_openai_model' => new Setting($key, 'test-model'),
+                'ai_openai_api_key' => new Setting($key, 'secret'),
+                default => null,
+            },
+        );
+
+        $service = $this->createService(defaultAiProvider: 'openai');
+
+        self::assertTrue($service->isOpenAiConfigured());
+        self::assertTrue($service->isAiConfigured(''));
+    }
+
+    public function testGetAllMasksOpenAiApiKeyValue(): void
+    {
+        $this->repository->method('findAll')->willReturn([
+            new Setting('ai_openai_api_key', 'secret'),
+        ]);
+
+        $service = $this->createService();
+        $all = $service->getAll();
+
+        self::assertArrayHasKey('ai_openai_api_key', $all);
+        self::assertSame('', $all['ai_openai_api_key']['value']);
+        self::assertTrue($all['ai_openai_api_key']['isOverridden']);
+    }
+
+    private function createService(
+        string $defaultAiProvider = 'openrouter',
+        string $defaultAiOpenAiBaseUrl = '',
+        string $defaultAiOpenAiApiKey = '',
+        string $defaultAiOpenAiModel = '',
+    ): SettingsService {
         return new SettingsService(
             $this->repository,
             'en',
             60,
             90,
             30,
+            $defaultAiProvider,
+            $defaultAiOpenAiBaseUrl,
+            $defaultAiOpenAiApiKey,
+            $defaultAiOpenAiModel,
         );
     }
 }
